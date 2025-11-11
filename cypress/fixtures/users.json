@@ -1,0 +1,20 @@
+{
+  "newUser": {
+    "email": "newuser@test.pathible.com",
+    "firstName": "Test",
+    "lastName": "User",
+    "otp": "123456"
+  },
+  "returningUser": {
+    "email": "returning@test.pathible.com",
+    "firstName": "Returning",
+    "lastName": "Tester",
+    "otp": "123456"
+  },
+  "invalidOtp": "999999",
+  "testOtpCodes": {
+    "valid": "123456",
+    "invalid": "000000",
+    "expired": "111111"
+  }
+}

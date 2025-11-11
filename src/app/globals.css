@@ -1,26 +1,293 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Font families */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-crimson: var(--font-crimson);
+  --font-inter: var(--font-inter);
+
+  /* Core design tokens - map CSS vars to Tailwind color utilities */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  /* Pathible custom colors */
+  --color-pathible-sand: hsl(var(--pathible-sand));
+  --color-pathible-charcoal: hsl(var(--pathible-charcoal));
+  --color-pathible-forest: hsl(var(--pathible-forest));
+  --color-pathible-gold: hsl(var(--pathible-gold));
+  --color-pathible-sage: hsl(var(--pathible-sage));
+  --color-pathible-warm-gray: hsl(var(--pathible-warm-gray));
+  --color-pathible-deep-gold: hsl(var(--pathible-deep-gold));
+  --color-pathible-green-hover: hsl(var(--pathible-green-hover));
+  --color-pathible-green-active: hsl(var(--pathible-green-active));
+
+  /* Admin theme colors */
+  --color-admin-bg: hsl(var(--admin-bg));
+  --color-admin-card: hsl(var(--admin-card));
+  --color-admin-text: hsl(var(--admin-text));
+  --color-admin-border: hsl(var(--admin-border));
+
+  /* Sidebar colors */
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  /* Border radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Pathible Foundation Colors - HSL values without hsl() wrapper */
+  --background: 36 33% 95%; /* Warm sand #F6F4F1 */
+  --foreground: 0 0% 17%; /* Deep charcoal #2C2C2C */
+
+  --card: 0 0% 100%; /* Pure white for cards */
+  --card-foreground: 0 0% 17%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 17%;
+
+  --primary: 130 25% 39%; /* Forest green #4B7F52 */
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 135 17% 56%; /* Sage green #7BA083 */
+  --secondary-foreground: 0 0% 17%;
+
+  --muted: 30 4% 53%; /* Warm gray #8B8680 */
+  --muted-foreground: 30 4% 40%; /* Darker for accessibility */
+
+  --accent: 46 65% 52%; /* Rich gold #D4AF37 */
+  --accent-foreground: 0 0% 17%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 135 17% 56%; /* Sage green borders */
+  --input: 135 17% 56%;
+  --ring: 46 65% 52%; /* Gold focus ring */
+
+  --radius: 0.5rem;
+
+  /* Custom Pathible Tokens */
+  --pathible-sand: 36 33% 95%;
+  --pathible-charcoal: 0 0% 17%;
+  --pathible-forest: 130 25% 39%;
+  --pathible-gold: 46 65% 52%;
+  --pathible-sage: 135 17% 56%;
+  --pathible-warm-gray: 30 4% 53%;
+  --pathible-deep-gold: 45 72% 42%;
+  --pathible-green-hover: 130 25% 32%;
+  --pathible-green-active: 130 25% 26%;
+
+  /* Admin Theme Colors */
+  --admin-bg: 0 0% 17%;
+  --admin-card: 0 0% 23%;
+  --admin-text: 36 33% 95%;
+  --admin-border: 0 0% 29%;
+
+  /* Sidebar */
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 0 0% 17%;
+  --sidebar-primary: 130 25% 39%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 36 33% 95%;
+  --sidebar-accent-foreground: 0 0% 17%;
+  --sidebar-border: 135 17% 56%;
+  --sidebar-ring: 46 65% 52%;
+}
+
+.dark {
+  --background: 0 0% 17%;
+  --foreground: 36 33% 95%;
+  --card: 0 0% 23%;
+  --card-foreground: 36 33% 95%;
+  --popover: 0 0% 23%;
+  --popover-foreground: 36 33% 95%;
+  --primary: 130 25% 39%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 135 17% 56%;
+  --secondary-foreground: 0 0% 17%;
+  --muted: 30 4% 53%;
+  --muted-foreground: 30 4% 70%; /* Lighter for dark mode */
+  --accent: 46 65% 52%;
+  --accent-foreground: 0 0% 17%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 29%;
+  --input: 0 0% 29%;
+  --ring: 46 65% 52%;
+  --sidebar: 0 0% 10%;
+  --sidebar-foreground: 36 33% 95%;
+  --sidebar-primary: 46 65% 52%;
+  --sidebar-primary-foreground: 0 0% 17%;
+  --sidebar-accent: 0 0% 15%;
+  --sidebar-accent-foreground: 36 33% 95%;
+  --sidebar-border: 0 0% 29%;
+  --sidebar-ring: 46 65% 52%;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-crimson;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Button Variants */
+  .btn-primary {
+    @apply bg-primary hover:bg-[hsl(130,25%,32%)] active:bg-[hsl(130,25%,26%)] text-white font-inter font-medium px-6 py-3 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 min-h-[44px];
+  }
+
+  .btn-secondary {
+    @apply bg-secondary hover:bg-[hsl(135,17%,46%)] text-foreground font-inter font-medium px-6 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 min-h-[44px] transform hover:-translate-y-0.5 active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply bg-transparent hover:bg-primary hover:text-white text-primary border-2 border-primary font-inter font-medium px-6 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 min-h-[44px];
+  }
+
+  .btn-accent {
+    @apply bg-accent hover:bg-[hsl(45,72%,42%)] text-foreground font-inter font-medium px-6 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 min-h-[44px] transform hover:-translate-y-0.5 active:scale-[0.98];
+  }
+
+  /* Dashboard Card */
+  .dashboard-card {
+    @apply bg-card border border-border rounded-xl p-6 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200;
+  }
+
+  /* Admin Theme */
+  .admin-theme {
+    @apply bg-[hsl(0,0%,17%)] text-[hsl(36,33%,95%)];
+  }
+
+  .admin-card {
+    @apply bg-[hsl(0,0%,23%)] border border-[hsl(0,0%,29%)] rounded-lg;
+  }
+
+  /* Form Inputs */
+  .input-field {
+    @apply bg-card border-2 border-input rounded-md px-4 py-3 font-inter text-base text-foreground transition-all duration-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10;
+  }
+
+  /* Loading States */
+  .skeleton {
+    @apply animate-pulse bg-gradient-to-r from-muted via-background to-muted bg-[length:200%_100%];
+  }
+
+  .spinner {
+    @apply border-4 border-secondary border-t-primary rounded-full w-6 h-6 animate-spin;
+  }
+
+  .checkmark {
+    @apply stroke-primary;
+    stroke-width: 3;
+    stroke-dasharray: 100;
+    animation: checkmark-draw 0.5s ease-out forwards;
+  }
+}
+
+@layer utilities {
+  /* Typography Classes */
+  .text-h1 {
+    @apply text-5xl md:text-6xl font-semibold leading-tight;
+  }
+
+  .text-h2 {
+    @apply text-3xl md:text-4xl font-semibold leading-snug;
+  }
+
+  .text-h3 {
+    @apply text-2xl font-semibold leading-snug;
+  }
+
+  .text-body {
+    @apply text-lg leading-relaxed;
+  }
+
+  .text-secondary {
+    @apply text-base leading-relaxed;
+  }
+
+  .text-small {
+    @apply text-sm leading-normal;
+  }
+
+  .text-caption {
+    @apply text-xs leading-normal;
+  }
+}
+
+/* Animations */
+@keyframes skeleton-wave {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes checkmark-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
