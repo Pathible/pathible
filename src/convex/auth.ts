@@ -2,6 +2,8 @@ import { createClient } from "@convex-dev/better-auth";
 import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
 import { Resend } from "resend";
+import { query } from "./_generated/server";
+import { v } from "convex/values";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { components } from "./_generated/api";
@@ -185,24 +187,12 @@ export async function requireAdmin(
 }
 
 /**
- * Get the current authenticated user (without requiring a profile)
+ * Helper: Get the current authenticated user (without requiring a profile)
  *
  * Returns null if not authenticated.
- * Use this when you need to check authentication status without throwing an error.
- *
- * @example
- * export const optionalAuthQuery = query({
- *   handler: async (ctx) => {
- *     const currentUser = await getCurrentUser(ctx);
- *     if (currentUser) {
- *       // Authenticated user logic
- *     } else {
- *       // Public/anonymous user logic
- *     }
- *   }
- * });
+ * Use this helper in other Convex functions when you need to check auth without throwing.
  */
-export async function getCurrentUser(
+async function getCurrentUserHelper(
   ctx: QueryCtx | MutationCtx
 ): Promise<{ user: { _id: string; email: string } } | null> {
   const user = await authComponent.safeGetAuthUser(ctx as any);
@@ -217,3 +207,74 @@ export async function getCurrentUser(
     },
   };
 }
+
+// ============================================================================
+// CONVEX QUERY EXPORTS (for Next.js server-side calls)
+// ============================================================================
+
+/**
+ * Query: Get current authenticated user (for Next.js getServerSession)
+ * Returns user info or null if not authenticated
+ */
+export const getCurrentUser = query({
+  args: {},
+  returns: v.union(
+    v.object({
+      user: v.object({
+        _id: v.string(),
+        email: v.string(),
+      }),
+    }),
+    v.null()
+  ),
+  handler: async (ctx) => {
+    return await getCurrentUserHelper(ctx);
+  },
+});
+
+/**
+ * Query: Get current user with profile (for Next.js getServerSessionWithProfile)
+ * Returns user and profile or null if not authenticated or no profile
+ */
+export const getCurrentUserWithProfile = query({
+  args: {},
+  returns: v.union(
+    v.object({
+      user: v.object({
+        _id: v.string(),
+        email: v.string(),
+      }),
+      profile: v.object({
+        _id: v.id("profiles"),
+        _creationTime: v.number(),
+        userId: v.string(),
+        firstName: v.string(),
+        lastName: v.string(),
+        avatarUrl: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        dateOfBirth: v.optional(v.number()),
+        onboardingStatus: v.optional(
+          v.union(
+            v.literal("not_started"),
+            v.literal("profile_complete"),
+            v.literal("household_complete"),
+            v.literal("preferences_complete"),
+            v.literal("complete")
+          )
+        ),
+        onboardingStep: v.optional(v.number()),
+        onboardingCompletedAt: v.optional(v.number()),
+        updatedAt: v.number(),
+      }),
+    }),
+    v.null()
+  ),
+  handler: async (ctx) => {
+    try {
+      const auth = await requireAuth(ctx);
+      return auth;
+    } catch {
+      return null;
+    }
+  },
+});
