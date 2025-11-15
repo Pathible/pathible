@@ -1,4 +1,8 @@
-export function getSignInOTPEmail(otp: string): { subject: string; html: string; text: string } {
+export function getSignInOTPEmail(otp: string): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   return {
     subject: "Your Pathible Sign In Code",
     html: `

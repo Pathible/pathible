@@ -1,8 +1,17 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Shield, BookOpen, FileText, Users, Heart, Sparkles, LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  FileText,
+  Heart,
+  type LucideIcon,
+  Shield,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Icon mapping for server-to-client serialization
 const iconMap: Record<string, LucideIcon> = {
@@ -27,7 +36,7 @@ export function DashboardStatCard({
   icon,
   value,
   title,
-  description
+  description,
 }: DashboardStatCardProps) {
   const router = useRouter();
   const Icon = iconMap[icon];

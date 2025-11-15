@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
 export default function SignOutPage() {
@@ -40,18 +41,16 @@ export default function SignOutPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">
-            Sign Out Error
-          </h1>
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Sign Out Error</h1>
           <p className="text-gray-600 mb-4">
             There was an error signing you out. Please try again.
           </p>
-          <button
+          <Button
             onClick={() => router.push("/login")}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Go to Login
-          </button>
+          </Button>
         </div>
       </div>
     );

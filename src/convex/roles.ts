@@ -1,7 +1,6 @@
-import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireAdmin, authComponent } from "./auth";
-import type { Id } from "./_generated/dataModel";
+import { mutation, query } from "./_generated/server";
+import { authComponent, requireAdmin, requireAuth } from "./auth";
 
 /**
  * Role management functions
@@ -25,12 +24,14 @@ export const checkRole = query({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     try {
-      const user = await authComponent.getAuthUser(ctx as any);
+      const user = await authComponent.getAuthUser(
+        ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
+      );
       if (!user) return false;
 
       const userRole = await ctx.db
         .query("userRoles")
-        .withIndex("by_userId", (q) => q.eq("userId", user._id as any))
+        .withIndex("by_userId", (q) => q.eq("userId", String(user._id)))
         .unique();
 
       return userRole?.role === args.role;
@@ -46,18 +47,17 @@ export const checkRole = query({
  */
 export const getMyRole = query({
   args: {},
-  returns: v.union(
-    v.union(v.literal("admin"), v.literal("user")),
-    v.null()
-  ),
+  returns: v.union(v.union(v.literal("admin"), v.literal("user")), v.null()),
   handler: async (ctx) => {
     try {
-      const user = await authComponent.getAuthUser(ctx as any);
+      const user = await authComponent.getAuthUser(
+        ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
+      );
       if (!user) return null;
 
       const userRole = await ctx.db
         .query("userRoles")
-        .withIndex("by_userId", (q) => q.eq("userId", user._id as any))
+        .withIndex("by_userId", (q) => q.eq("userId", String(user._id)))
         .unique();
 
       return userRole?.role ?? null;
@@ -80,7 +80,7 @@ export const listAdmins = query({
       _creationTime: v.number(),
       userId: v.string(), // Better Auth user ID
       role: v.literal("admin"),
-    })
+    }),
   ),
   handler: async (ctx) => {
     await requireAdmin(ctx);
@@ -114,7 +114,7 @@ export const getUserRole = query({
       userId: v.string(), // Better Auth user ID
       role: v.union(v.literal("admin"), v.literal("user")),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -153,10 +153,7 @@ export const assignRole = mutation({
     // manages its own tables. We trust that the userId is valid.
 
     // Prevent removing your own admin status
-    if (
-      (currentUser._id as any) === args.userId &&
-      args.role !== "admin"
-    ) {
+    if (currentUser._id === args.userId && args.role !== "admin") {
       throw new Error("You cannot remove your own admin role");
     }
 
@@ -198,7 +195,7 @@ export const removeRole = mutation({
     const { user: currentUser } = await requireAuth(ctx);
 
     // Prevent removing your own role
-    if ((currentUser._id as any) === args.userId) {
+    if (currentUser._id === args.userId) {
       throw new Error("You cannot remove your own role");
     }
 
@@ -232,13 +229,15 @@ export const initializeFirstAdmin = mutation({
     const adminCount = allRoles.filter((r) => r.role === "admin").length;
 
     if (adminCount > 0) {
-      throw new Error("Admin users already exist. This function can only be called for initial setup.");
+      throw new Error(
+        "Admin users already exist. This function can only be called for initial setup.",
+      );
     }
 
     // Check if this user already has a role
     const existingRole = await ctx.db
       .query("userRoles")
-      .withIndex("by_userId", (q) => q.eq("userId", user._id as any))
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
       .unique();
 
     if (existingRole) {
@@ -248,7 +247,7 @@ export const initializeFirstAdmin = mutation({
     } else {
       // Create admin role
       const roleId = await ctx.db.insert("userRoles", {
-        userId: user._id as any,
+        userId: user._id,
         role: "admin",
       });
       return roleId;

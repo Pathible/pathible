@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useMutation } from "convex/react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import { useMutation, useQuery } from "convex/react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { api } from "@/convex/_generated/api";
-import Image from "next/image";
-import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 
 /**
  * Multi-Step Onboarding Wizard
@@ -39,7 +39,14 @@ export default function OnboardingPage() {
   const [householdDescription, setHouseholdDescription] = useState("");
 
   // Step 3: Goals
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  type Goal =
+    | "document_organization"
+    | "legacy_planning"
+    | "family_heritage"
+    | "financial_clarity"
+    | "estate_planning"
+    | "end_of_life_planning";
+  const [selectedGoals, setSelectedGoals] = useState<Goal[]>([]);
 
   // Step 4: Invitations
   const [inviteEmail, setInviteEmail] = useState("");
@@ -54,7 +61,7 @@ export default function OnboardingPage() {
   const sendInvitationsMutation = useMutation(api.onboarding.sendInvitations);
   const skipInvitationsMutation = useMutation(api.onboarding.skipInvitations);
 
-  const goalOptions = [
+  const goalOptions: Array<{ id: Goal; label: string }> = [
     { id: "document_organization", label: "Organize important documents" },
     { id: "legacy_planning", label: "Plan my legacy and estate" },
     { id: "family_heritage", label: "Preserve family stories and heritage" },
@@ -63,9 +70,9 @@ export default function OnboardingPage() {
     { id: "end_of_life_planning", label: "End-of-life planning" },
   ];
 
-  const handleGoalToggle = (goalId: string) => {
+  const handleGoalToggle = (goalId: Goal) => {
     setSelectedGoals((prev) =>
-      prev.includes(goalId) ? prev.filter((id) => id !== goalId) : [...prev, goalId]
+      prev.includes(goalId) ? prev.filter((id) => id !== goalId) : [...prev, goalId],
     );
   };
 
@@ -117,7 +124,7 @@ export default function OnboardingPage() {
 
         // Set preferences
         await setPreferencesMutation({
-          goals: selectedGoals as any,
+          goals: selectedGoals,
           emailNotifications: true,
           interestedFeatures: [],
         });
@@ -354,7 +361,11 @@ export default function OnboardingPage() {
 
             {/* Navigation Buttons */}
             <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={handleBack} disabled={currentStep === 1 || isLoading}>
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={currentStep === 1 || isLoading}
+              >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
@@ -370,7 +381,9 @@ export default function OnboardingPage() {
                     Skip for now
                   </Button>
                   <Button onClick={handleSendInvitation} disabled={isLoading}>
-                    {isLoading ? "Sending..." : (
+                    {isLoading ? (
+                      "Sending..."
+                    ) : (
                       <>
                         <Check className="mr-2 h-4 w-4" />
                         Send Invite & Continue
