@@ -15,22 +15,9 @@ import { components } from "./_generated/api";
  * for authentication and authorization in Convex functions.
  */
 
-// Initialize Resend for email sending (only in production with API key)
-// Debug: Log whether API key is available
-console.log(
-  "[Auth Init] RESEND_API_KEY available:",
-  !!process.env.RESEND_API_KEY
-);
-console.log(
-  "[Auth Init] RESEND_API_KEY value:",
-  process.env.RESEND_API_KEY ? "SET" : "NOT SET"
-);
-
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
-
-console.log("[Auth Init] Resend client initialized:", !!resend);
 
 /**
  * Create the Better Auth instance with Convex adapter
