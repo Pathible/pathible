@@ -16,9 +16,21 @@ import { components } from "./_generated/api";
  */
 
 // Initialize Resend for email sending (only in production with API key)
+// Debug: Log whether API key is available
+console.log(
+  "[Auth Init] RESEND_API_KEY available:",
+  !!process.env.RESEND_API_KEY
+);
+console.log(
+  "[Auth Init] RESEND_API_KEY value:",
+  process.env.RESEND_API_KEY ? "SET" : "NOT SET"
+);
+
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
+
+console.log("[Auth Init] Resend client initialized:", !!resend);
 
 /**
  * Create the Better Auth instance with Convex adapter
@@ -38,8 +50,13 @@ export const createAuth = (ctx: any) =>
     },
     plugins: [
       emailOTP({
+        expiresIn: 300, // 5 minutes - explicitly documented
+        otpLength: 6, // 6-digit codes
+        allowedAttempts: 3, // Maximum 3 verification attempts per OTP
+        storeOTP: "encrypted", // Encrypt OTPs in database for security
         async sendVerificationOTP({ email, otp, type }) {
-          const emailFrom = process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
+          const emailFrom =
+            process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
           const emailFromName = process.env.EMAIL_FROM_NAME || "Pathible";
 
           if (resend) {
@@ -51,8 +68,8 @@ export const createAuth = (ctx: any) =>
                   type === "sign-in"
                     ? "Your Pathible Sign-In Code"
                     : type === "email-verification"
-                      ? "Verify Your Pathible Email"
-                      : "Reset Your Pathible Password",
+                    ? "Verify Your Pathible Email"
+                    : "Reset Your Pathible Password",
                 html: `
                   <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                     <h1 style="color: #4B7F52;">Pathible</h1>
@@ -177,9 +194,7 @@ export async function requireAuth(
  *   }
  * });
  */
-export async function requireAdmin(
-  ctx: QueryCtx | MutationCtx
-): Promise<void> {
+export async function requireAdmin(ctx: QueryCtx | MutationCtx): Promise<void> {
   const { user } = await requireAuth(ctx);
 
   // Check if user has admin role
