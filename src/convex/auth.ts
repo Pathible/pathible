@@ -26,6 +26,13 @@ const resend = process.env.RESEND_API_KEY
 export const createAuth = (ctx: any) =>
   betterAuth({
     database: authComponent.adapter(ctx),
+    // Add trustedOrigins to allow requests from Next.js app
+    // Note: Convex env vars are separate from Next.js .env.local
+    trustedOrigins: [
+      "https://quaint-loris-658.convex.site",
+      "http://localhost:3000",
+      "http://localhost:3001",
+    ],
     emailAndPassword: {
       enabled: false, // We use email OTP instead
     },
@@ -195,9 +202,7 @@ export async function requireAdmin(
 async function getCurrentUserHelper(
   ctx: QueryCtx | MutationCtx
 ): Promise<{ user: { _id: string; email: string } } | null> {
-  console.log("[Convex Auth] getCurrentUserHelper called");
   const user = await authComponent.safeGetAuthUser(ctx as any);
-  console.log("[Convex Auth] safeGetAuthUser result:", user ? "✓ User found" : "✗ No user");
 
   if (!user) {
     return null;
