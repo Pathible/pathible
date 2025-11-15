@@ -25,6 +25,18 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
     phone: v.optional(v.string()),
     dateOfBirth: v.optional(v.number()), // Unix timestamp
+    // Onboarding tracking
+    onboardingStatus: v.optional(
+      v.union(
+        v.literal("not_started"),
+        v.literal("profile_complete"),
+        v.literal("household_complete"),
+        v.literal("preferences_complete"),
+        v.literal("complete")
+      )
+    ),
+    onboardingStep: v.optional(v.number()), // 1-4, current step
+    onboardingCompletedAt: v.optional(v.number()), // Unix timestamp
     updatedAt: v.number(), // Unix timestamp
   }).index("by_userId", ["userId"]),
 
@@ -37,6 +49,33 @@ export default defineSchema({
     userId: v.string(), // Better Auth user ID
     role: v.union(v.literal("admin"), v.literal("user")),
   }).index("by_userId", ["userId"]),
+
+  /**
+   * User preferences - goals, interests, and communication preferences
+   * Set during onboarding step 3
+   */
+  userPreferences: defineTable({
+    profileId: v.id("profiles"),
+    // Primary goals (multi-select from onboarding)
+    goals: v.array(
+      v.union(
+        v.literal("document_organization"),
+        v.literal("legacy_planning"),
+        v.literal("family_heritage"),
+        v.literal("financial_clarity"),
+        v.literal("estate_planning"),
+        v.literal("end_of_life_planning")
+      )
+    ),
+    // Communication preferences
+    emailNotifications: v.boolean(),
+    smsNotifications: v.optional(v.boolean()),
+    // Feature interests
+    interestedFeatures: v.array(v.string()),
+    // Privacy settings
+    shareDataWithHousehold: v.boolean(), // Default true
+    updatedAt: v.number(),
+  }).index("by_profile", ["profileId"]),
 
   // ============================================================================
   // HOUSEHOLD/FAMILY STRUCTURE
@@ -107,7 +146,8 @@ export default defineSchema({
       v.literal("pending"),
       v.literal("accepted"),
       v.literal("declined"),
-      v.literal("expired")
+      v.literal("expired"),
+      v.literal("failed") // Email send failure
     ),
     expiresAt: v.number(), // Unix timestamp
   })

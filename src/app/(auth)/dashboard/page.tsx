@@ -9,14 +9,11 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardStatCard } from "@/app/(auth)/dashboard/components/dashboard-stat-card";
 import Link from "next/link";
-import { requireServerAuth } from "@/lib/auth-session";
 
 export default async function DashboardPage() {
-  // Require authentication and get user data
-  const { user, profile } = await requireServerAuth();
-
-  // Use real user name from profile
-  const userName = profile.firstName;
+  // Auth is validated by layout - user is authenticated
+  // We'll use client-side queries to get user data (Better Auth + Convex works better client-side)
+  const userName = "there"; // Default greeting, will be replaced by client-side component
 
   // Mock data - will be replaced with Convex queries later
   const stats = {

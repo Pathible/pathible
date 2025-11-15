@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
@@ -28,18 +28,35 @@ export default function LoginPage() {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [otpExpiresIn, setOtpExpiresIn] = useState(300); // 5 minutes in seconds
 
-  // Check if user is already authenticated
+  // Refs to store interval IDs for cleanup
+  const resendIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const expirationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Don't auto-redirect - let the user explicitly log in
+  // The auth layout will handle redirects after successful authentication
+
+  // Cleanup intervals on unmount or when OTP input is hidden
   useEffect(() => {
-    const checkAuth = async () => {
-      const session = await authClient.getSession();
-      if (session?.data?.session) {
-        // Let middleware handle the redirect based on profile status
-        router.push(redirect);
+    if (!showOtpInput) {
+      // Clear intervals when hiding OTP input
+      if (resendIntervalRef.current) {
+        clearInterval(resendIntervalRef.current);
+        resendIntervalRef.current = null;
       }
+      if (expirationIntervalRef.current) {
+        clearInterval(expirationIntervalRef.current);
+        expirationIntervalRef.current = null;
+      }
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (resendIntervalRef.current) clearInterval(resendIntervalRef.current);
+      if (expirationIntervalRef.current) clearInterval(expirationIntervalRef.current);
     };
-    checkAuth();
-  }, [redirect, router]);
+  }, [showOtpInput]);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,18 +81,47 @@ export default function LoginPage() {
       setShowOtpInput(true);
       setCanResend(false);
       setCountdown(60);
+      setOtpExpiresIn(300); // Reset to 5 minutes
 
       toast.success("Code sent!", {
         description: "Check your email for the 6-digit code.",
       });
 
-      // Start countdown
-      const interval = setInterval(() => {
+      // Clear any existing intervals before starting new ones
+      if (resendIntervalRef.current) {
+        clearInterval(resendIntervalRef.current);
+      }
+      if (expirationIntervalRef.current) {
+        clearInterval(expirationIntervalRef.current);
+      }
+
+      // Start resend countdown (60 seconds)
+      resendIntervalRef.current = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            clearInterval(interval);
+            if (resendIntervalRef.current) {
+              clearInterval(resendIntervalRef.current);
+              resendIntervalRef.current = null;
+            }
             setCanResend(true);
             return 60;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Start OTP expiration countdown (5 minutes)
+      expirationIntervalRef.current = setInterval(() => {
+        setOtpExpiresIn((prev) => {
+          if (prev <= 1) {
+            if (expirationIntervalRef.current) {
+              clearInterval(expirationIntervalRef.current);
+              expirationIntervalRef.current = null;
+            }
+            toast.error("Code expired", {
+              description: "Please request a new code.",
+            });
+            return 0;
           }
           return prev - 1;
         });
@@ -245,9 +291,19 @@ export default function LoginPage() {
               </InputOTP>
             </div>
 
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Code expires in{" "}
+                <span className="font-medium text-foreground">
+                  {Math.floor(otpExpiresIn / 60)}:
+                  {String(otpExpiresIn % 60).padStart(2, "0")}
+                </span>
+              </p>
+            </div>
+
             <Button
               onClick={handleVerifyOtp}
-              disabled={isLoading || otp.length !== 6}
+              disabled={isLoading || otp.length !== 6 || otpExpiresIn === 0}
               className="btn-primary w-full"
               data-testid="verify-code-button"
             >
@@ -256,6 +312,8 @@ export default function LoginPage() {
                   <div className="spinner mr-2" />
                   Verifying...
                 </>
+              ) : otpExpiresIn === 0 ? (
+                "Code Expired"
               ) : (
                 "Verify Code"
               )}

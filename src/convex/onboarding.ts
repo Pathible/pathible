@@ -1,0 +1,557 @@
+import { mutation, query, internalMutation, internalQuery, internalAction } from "./_generated/server";
+import { v } from "convex/values";
+import { requireAuth } from "./auth";
+import { internal } from "./_generated/api";
+
+/**
+ * Onboarding Module
+ *
+ * Handles the 4-step onboarding wizard:
+ * 1. Profile - Complete user profile information
+ * 2. Household - Create first household
+ * 3. Preferences - Set goals and preferences
+ * 4. Invitations - Send invitations to family members
+ */
+
+// ============================================================================
+// QUERIES
+// ============================================================================
+
+/**
+ * Get the current user's onboarding status and existing data
+ * Used to resume onboarding or redirect to correct step
+ */
+export const getStatus = query({
+  args: {},
+  returns: v.object({
+    status: v.union(
+      v.literal("not_started"),
+      v.literal("profile_complete"),
+      v.literal("household_complete"),
+      v.literal("preferences_complete"),
+      v.literal("complete")
+    ),
+    currentStep: v.number(),
+    profile: v.object({
+      firstName: v.string(),
+      lastName: v.string(),
+      phone: v.optional(v.string()),
+      dateOfBirth: v.optional(v.number()),
+      avatarUrl: v.optional(v.string()),
+    }),
+    household: v.optional(
+      v.object({
+        id: v.id("households"),
+        name: v.string(),
+      })
+    ),
+  }),
+  handler: async (ctx) => {
+    const { profile } = await requireAuth(ctx);
+
+    // Get household if exists
+    const membership = await ctx.db
+      .query("householdMemberships")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .first();
+
+    let household = undefined;
+    if (membership) {
+      const h = await ctx.db.get(membership.householdId);
+      if (h) {
+        household = { id: h._id, name: h.name };
+      }
+    }
+
+    return {
+      status: profile.onboardingStatus || "not_started",
+      currentStep: profile.onboardingStep || 1,
+      profile: {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phone: profile.phone,
+        dateOfBirth: profile.dateOfBirth,
+        avatarUrl: profile.avatarUrl,
+      },
+      household,
+    };
+  },
+});
+
+// ============================================================================
+// MUTATIONS - Step 1: Profile
+// ============================================================================
+
+/**
+ * Update user profile with additional information
+ * Step 1 of onboarding
+ */
+export const updateProfile = mutation({
+  args: {
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    dateOfBirth: v.optional(v.number()),
+    avatarUrl: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+
+    // Validate inputs
+    if (args.firstName !== undefined && !args.firstName.trim()) {
+      throw new Error("First name cannot be empty");
+    }
+    if (args.lastName !== undefined && !args.lastName.trim()) {
+      throw new Error("Last name cannot be empty");
+    }
+    if (args.dateOfBirth && args.dateOfBirth > Date.now()) {
+      throw new Error("Date of birth cannot be in the future");
+    }
+    if (args.phone && !/^\+?[\d\s\-()]+$/.test(args.phone)) {
+      throw new Error("Invalid phone number format");
+    }
+
+    // Build update object
+    const updates: any = {
+      updatedAt: Date.now(),
+      onboardingStatus: "profile_complete",
+      onboardingStep: 2,
+    };
+
+    if (args.firstName !== undefined) updates.firstName = args.firstName.trim();
+    if (args.lastName !== undefined) updates.lastName = args.lastName.trim();
+    if (args.phone !== undefined) updates.phone = args.phone;
+    if (args.dateOfBirth !== undefined) updates.dateOfBirth = args.dateOfBirth;
+    if (args.avatarUrl !== undefined) updates.avatarUrl = args.avatarUrl;
+
+    await ctx.db.patch(profile._id, updates);
+
+    return null;
+  },
+});
+
+// ============================================================================
+// MUTATIONS - Step 2: Household
+// ============================================================================
+
+/**
+ * Create user's first household
+ * Step 2 of onboarding
+ * Automatically creates membership with owner role
+ */
+export const createFirstHousehold = mutation({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+  },
+  returns: v.id("households"),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+
+    // Validate
+    if (!args.name.trim()) {
+      throw new Error("Household name is required");
+    }
+    if (args.name.length > 100) {
+      throw new Error("Household name is too long (max 100 characters)");
+    }
+
+    // Check if user already has a household (prevent duplicates during onboarding)
+    const existingMembership = await ctx.db
+      .query("householdMemberships")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .first();
+
+    if (existingMembership) {
+      throw new Error("You already belong to a household");
+    }
+
+    // Create household
+    const householdId = await ctx.db.insert("households", {
+      name: args.name.trim(),
+      description: args.description?.trim(),
+      primaryContactId: profile._id,
+      subscriptionTier: "foundations", // Default tier
+      subscriptionStatus: "active", // Start with free tier active
+      updatedAt: Date.now(),
+    });
+
+    // Create membership (owner role)
+    await ctx.db.insert("householdMemberships", {
+      householdId,
+      userId: profile._id,
+      role: "owner",
+      status: "active",
+      joinedAt: Date.now(),
+    });
+
+    // Update profile onboarding status
+    await ctx.db.patch(profile._id, {
+      onboardingStatus: "household_complete",
+      onboardingStep: 3,
+      updatedAt: Date.now(),
+    });
+
+    // Log activity
+    await ctx.db.insert("activityLog", {
+      householdId,
+      userId: profile._id,
+      actionType: "other",
+      description: `Created household "${args.name.trim()}"`,
+    });
+
+    return householdId;
+  },
+});
+
+// ============================================================================
+// MUTATIONS - Step 3: Preferences
+// ============================================================================
+
+/**
+ * Set user preferences and goals
+ * Step 3 of onboarding
+ */
+export const setPreferences = mutation({
+  args: {
+    goals: v.array(
+      v.union(
+        v.literal("document_organization"),
+        v.literal("legacy_planning"),
+        v.literal("family_heritage"),
+        v.literal("financial_clarity"),
+        v.literal("estate_planning"),
+        v.literal("end_of_life_planning")
+      )
+    ),
+    emailNotifications: v.boolean(),
+    interestedFeatures: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+
+    // Validate
+    if (args.goals.length === 0) {
+      throw new Error("Please select at least one goal");
+    }
+    if (args.goals.length > 6) {
+      throw new Error("Please select no more than 6 goals");
+    }
+
+    // Check if preferences already exist (in case of retry)
+    const existing = await ctx.db
+      .query("userPreferences")
+      .withIndex("by_profile", (q) => q.eq("profileId", profile._id))
+      .first();
+
+    if (existing) {
+      // Update existing
+      await ctx.db.patch(existing._id, {
+        goals: args.goals,
+        emailNotifications: args.emailNotifications,
+        interestedFeatures: args.interestedFeatures,
+        updatedAt: Date.now(),
+      });
+    } else {
+      // Create new
+      await ctx.db.insert("userPreferences", {
+        profileId: profile._id,
+        goals: args.goals,
+        emailNotifications: args.emailNotifications,
+        interestedFeatures: args.interestedFeatures,
+        shareDataWithHousehold: true, // Default
+        updatedAt: Date.now(),
+      });
+    }
+
+    // Update profile onboarding status
+    await ctx.db.patch(profile._id, {
+      onboardingStatus: "preferences_complete",
+      onboardingStep: 4,
+      updatedAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+// ============================================================================
+// MUTATIONS - Step 4: Invitations
+// ============================================================================
+
+/**
+ * Send invitations to family members
+ * Step 4 of onboarding
+ * Creates invitations and schedules email sending
+ */
+export const sendInvitations = mutation({
+  args: {
+    invitations: v.array(
+      v.object({
+        email: v.string(),
+        relationship: v.optional(v.string()),
+        role: v.union(
+          v.literal("steward"),
+          v.literal("viewer"),
+          v.literal("executor")
+        ),
+      })
+    ),
+  },
+  returns: v.object({
+    sent: v.number(),
+    failed: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+
+    // Get user's household (must have one from step 2)
+    const membership = await ctx.db
+      .query("householdMemberships")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .first();
+
+    if (!membership) {
+      throw new Error("No household found. Please complete household setup first.");
+    }
+
+    const household = await ctx.db.get(membership.householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
+
+    // Validate invitations
+    if (args.invitations.length === 0) {
+      // Allow skipping invitations
+      await ctx.db.patch(profile._id, {
+        onboardingStatus: "complete",
+        onboardingCompletedAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return { sent: 0, failed: 0 };
+    }
+
+    if (args.invitations.length > 10) {
+      throw new Error("Cannot send more than 10 invitations at once");
+    }
+
+    // Validate email addresses
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (const inv of args.invitations) {
+      if (!emailRegex.test(inv.email)) {
+        throw new Error(`Invalid email address: ${inv.email}`);
+      }
+    }
+
+    let sent = 0;
+    let failed = 0;
+
+    // Create invitations
+    for (const inv of args.invitations) {
+      try {
+        // Check if invitation already exists
+        const existingInvite = await ctx.db
+          .query("householdInvitations")
+          .withIndex("by_household", (q) => q.eq("householdId", household._id))
+          .filter((q) => q.eq(q.field("email"), inv.email))
+          .filter((q) => q.eq(q.field("status"), "pending"))
+          .first();
+
+        if (existingInvite) {
+          // Skip duplicate
+          continue;
+        }
+
+        // Generate unique token
+        const token = crypto.randomUUID();
+
+        // Create invitation
+        const invitationId = await ctx.db.insert("householdInvitations", {
+          householdId: household._id,
+          email: inv.email.toLowerCase(),
+          invitedBy: profile._id,
+          relationship: inv.relationship,
+          role: inv.role,
+          token,
+          status: "pending",
+          expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
+        // Schedule email sending (non-blocking)
+        await ctx.scheduler.runAfter(0, internal.onboarding.sendInvitationEmail, {
+          invitationId,
+        });
+
+        sent++;
+      } catch (error) {
+        console.error(`Failed to send invitation to ${inv.email}:`, error);
+        failed++;
+      }
+    }
+
+    // Mark onboarding complete
+    await ctx.db.patch(profile._id, {
+      onboardingStatus: "complete",
+      onboardingCompletedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    // Log activity
+    await ctx.db.insert("activityLog", {
+      householdId: household._id,
+      userId: profile._id,
+      actionType: "member_invited",
+      description: `Invited ${sent} family member(s) to household`,
+    });
+
+    return { sent, failed };
+  },
+});
+
+/**
+ * Skip invitations and complete onboarding
+ * Step 4 optional skip
+ */
+export const skipInvitations = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const { profile } = await requireAuth(ctx);
+
+    // Mark onboarding complete without sending invitations
+    await ctx.db.patch(profile._id, {
+      onboardingStatus: "complete",
+      onboardingCompletedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+// ============================================================================
+// INTERNAL FUNCTIONS - Email Sending
+// ============================================================================
+
+/**
+ * Get invitation details for email
+ * Internal query used by sendInvitationEmail action
+ */
+export const getInvitationDetails = internalQuery({
+  args: { invitationId: v.id("householdInvitations") },
+  returns: v.union(
+    v.object({
+      email: v.string(),
+      token: v.string(),
+      householdName: v.string(),
+      inviterName: v.string(),
+      expiresAt: v.number(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db.get(args.invitationId);
+    if (!invitation) return null;
+
+    const household = await ctx.db.get(invitation.householdId);
+    const inviter = await ctx.db.get(invitation.invitedBy);
+
+    if (!household || !inviter) return null;
+
+    return {
+      email: invitation.email,
+      token: invitation.token,
+      householdName: household.name,
+      inviterName: `${inviter.firstName} ${inviter.lastName}`,
+      expiresAt: invitation.expiresAt,
+    };
+  },
+});
+
+/**
+ * Mark invitation as failed
+ * Internal mutation used when email sending fails
+ */
+export const markInvitationFailed = internalMutation({
+  args: { invitationId: v.id("householdInvitations") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.invitationId, {
+      status: "failed",
+    });
+    return null;
+  },
+});
+
+/**
+ * Send invitation email
+ * Internal action that sends the actual email
+ */
+export const sendInvitationEmail = internalAction({
+  args: {
+    invitationId: v.id("householdInvitations"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Get invitation details
+    const invitation = await ctx.runQuery(internal.onboarding.getInvitationDetails, {
+      invitationId: args.invitationId,
+    });
+
+    if (!invitation) {
+      console.error(`Invitation ${args.invitationId} not found`);
+      return null;
+    }
+
+    // Send email via Resend (or log in dev mode)
+    try {
+      if (process.env.RESEND_API_KEY) {
+        const { Resend } = await import("resend");
+        const resend = new Resend(process.env.RESEND_API_KEY);
+
+        const inviteUrl = `${process.env.SITE_URL}/invite/${invitation.token}`;
+
+        await resend.emails.send({
+          from: `${process.env.EMAIL_FROM_NAME || "Pathible"} <${process.env.EMAIL_FROM_ADDRESS}>`,
+          to: invitation.email,
+          subject: `You've been invited to join ${invitation.householdName} on Pathible`,
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #4B7F52;">Pathible</h1>
+              <h2>You've been invited!</h2>
+              <p>${invitation.inviterName} has invited you to join their household "${invitation.householdName}" on Pathible.</p>
+              <p style="margin: 30px 0;">
+                <a href="${inviteUrl}" style="background: #4B7F52; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  Accept Invitation
+                </a>
+              </p>
+              <p style="color: #666;">This invitation expires on ${new Date(invitation.expiresAt).toLocaleDateString()}.</p>
+              <p style="color: #999; font-size: 12px; margin-top: 40px;">
+                If you didn't expect this invitation, you can safely ignore this email.
+              </p>
+            </div>
+          `,
+        });
+
+        console.log(`[Onboarding] Invitation email sent to ${invitation.email}`);
+      } else {
+        console.log(`[Onboarding] [DEV MODE] Invitation email for ${invitation.email}:`);
+        console.log(`  Household: ${invitation.householdName}`);
+        console.log(`  Inviter: ${invitation.inviterName}`);
+        console.log(`  Token: ${invitation.token}`);
+        console.log(`  URL: ${process.env.SITE_URL}/invite/${invitation.token}`);
+      }
+    } catch (error) {
+      console.error(`[Onboarding] Failed to send invitation email:`, error);
+
+      // Update invitation status to failed
+      await ctx.runMutation(internal.onboarding.markInvitationFailed, {
+        invitationId: args.invitationId,
+      });
+    }
+
+    return null;
+  },
+});

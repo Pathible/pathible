@@ -25,7 +25,7 @@ export const checkRole = query({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     try {
-      const user = await authComponent.getAuthUser(ctx);
+      const user = await authComponent.getAuthUser(ctx as any);
       if (!user) return false;
 
       const userRole = await ctx.db
@@ -52,7 +52,7 @@ export const getMyRole = query({
   ),
   handler: async (ctx) => {
     try {
-      const user = await authComponent.getAuthUser(ctx);
+      const user = await authComponent.getAuthUser(ctx as any);
       if (!user) return null;
 
       const userRole = await ctx.db

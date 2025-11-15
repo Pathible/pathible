@@ -1,180 +1,250 @@
-import { createClient, type GenericCtx } from "@convex-dev/better-auth";
-import { convex } from "@convex-dev/better-auth/plugins";
-import { components } from "./_generated/api";
-import { DataModel } from "./_generated/dataModel";
-import { query, internalQuery } from "./_generated/server";
+import { createClient } from "@convex-dev/better-auth";
 import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
-import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
 import { Resend } from "resend";
-import { getSignInOTPEmail } from "../lib/email-templates/otp-sign-in";
-import { getEmailVerificationOTPEmail } from "../lib/email-templates/otp-email-verification";
-import { getPasswordResetOTPEmail } from "../lib/email-templates/otp-password-reset";
-import type { BetterAuthUser } from "../types/auth";
+import { query } from "./_generated/server";
+import { v } from "convex/values";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { components } from "./_generated/api";
 
-const siteUrl = process.env.SITE_URL!;
-const isDevelopment = process.env.NODE_ENV === 'development';
+/**
+ * Better Auth Configuration for Convex
+ *
+ * This file sets up Better Auth with Convex adapter and exports helper functions
+ * for authentication and authorization in Convex functions.
+ */
 
-// Initialize Resend with API key from environment
-// Note: In development without RESEND_API_KEY, emails will be logged to console
-const resendApiKey = process.env.RESEND_API_KEY;
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
-const emailFromAddress = process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
-const emailFromName = process.env.EMAIL_FROM_NAME || "Pathible";
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
-// The component client has methods needed for integrating Convex with Better Auth,
-// as well as helper methods for general use.
-export const authComponent = createClient<DataModel>(components.betterAuth);
-
-export const createAuth = (
-  ctx: GenericCtx<DataModel>,
-  { optionsOnly } = { optionsOnly: false }
-) => {
-  return betterAuth({
-    // disable logging when createAuth is called just to generate options.
-    // this is not required, but there's a lot of noise in logs without it.
-    logger: {
-      disabled: optionsOnly,
-    },
-    baseURL: siteUrl,
+/**
+ * Create the Better Auth instance with Convex adapter
+ */
+export const createAuth = (ctx: any) =>
+  betterAuth({
     database: authComponent.adapter(ctx),
+    // Add trustedOrigins to allow requests from Next.js app
+    // Note: Convex env vars are separate from Next.js .env.local
+    trustedOrigins: [
+      "https://quaint-loris-658.convex.site",
+      "http://localhost:3000",
+      "http://localhost:3001",
+    ],
+    emailAndPassword: {
+      enabled: false, // We use email OTP instead
+    },
     plugins: [
-      // Email OTP authentication with secure defaults
       emailOTP({
-        // Send OTP via Resend (or console in development)
-        sendVerificationOTP: async ({ email, otp, type }) => {
-          // Development logging only
-          if (isDevelopment) {
-            console.log('==============================================');
-            console.log('[OTP] Email:', email);
-            console.log('[OTP] Type:', type);
-            console.log('[OTP] OTP Code:', otp);
-            console.log('[OTP] Resend configured:', !!resend);
-            console.log('==============================================');
-          }
+        expiresIn: 300, // 5 minutes - explicitly documented
+        otpLength: 6, // 6-digit codes
+        allowedAttempts: 3, // Maximum 3 verification attempts per OTP
+        storeOTP: "encrypted", // Encrypt OTPs in database for security
+        async sendVerificationOTP({ email, otp, type }) {
+          const emailFrom =
+            process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
+          const emailFromName = process.env.EMAIL_FROM_NAME || "Pathible";
 
-          // Get appropriate email template based on type
-          let emailContent: { subject: string; html: string; text: string };
-
-          if (type === "sign-in") {
-            emailContent = getSignInOTPEmail(otp);
-          } else if (type === "email-verification") {
-            emailContent = getEmailVerificationOTPEmail(otp);
+          if (resend) {
+            try {
+              await resend.emails.send({
+                from: `${emailFromName} <${emailFrom}>`,
+                to: email,
+                subject:
+                  type === "sign-in"
+                    ? "Your Pathible Sign-In Code"
+                    : type === "email-verification"
+                    ? "Verify Your Pathible Email"
+                    : "Reset Your Pathible Password",
+                html: `
+                  <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #4B7F52;">Pathible</h1>
+                    <h2>Your verification code is:</h2>
+                    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center;">
+                      <h1 style="font-size: 32px; letter-spacing: 8px; margin: 0;">${otp}</h1>
+                    </div>
+                    <p style="color: #666; margin-top: 20px;">
+                      This code will expire in 5 minutes.
+                    </p>
+                    <p style="color: #999; font-size: 12px;">
+                      If you didn't request this code, please ignore this email.
+                    </p>
+                  </div>
+                `,
+              });
+              console.log(`[Auth] OTP sent to ${email}`);
+            } catch (error) {
+              console.error(`[Auth] Failed to send OTP to ${email}:`, error);
+              throw new Error("Failed to send verification code");
+            }
           } else {
-            // type === "forget-password"
-            emailContent = getPasswordResetOTPEmail(otp);
-          }
-
-          // Development: Log to console if Resend not configured
-          if (!resend) {
-            if (isDevelopment) {
-              console.log(`
-==============================================
-📧 OTP Email (Development Mode)
-==============================================
-To: ${email}
-Type: ${type}
-Subject: ${emailContent.subject}
-OTP Code: ${otp}
-==============================================
-Note: Configure RESEND_API_KEY to send real emails
-==============================================
-              `);
-            }
-            return;
-          }
-
-          // Production: Send via Resend
-          if (isDevelopment) {
-            console.log('[OTP] Attempting to send via Resend...');
-          }
-
-          try {
-            const { data, error } = await resend.emails.send({
-              from: `${emailFromName} <${emailFromAddress}>`,
-              to: email,
-              subject: emailContent.subject,
-              html: emailContent.html,
-              text: emailContent.text,
-            });
-
-            if (error) {
-              console.error('[OTP] Resend error:', error);
-              throw new Error(`Failed to send OTP email: ${error.message}`);
-            }
-
-            if (isDevelopment) {
-              console.log(`[OTP] ✅ Success! Email sent to ${email} (ID: ${data?.id})`);
-            }
-          } catch (error) {
-            console.error('[OTP] Exception sending email:', error);
-            throw error;
+            // Development mode - log OTP to console
+            console.log(`[Auth] OTP for ${email}: ${otp} (type: ${type})`);
           }
         },
-
-        // Security Options
-        otpLength: 6, // 6-digit OTP
-        expiresIn: 300, // 5 minutes
-        allowedAttempts: 3, // Maximum 3 attempts before OTP becomes invalid
-        sendVerificationOnSignUp: true, // Send OTP to verify email on sign-up
-        disableSignUp: false, // Allow automatic user creation on sign-in
-
-        // Store OTP encrypted in database for security
-        storeOTP: "encrypted",
       }),
-
-      // The Convex plugin is required for Convex compatibility
-      convex(),
     ],
   });
-};
+
+/**
+ * Better Auth component instance for Convex
+ */
+export const authComponent = createClient(components.betterAuth, {
+  local: {
+    schema: undefined, // Uses default schema from component
+  },
+});
+
+/**
+ * Type for authenticated context with user and profile
+ */
+export interface AuthenticatedContext {
+  user: {
+    _id: string;
+    email: string;
+  };
+  profile: {
+    _id: Id<"profiles">;
+    _creationTime: number;
+    userId: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl?: string;
+    phone?: string;
+    dateOfBirth?: number;
+    updatedAt: number;
+    onboardingStatus?:
+      | "not_started"
+      | "profile_complete"
+      | "household_complete"
+      | "preferences_complete"
+      | "complete";
+    onboardingStep?: number;
+    onboardingCompletedAt?: number;
+  };
+}
+
+/**
+ * Require authentication and return user + profile
+ *
+ * Throws an error if not authenticated or profile doesn't exist.
+ * Use this in mutations and queries that require authentication.
+ *
+ * @example
+ * export const myMutation = mutation({
+ *   handler: async (ctx, args) => {
+ *     const { user, profile } = await requireAuth(ctx);
+ *     // ... use user and profile
+ *   }
+ * });
+ */
+export async function requireAuth(
+  ctx: QueryCtx | MutationCtx
+): Promise<AuthenticatedContext> {
+  // Get the authenticated user from Better Auth
+  const user = await authComponent.getAuthUser(ctx as any);
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Get the user's profile
+  const profile = await ctx.db
+    .query("profiles")
+    .withIndex("by_userId", (q) => q.eq("userId", user._id as any))
+    .unique();
+
+  if (!profile) {
+    throw new Error("Profile not found");
+  }
+
+  return {
+    user: {
+      _id: user._id as any,
+      email: user.email,
+    },
+    profile,
+  };
+}
+
+/**
+ * Require admin role
+ *
+ * Throws an error if not authenticated or not an admin.
+ * Use this in admin-only mutations and queries.
+ *
+ * @example
+ * export const adminOnlyMutation = mutation({
+ *   handler: async (ctx, args) => {
+ *     await requireAdmin(ctx);
+ *     // ... admin-only logic
+ *   }
+ * });
+ */
+export async function requireAdmin(ctx: QueryCtx | MutationCtx): Promise<void> {
+  const { user } = await requireAuth(ctx);
+
+  // Check if user has admin role
+  const userRole = await ctx.db
+    .query("userRoles")
+    .withIndex("by_userId", (q) => q.eq("userId", user._id))
+    .unique();
+
+  if (!userRole || userRole.role !== "admin") {
+    throw new Error("Admin access required");
+  }
+}
+
+/**
+ * Helper: Get the current authenticated user (without requiring a profile)
+ *
+ * Returns null if not authenticated.
+ * Use this helper in other Convex functions when you need to check auth without throwing.
+ */
+async function getCurrentUserHelper(
+  ctx: QueryCtx | MutationCtx
+): Promise<{ user: { _id: string; email: string } } | null> {
+  const user = await authComponent.safeGetAuthUser(ctx as any);
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    user: {
+      _id: user._id as any,
+      email: user.email,
+    },
+  };
+}
 
 // ============================================================================
-// AUTHENTICATION QUERIES
+// CONVEX QUERY EXPORTS (for Next.js server-side calls)
 // ============================================================================
 
 /**
- * Get the current authenticated user
- * Returns null if not authenticated
- *
- * Note: Returns Better Auth user object which is managed by the auth component.
- * The shape of this object is flexible and may contain additional fields.
+ * Query: Get current authenticated user (for Next.js getServerSession)
+ * Returns user info or null if not authenticated
  */
 export const getCurrentUser = query({
   args: {},
   returns: v.union(
     v.object({
-      _id: v.string(),
-      email: v.string(),
-      emailVerified: v.boolean(),
-      name: v.optional(v.string()),
-      image: v.optional(v.union(v.string(), v.null())),
-      createdAt: v.number(),
-      updatedAt: v.number(),
+      user: v.object({
+        _id: v.string(),
+        email: v.string(),
+      }),
     }),
     v.null()
   ),
   handler: async (ctx) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user) return null;
-
-    const typedUser = user as BetterAuthUser & { image?: string | null };
-    return {
-      _id: typedUser._id,
-      email: typedUser.email,
-      emailVerified: typedUser.emailVerified,
-      name: typedUser.name,
-      image: typedUser.image,
-      createdAt: typedUser.createdAt,
-      updatedAt: typedUser.updatedAt,
-    };
+    return await getCurrentUserHelper(ctx);
   },
 });
 
 /**
- * Get the current user with their profile
- * Returns null if not authenticated or profile doesn't exist
+ * Query: Get current user with profile (for Next.js getServerSessionWithProfile)
+ * Returns user and profile or null if not authenticated or no profile
  */
 export const getCurrentUserWithProfile = query({
   args: {},
@@ -183,11 +253,6 @@ export const getCurrentUserWithProfile = query({
       user: v.object({
         _id: v.string(),
         email: v.string(),
-        emailVerified: v.boolean(),
-        name: v.optional(v.string()),
-        image: v.optional(v.union(v.string(), v.null())),
-        createdAt: v.number(),
-        updatedAt: v.number(),
       }),
       profile: v.object({
         _id: v.id("profiles"),
@@ -198,352 +263,28 @@ export const getCurrentUserWithProfile = query({
         avatarUrl: v.optional(v.string()),
         phone: v.optional(v.string()),
         dateOfBirth: v.optional(v.number()),
+        onboardingStatus: v.optional(
+          v.union(
+            v.literal("not_started"),
+            v.literal("profile_complete"),
+            v.literal("household_complete"),
+            v.literal("preferences_complete"),
+            v.literal("complete")
+          )
+        ),
+        onboardingStep: v.optional(v.number()),
+        onboardingCompletedAt: v.optional(v.number()),
         updatedAt: v.number(),
       }),
     }),
     v.null()
   ),
   handler: async (ctx) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user) return null;
-
-    const typedUser = user as BetterAuthUser & { image?: string | null };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", typedUser._id as string))
-      .unique();
-
-    if (!profile) return null;
-
-    return {
-      user: {
-        _id: typedUser._id,
-        email: typedUser.email,
-        emailVerified: typedUser.emailVerified,
-        name: typedUser.name,
-        image: typedUser.image,
-        createdAt: typedUser.createdAt,
-        updatedAt: typedUser.updatedAt,
-      },
-      profile
-    };
-  },
-});
-
-// ============================================================================
-// AUTHORIZATION HELPERS (Internal)
-// ============================================================================
-
-/**
- * Internal helper to check if a user has a specific role
- * Used internally by other functions - not exposed as public API
- */
-export const _hasRole = internalQuery({
-  args: {
-    userId: v.string(), // Better Auth user ID
-    role: v.union(v.literal("admin"), v.literal("user")),
-  },
-  returns: v.boolean(),
-  handler: async (ctx, args) => {
-    const userRole = await ctx.db
-      .query("userRoles")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .unique();
-
-    return userRole?.role === args.role;
-  },
-});
-
-/**
- * Internal helper to check if a user is a member of a household
- * Used internally by other functions - not exposed as public API
- */
-export const _isHouseholdMember = internalQuery({
-  args: {
-    userId: v.id("profiles"),
-    householdId: v.id("households"),
-  },
-  returns: v.union(
-    v.object({
-      _id: v.id("householdMemberships"),
-      _creationTime: v.number(),
-      householdId: v.id("households"),
-      userId: v.id("profiles"),
-      relationship: v.optional(v.string()),
-      role: v.union(
-        v.literal("owner"),
-        v.literal("steward"),
-        v.literal("viewer"),
-        v.literal("executor")
-      ),
-      status: v.union(
-        v.literal("active"),
-        v.literal("pending"),
-        v.literal("inactive")
-      ),
-      joinedAt: v.number(),
-    }),
-    v.null()
-  ),
-  handler: async (ctx, args) => {
-    const membership = await ctx.db
-      .query("householdMemberships")
-      .withIndex("by_household_and_user", (q) =>
-        q.eq("householdId", args.householdId).eq("userId", args.userId)
-      )
-      .unique();
-
-    // Only return active memberships
-    if (!membership || membership.status !== "active") {
+    try {
+      const auth = await requireAuth(ctx);
+      return auth;
+    } catch {
       return null;
     }
-
-    return membership;
   },
 });
-
-/**
- * Check if the current user has a specific role
- * Public query for role checking
- */
-export const hasRole = query({
-  args: {
-    role: v.union(v.literal("admin"), v.literal("user")),
-  },
-  returns: v.boolean(),
-  handler: async (ctx, args) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user) return false;
-
-    const typedUser = user as BetterAuthUser;
-    const userRole = await ctx.db
-      .query("userRoles")
-      .withIndex("by_userId", (q) => q.eq("userId", typedUser._id as string))
-      .unique();
-
-    return userRole?.role === args.role;
-  },
-});
-
-/**
- * Check if the current user is a member of a specific household
- * Public query for membership checking
- */
-export const isHouseholdMember = query({
-  args: {
-    householdId: v.id("households"),
-  },
-  returns: v.boolean(),
-  handler: async (ctx, args) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user) return false;
-
-    const typedUser = user as BetterAuthUser;
-    // Get the user's profile
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", typedUser._id as string))
-      .unique();
-
-    if (!profile) return false;
-
-    const membership = await ctx.db
-      .query("householdMemberships")
-      .withIndex("by_household_and_user", (q) =>
-        q.eq("householdId", args.householdId).eq("userId", profile._id)
-      )
-      .unique();
-
-    return membership?.status === "active";
-  },
-});
-
-/**
- * Get the current user's role in a specific household
- * Returns null if not a member
- */
-export const getHouseholdRole = query({
-  args: {
-    householdId: v.id("households"),
-  },
-  returns: v.union(
-    v.union(
-      v.literal("owner"),
-      v.literal("steward"),
-      v.literal("viewer"),
-      v.literal("executor")
-    ),
-    v.null()
-  ),
-  handler: async (ctx, args) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user) return null;
-
-    const typedUser = user as BetterAuthUser;
-    // Get the user's profile
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", typedUser._id as string))
-      .unique();
-
-    if (!profile) return null;
-
-    const membership = await ctx.db
-      .query("householdMemberships")
-      .withIndex("by_household_and_user", (q) =>
-        q.eq("householdId", args.householdId).eq("userId", profile._id)
-      )
-      .unique();
-
-    if (!membership || membership.status !== "active") {
-      return null;
-    }
-
-    return membership.role;
-  },
-});
-
-// ============================================================================
-// HELPER FUNCTIONS FOR USE IN OTHER MUTATIONS/QUERIES
-// ============================================================================
-
-/**
- * Helper function to require authentication and return user with profile
- * Throws error if not authenticated or profile doesn't exist
- *
- * Usage in mutations/queries:
- * const { user, profile } = await requireAuth(ctx);
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function requireAuth(ctx: any): Promise<{
-  user: BetterAuthUser;
-  profile: {
-    _id: Id<"profiles">;
-    userId: string;
-    firstName: string;
-    lastName: string;
-    avatarUrl?: string;
-    phone?: string;
-    dateOfBirth?: number;
-    updatedAt: number;
-    _creationTime: number;
-  };
-}> {
-  const user = await authComponent.getAuthUser(ctx);
-  if (!user) {
-    throw new Error("Not authenticated");
-  }
-
-  const typedUser = user as BetterAuthUser;
-  const profile = await ctx.db
-    .query("profiles")
-    .withIndex("by_userId", (q: {
-      eq: (field: string, value: string) => unknown;
-    }) => q.eq("userId", typedUser._id as string))
-    .unique();
-
-  if (!profile) {
-    throw new Error("Profile not found");
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { user: typedUser, profile: profile as any };
-}
-
-/**
- * Helper function to require admin access
- * Throws error if not authenticated or not an admin
- *
- * Usage in mutations/queries:
- * await requireAdmin(ctx);
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function requireAdmin(ctx: any): Promise<void> {
-  const user = await authComponent.getAuthUser(ctx);
-  if (!user) {
-    throw new Error("Not authenticated");
-  }
-
-  const typedUser = user as BetterAuthUser;
-  const userRole = await ctx.db
-    .query("userRoles")
-    .withIndex("by_userId", (q: {
-      eq: (field: string, value: string) => unknown;
-    }) => q.eq("userId", typedUser._id as string))
-    .unique();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const role = userRole as { role?: string } | null;
-  if (!role || role.role !== "admin") {
-    throw new Error("Admin access required");
-  }
-}
-
-/**
- * Helper function to require household access
- * Throws error if not authenticated or not a member of the household
- * Returns the membership for role checking
- *
- * Usage in mutations/queries:
- * const membership = await requireHouseholdAccess(ctx, householdId);
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function requireHouseholdAccess(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
-  householdId: Id<"households">
-): Promise<{
-  _id: Id<"householdMemberships">;
-  householdId: Id<"households">;
-  userId: Id<"profiles">;
-  relationship?: string;
-  role: "owner" | "steward" | "viewer" | "executor";
-  status: "active" | "pending" | "inactive";
-  joinedAt: number;
-  _creationTime: number;
-}> {
-  const { profile } = await requireAuth(ctx);
-
-  const membership = await ctx.db
-    .query("householdMemberships")
-    .withIndex("by_household_and_user", (q: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      eq: (field: string, value: any) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        eq: (field: string, value: any) => unknown;
-      };
-    }) =>
-      q.eq("householdId", householdId).eq("userId", profile._id)
-    )
-    .unique();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const typedMembership = membership as any;
-
-  if (!typedMembership || typedMembership.status !== "active") {
-    throw new Error("Access denied: not a member of this household");
-  }
-
-  return typedMembership;
-}
-
-/**
- * Helper function to require household admin access
- * Throws error if not authenticated or not an admin/owner of the household
- *
- * Usage in mutations/queries:
- * await requireHouseholdAdmin(ctx, householdId);
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function requireHouseholdAdmin(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
-  householdId: Id<"households">
-): Promise<void> {
-  const membership = await requireHouseholdAccess(ctx, householdId);
-
-  if (membership.role !== "owner" && membership.role !== "steward") {
-    throw new Error("Admin access required for this household");
-  }
-}
