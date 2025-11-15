@@ -9,19 +9,11 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardStatCard } from "@/app/(auth)/dashboard/components/dashboard-stat-card";
 import Link from "next/link";
-import { getServerSessionWithProfile } from "@/lib/auth-session";
 
 export default async function DashboardPage() {
-  // Get user data (auth already validated by layout)
-  const session = await getServerSessionWithProfile();
-
-  // Auth layout guarantees this exists, but TypeScript needs the check
-  if (!session) {
-    return null; // Will never happen due to layout redirect
-  }
-
-  // Use real user name from profile
-  const userName = session.profile.firstName;
+  // Auth is validated by layout - user is authenticated
+  // We'll use client-side queries to get user data (Better Auth + Convex works better client-side)
+  const userName = "there"; // Default greeting, will be replaced by client-side component
 
   // Mock data - will be replaced with Convex queries later
   const stats = {
