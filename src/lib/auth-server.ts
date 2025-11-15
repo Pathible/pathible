@@ -1,6 +1,23 @@
-import { createAuth } from "@/convex/auth";
-import { getToken as getTokenNextjs } from "@convex-dev/better-auth/nextjs";
+import { cookies } from "next/headers";
 
-export const getToken = () => {
-  return getTokenNextjs(createAuth);
-};
+/**
+ * Get the Better Auth token from cookies
+ * This retrieves the session token that Better Auth stores in cookies
+ */
+export async function getToken(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+
+    // Better Auth stores the session token in a cookie named "better-auth.session_token"
+    const sessionToken = cookieStore.get("better-auth.session_token");
+
+    if (!sessionToken) {
+      return null;
+    }
+
+    return sessionToken.value;
+  } catch (error) {
+    console.error("[Auth] Failed to get token from cookies:", error);
+    return null;
+  }
+}

@@ -10,7 +10,10 @@ export async function getServerSession() {
   try {
     const token = await getToken();
 
+    console.log("[Auth Debug] Token:", token ? "✓ Present" : "✗ Missing");
+
     if (!token) {
+      console.log("[Auth Debug] No token found, returning null");
       return null;
     }
 
@@ -20,6 +23,8 @@ export async function getServerSession() {
       {},
       { token }
     );
+
+    console.log("[Auth Debug] User from Convex:", user ? "✓ Found" : "✗ Not found");
 
     return user;
   } catch (error) {

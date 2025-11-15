@@ -29,17 +29,8 @@ export default function LoginPage() {
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
-  // Check if user is already authenticated
-  useEffect(() => {
-    const checkAuth = async () => {
-      const session = await authClient.getSession();
-      if (session?.data?.session) {
-        // Let middleware handle the redirect based on profile status
-        router.push(redirect);
-      }
-    };
-    checkAuth();
-  }, [redirect, router]);
+  // Don't auto-redirect - let the user explicitly log in
+  // The auth layout will handle redirects after successful authentication
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -195,7 +195,10 @@ export async function requireAdmin(
 async function getCurrentUserHelper(
   ctx: QueryCtx | MutationCtx
 ): Promise<{ user: { _id: string; email: string } } | null> {
+  console.log("[Convex Auth] getCurrentUserHelper called");
   const user = await authComponent.safeGetAuthUser(ctx as any);
+  console.log("[Convex Auth] safeGetAuthUser result:", user ? "✓ User found" : "✗ No user");
+
   if (!user) {
     return null;
   }
