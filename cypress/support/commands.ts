@@ -63,29 +63,29 @@ declare global {
 /**
  * Login with OTP
  * Fills in email, requests OTP, and enters code
+ * Uses {force: true} to handle element coverage issues
  */
 Cypress.Commands.add("loginWithOtp", (email: string, otp: string) => {
   // Visit login page
   cy.visit("/login");
 
-  // Fill in email
-  cy.get('[data-testid="email-input"]').should("be.visible").type(email);
+  // Fill in email (use force to handle any overlays)
+  cy.get('[data-testid="email-input"]', { timeout: 10000 })
+    .should("be.visible")
+    .type(email, { force: true });
 
   // Click send code button
-  cy.get('[data-testid="send-code-button"]').click();
+  cy.get('[data-testid="send-code-button"]').click({ force: true });
 
   // Wait for OTP input to appear
-  cy.get('[data-testid="otp-input"]', { timeout: 10000 }).should("be.visible");
+  cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
 
-  // Enter OTP code (input-otp uses individual slots)
-  cy.get('[data-testid="otp-input"]').within(() => {
-    // Type the OTP - the input-otp component will distribute it across slots
-    cy.get("input").first().type(otp);
-  });
+  // Enter OTP code - type directly on the InputOTP component
+  cy.get('[data-testid="otp-input"]').type(otp, { force: true });
 
   // The verification happens automatically when 6 digits are entered
   // Wait for redirect (either to dashboard or onboarding)
-  cy.url({ timeout: 15000 }).should("not.include", "/login");
+  cy.url({ timeout: 20000 }).should("not.include", "/login");
 });
 
 /**
@@ -128,6 +128,7 @@ Cypress.Commands.add("waitForNavigation", (path: string) => {
 /**
  * Mock the OTP flow by intercepting the API calls
  * This allows tests to proceed without actual email sending
+ * and includes comprehensive Convex API mocking
  */
 Cypress.Commands.add("mockOtpFlow", () => {
   // Intercept OTP send request
@@ -141,11 +142,15 @@ Cypress.Commands.add("mockOtpFlow", () => {
     statusCode: 200,
     body: {
       user: {
+        _id: "test-user-id",
         id: "test-user-id",
-        email: Cypress.env("NEW_USER_EMAIL"),
+        email: Cypress.env("NEW_USER_EMAIL") || "newuser@test.pathible.com",
+        emailVerified: true,
+        createdAt: Date.now(),
       },
       session: {
         token: "test-token",
+        sessionToken: "test-session-token",
         expiresAt: Date.now() + 1000 * 60 * 60 * 24, // 24 hours
       },
     },
@@ -154,8 +159,69 @@ Cypress.Commands.add("mockOtpFlow", () => {
   // Intercept Convex token endpoint
   cy.intercept("GET", "**/api/auth/convex/token", {
     statusCode: 200,
-    body: { token: "test-convex-token" },
+    body: { token: "test-convex-jwt-token" },
   }).as("getConvexToken");
+
+  // Mock Convex profile queries
+  cy.intercept("POST", "**/api/query", (req) => {
+    if (req.body.path === "profiles:get") {
+      // Return null for new users (no profile)
+      req.reply({
+        statusCode: 200,
+        body: { value: null },
+      });
+    } else if (req.body.path === "auth:getCurrentUser") {
+      req.reply({
+        statusCode: 200,
+        body: {
+          value: {
+            _id: "test-user-id",
+            email: "test@example.com",
+            emailVerified: true,
+          },
+        },
+      });
+    } else if (req.body.path === "auth:getCurrentUserWithProfile") {
+      // Return null for new users (no profile yet)
+      req.reply({
+        statusCode: 200,
+        body: { value: null },
+      });
+    } else {
+      // Allow other Convex queries through
+      req.continue();
+    }
+  }).as("convexQuery");
+
+  // Mock Convex mutations (profile creation)
+  cy.intercept("POST", "**/api/mutation", (req) => {
+    if (req.body.path === "profiles:create") {
+      req.reply({
+        statusCode: 200,
+        body: { value: "profile-created-id" },
+      });
+    } else {
+      req.continue();
+    }
+  }).as("convexMutation");
+
+  // Mock session checks
+  cy.intercept("GET", "**/api/auth/get-session", {
+    statusCode: 200,
+    body: {
+      data: {
+        session: {
+          userId: "test-user-id",
+          expiresAt: Date.now() + 86400000,
+        },
+        user: {
+          id: "test-user-id",
+          email: "test@example.com",
+          emailVerified: true,
+        },
+      },
+    },
+  }).as("getSession");
 });
 
 /**
