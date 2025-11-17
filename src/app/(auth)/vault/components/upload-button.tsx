@@ -66,7 +66,7 @@ export function UploadButton({ householdId, categories, className }: UploadButto
         headers: {
           Authorization: authorizationToken,
           "Content-Type": selectedFile.type,
-          "X-Bz-File-Name": b2FileName,
+          "X-Bz-File-Name": encodeURIComponent(b2FileName),
           "X-Bz-Content-Sha1": "do_not_verify", // Skip SHA1 verification for simplicity
         },
         body: selectedFile,

@@ -113,7 +113,8 @@ export default defineSchema({
       v.literal("executor"),
     ),
     status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
-    joinedAt: v.number(), // Unix timestamp
+    invitedBy: v.optional(v.id("profiles")), // Profile that invited this member
+    joinedAt: v.optional(v.number()), // Unix timestamp when member joined
   })
     .index("by_household", ["householdId"])
     .index("by_user", ["userId"])

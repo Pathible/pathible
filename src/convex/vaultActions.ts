@@ -10,7 +10,7 @@
 import { v } from "convex/values";
 import { getBackblazeClient } from "../lib/backblaze/client";
 import { B2_CONSTANTS, generateB2FileName, validateUploadParams } from "../lib/backblaze/config";
-import type { DownloadUrlData, UploadUrlData } from "../lib/backblaze/types";
+import type { UploadUrlData } from "../lib/backblaze/types";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
 
@@ -72,9 +72,10 @@ export const generateDownloadUrl = action({
   },
   returns: v.object({
     url: v.string(),
+    authToken: v.string(),
     expiresIn: v.number(),
   }),
-  handler: async (ctx, args): Promise<DownloadUrlData> => {
+  handler: async (ctx, args) => {
     // Get document using internal query
     const document = await ctx.runQuery(internal.auth.getDocumentInternal, {
       documentId: args.documentId,
@@ -97,12 +98,13 @@ export const generateDownloadUrl = action({
       throw new Error("Access denied: You do not have permission to view this document");
     }
 
-    // Generate download URL
+    // Generate download URL and authorization token
     const b2Client = getBackblazeClient();
-    const url = await b2Client.getDownloadUrl(document.b2FileName);
+    const { url, authToken } = await b2Client.getDownloadUrl(document.b2FileName);
 
     return {
       url,
+      authToken,
       expiresIn: B2_CONSTANTS.DOWNLOAD_URL_EXPIRATION,
     };
   },

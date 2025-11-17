@@ -170,17 +170,20 @@ export class BackblazeClient {
   }
 
   /**
-   * Generate a signed download URL for a file
+   * Generate download URL and authorization token for a file
+   * Returns both URL and auth token - client must include token in Authorization header
    */
-  async getDownloadUrl(fileName: string): Promise<string> {
+  async getDownloadUrl(fileName: string): Promise<{ url: string; authToken: string }> {
     await this.authorize();
 
     // For private buckets, we need download authorization
     const authToken = await this.getDownloadAuthorization(fileName);
 
-    // Construct download URL with authorization token
+    // Construct download URL (auth token goes in Authorization header, not query params)
     const encodedFileName = encodeURIComponent(fileName);
-    return `${this.downloadUrl}/file/${this.config.bucketName}/${encodedFileName}?Authorization=${authToken}`;
+    const url = `${this.downloadUrl}/file/${this.config.bucketName}/${encodedFileName}`;
+
+    return { url, authToken };
   }
 
   /**

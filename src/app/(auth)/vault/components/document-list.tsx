@@ -65,11 +65,15 @@ export function DocumentList({ documents, categories, householdId, isLoading }: 
 
   const handleDownload = async (document: Document) => {
     try {
-      // Generate a signed download URL from B2
-      const { url } = await generateDownloadUrl({ documentId: document._id });
+      // Generate a signed download URL and auth token from B2
+      const { url, authToken } = await generateDownloadUrl({ documentId: document._id });
 
-      // Download the file
-      const response = await fetch(url);
+      // Download the file with Authorization header
+      const response = await fetch(url, {
+        headers: {
+          Authorization: authToken,
+        },
+      });
       const blob = await response.blob();
       const objectUrl = window.URL.createObjectURL(blob);
       const a = window.document.createElement("a");

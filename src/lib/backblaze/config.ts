@@ -64,14 +64,15 @@ export function validateUploadParams(params: {
     throw new Error("File name is too long (max 255 characters)");
   }
 
-  // Validate file size (max 2GB)
-  const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB in bytes
+  // Validate file size
   if (fileSize <= 0) {
     throw new Error("File size must be greater than 0");
   }
 
-  if (fileSize > MAX_FILE_SIZE) {
-    throw new Error("File size exceeds maximum allowed size of 2GB");
+  if (fileSize > B2_CONSTANTS.MAX_FILE_SIZE) {
+    throw new Error(
+      `File size exceeds maximum allowed size of ${B2_CONSTANTS.MAX_FILE_SIZE / (1024 * 1024)}MB`,
+    );
   }
 
   // Validate file type
@@ -102,6 +103,9 @@ export function generateB2FileName(householdId: string, originalFileName: string
  * Constants for B2 integration
  */
 export const B2_CONSTANTS = {
+  // File size limits
+  MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB in bytes (aligned with frontend validation)
+
   // Signed URL expiration (in seconds)
   DOWNLOAD_URL_EXPIRATION: 3600, // 1 hour
 

@@ -63,11 +63,11 @@ const categoryReturnValidator = v.object({
 /**
  * Check if a user has access to a specific document based on access level
  */
-async function checkDocumentAccess(
+function checkDocumentAccess(
   document: Doc<"vaultDocuments">,
   profileId: Id<"profiles">,
   membershipRole: string,
-): Promise<boolean> {
+): boolean {
   // Check access level
   switch (document.accessLevel) {
     case "household":
@@ -173,7 +173,7 @@ export const get = query({
     const { profile } = await requireAuth(ctx);
 
     // Check document-level access
-    const hasAccess = await checkDocumentAccess(document, profile._id, membership.role);
+    const hasAccess = checkDocumentAccess(document, profile._id, membership.role);
 
     if (!hasAccess) {
       throw new Error("Access denied: You do not have permission to view this document");

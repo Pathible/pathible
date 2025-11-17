@@ -156,7 +156,8 @@ export const listMembers = query({
         v.literal("executor"),
       ),
       status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
-      joinedAt: v.number(),
+      invitedBy: v.optional(v.id("profiles")),
+      joinedAt: v.optional(v.number()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -185,6 +186,7 @@ export const listMembers = query({
           relationship: membership.relationship,
           role: membership.role,
           status: membership.status,
+          invitedBy: membership.invitedBy,
           joinedAt: membership.joinedAt,
         };
       }),
