@@ -1,7 +1,14 @@
-import { mutation, query, internalMutation, internalQuery, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth } from "./auth";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+import {
+  internalAction,
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
+import { requireAuth } from "./auth";
 
 /**
  * Onboarding Module
@@ -29,7 +36,7 @@ export const getStatus = query({
       v.literal("profile_complete"),
       v.literal("household_complete"),
       v.literal("preferences_complete"),
-      v.literal("complete")
+      v.literal("complete"),
     ),
     currentStep: v.number(),
     profile: v.object({
@@ -43,7 +50,7 @@ export const getStatus = query({
       v.object({
         id: v.id("households"),
         name: v.string(),
-      })
+      }),
     ),
   }),
   handler: async (ctx) => {
@@ -55,7 +62,7 @@ export const getStatus = query({
       .withIndex("by_user", (q) => q.eq("userId", profile._id))
       .first();
 
-    let household = undefined;
+    let household: { id: Id<"households">; name: string } | undefined;
     if (membership) {
       const h = await ctx.db.get(membership.householdId);
       if (h) {
@@ -113,7 +120,16 @@ export const updateProfile = mutation({
     }
 
     // Build update object
-    const updates: any = {
+    const updates: {
+      updatedAt: number;
+      onboardingStatus: "profile_complete";
+      onboardingStep: number;
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      dateOfBirth?: number;
+      avatarUrl?: string;
+    } = {
       updatedAt: Date.now(),
       onboardingStatus: "profile_complete",
       onboardingStep: 2,
@@ -222,8 +238,8 @@ export const setPreferences = mutation({
         v.literal("family_heritage"),
         v.literal("financial_clarity"),
         v.literal("estate_planning"),
-        v.literal("end_of_life_planning")
-      )
+        v.literal("end_of_life_planning"),
+      ),
     ),
     emailNotifications: v.boolean(),
     interestedFeatures: v.array(v.string()),
@@ -292,12 +308,8 @@ export const sendInvitations = mutation({
       v.object({
         email: v.string(),
         relationship: v.optional(v.string()),
-        role: v.union(
-          v.literal("steward"),
-          v.literal("viewer"),
-          v.literal("executor")
-        ),
-      })
+        role: v.union(v.literal("steward"), v.literal("viewer"), v.literal("executor")),
+      }),
     ),
   },
   returns: v.object({
@@ -449,7 +461,7 @@ export const getInvitationDetails = internalQuery({
       inviterName: v.string(),
       expiresAt: v.number(),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx, args) => {
     const invitation = await ctx.db.get(args.invitationId);

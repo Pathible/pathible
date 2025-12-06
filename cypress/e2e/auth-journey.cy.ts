@@ -1,11 +1,29 @@
 /// <reference types="cypress" />
 
+interface TestUser {
+  email: string;
+  firstName: string;
+  lastName: string;
+  otp: string;
+}
+
+interface TestUsers {
+  newUser: TestUser;
+  returningUser: TestUser;
+  invalidOtp: string;
+  testOtpCodes: {
+    valid: string;
+    invalid: string;
+    expired: string;
+  };
+}
+
 describe("Authentication Journey Tests", () => {
-  let testUsers: any;
+  let testUsers: TestUsers;
 
   before(() => {
     // Load test fixtures
-    cy.fixture("users").then((users) => {
+    cy.fixture("users").then((users: TestUsers) => {
       testUsers = users;
     });
   });
@@ -50,9 +68,7 @@ describe("Authentication Journey Tests", () => {
       cy.get('[data-testid="send-code-button"]').should("contain", "Sending");
 
       // Step 4: Wait for OTP input to appear
-      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
 
       // Verify we're on the OTP screen
       cy.contains("Enter Code").should("be.visible");
@@ -63,9 +79,7 @@ describe("Authentication Journey Tests", () => {
       cy.get('[data-testid="otp-input"]').type(testUsers.newUser.otp);
 
       // Verify button states during verification
-      cy.get('[data-testid="verify-code-button"]', { timeout: 2000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="verify-code-button"]', { timeout: 2000 }).should("be.visible");
 
       // Step 6: Wait for profile check and redirect to onboarding
       // FIXED: Increased timeout for 800ms delay + profile check
@@ -77,21 +91,14 @@ describe("Authentication Journey Tests", () => {
       cy.get('[data-testid="last-name-input"]').should("be.visible");
 
       // Step 8: Fill in profile form
-      cy.get('[data-testid="first-name-input"]').type(
-        testUsers.newUser.firstName
-      );
-      cy.get('[data-testid="last-name-input"]').type(
-        testUsers.newUser.lastName
-      );
+      cy.get('[data-testid="first-name-input"]').type(testUsers.newUser.firstName);
+      cy.get('[data-testid="last-name-input"]').type(testUsers.newUser.lastName);
 
       // Step 9: Submit profile
       cy.get('[data-testid="submit-profile-button"]').click();
 
       // Verify loading state
-      cy.get('[data-testid="submit-profile-button"]').should(
-        "contain",
-        "Creating Profile"
-      );
+      cy.get('[data-testid="submit-profile-button"]').should("contain", "Creating Profile");
 
       // Step 10: Wait for redirect to dashboard
       cy.url({ timeout: 25000 }).should("include", "/dashboard");
@@ -103,19 +110,15 @@ describe("Authentication Journey Tests", () => {
       }).should("be.visible");
 
       // Verify dashboard elements
-      cy.get('[data-testid="dashboard-stats"]', { timeout: 20000 }).should(
-        "be.visible"
-      );
-      cy.get('[data-testid="user-avatar"]', { timeout: 20000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="dashboard-stats"]', { timeout: 20000 }).should("be.visible");
+      cy.get('[data-testid="user-avatar"]', { timeout: 20000 }).should("be.visible");
 
       // Verify user menu shows correct name
       cy.get('[data-testid="user-menu-trigger"]').click();
       cy.get('[data-testid="user-menu"]').should("be.visible");
-      cy.contains(
-        `${testUsers.newUser.firstName} ${testUsers.newUser.lastName}`
-      ).should("be.visible");
+      cy.contains(`${testUsers.newUser.firstName} ${testUsers.newUser.lastName}`).should(
+        "be.visible",
+      );
     });
 
     it("should show error for invalid OTP code", () => {
@@ -129,9 +132,7 @@ describe("Authentication Journey Tests", () => {
       cy.get('[data-testid="send-code-button"]').click();
 
       // Wait for OTP input
-      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
 
       // Enter invalid OTP - FIXED: Type directly at component level
       cy.get('[data-testid="otp-input"]').type(testUsers.invalidOtp);
@@ -155,9 +156,7 @@ describe("Authentication Journey Tests", () => {
       cy.get('[data-testid="send-code-button"]').click();
 
       // Wait for OTP input
-      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
 
       // Wait for countdown to finish (or verify countdown is visible)
       cy.contains(/Resend code in \d+s/).should("be.visible");
@@ -167,9 +166,7 @@ describe("Authentication Journey Tests", () => {
       cy.wait(61000);
 
       // Click resend button - should now be visible
-      cy.get('[data-testid="resend-code-button"]', { timeout: 5000 })
-        .should("be.visible")
-        .click();
+      cy.get('[data-testid="resend-code-button"]', { timeout: 5000 }).should("be.visible").click();
 
       // Should show success toast
       cy.contains("Code sent!", { timeout: 10000 }).should("be.visible");
@@ -189,19 +186,14 @@ describe("Authentication Journey Tests", () => {
       cy.get('[data-testid="send-code-button"]').click();
 
       // Wait for OTP input
-      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
 
       // Click back button
       cy.get('[data-testid="back-to-email-button"]').click();
 
       // Should be back on email entry screen
       cy.get('[data-testid="email-input"]').should("be.visible");
-      cy.get('[data-testid="email-input"]').should(
-        "have.value",
-        testUsers.newUser.email
-      );
+      cy.get('[data-testid="email-input"]').should("have.value", testUsers.newUser.email);
     });
   });
 
@@ -222,17 +214,13 @@ describe("Authentication Journey Tests", () => {
       cy.url().should("include", "/login");
 
       // Step 2: Enter email address for returning user
-      cy.get('[data-testid="email-input"]').type(
-        testUsers.returningUser.email
-      );
+      cy.get('[data-testid="email-input"]').type(testUsers.returningUser.email);
 
       // Step 3: Click "Send Code"
       cy.get('[data-testid="send-code-button"]').click();
 
       // Step 4: Wait for OTP input
-      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
 
       // Step 5: Enter OTP code - FIXED: Type directly at component level
       cy.get('[data-testid="otp-input"]').type(testUsers.returningUser.otp);
@@ -252,12 +240,8 @@ describe("Authentication Journey Tests", () => {
       }).should("be.visible");
 
       // Verify dashboard elements
-      cy.get('[data-testid="dashboard-stats"]', { timeout: 20000 }).should(
-        "be.visible"
-      );
-      cy.get('[data-testid="user-avatar"]', { timeout: 20000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="dashboard-stats"]', { timeout: 20000 }).should("be.visible");
+      cy.get('[data-testid="user-avatar"]', { timeout: 20000 }).should("be.visible");
     });
 
     it("should redirect to intended destination after login", () => {
@@ -277,13 +261,9 @@ describe("Authentication Journey Tests", () => {
       });
 
       // Complete login
-      cy.get('[data-testid="email-input"]').type(
-        testUsers.returningUser.email
-      );
+      cy.get('[data-testid="email-input"]').type(testUsers.returningUser.email);
       cy.get('[data-testid="send-code-button"]').click();
-      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
       cy.get('[data-testid="otp-input"]').type(testUsers.returningUser.otp);
 
       // Should redirect back to original destination
@@ -296,13 +276,9 @@ describe("Authentication Journey Tests", () => {
 
       // First, login
       cy.visit("/login");
-      cy.get('[data-testid="email-input"]').type(
-        testUsers.returningUser.email
-      );
+      cy.get('[data-testid="email-input"]').type(testUsers.returningUser.email);
       cy.get('[data-testid="send-code-button"]').click();
-      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
       cy.get('[data-testid="otp-input"]').type(testUsers.returningUser.otp);
 
       // Wait for dashboard
@@ -328,13 +304,9 @@ describe("Authentication Journey Tests", () => {
 
       // Login before each test in this suite
       cy.visit("/login");
-      cy.get('[data-testid="email-input"]').type(
-        testUsers.returningUser.email
-      );
+      cy.get('[data-testid="email-input"]').type(testUsers.returningUser.email);
       cy.get('[data-testid="send-code-button"]').click();
-      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
       cy.get('[data-testid="otp-input"]').type(testUsers.returningUser.otp);
       cy.url({ timeout: 25000 }).should("include", "/dashboard");
     });
@@ -342,9 +314,7 @@ describe("Authentication Journey Tests", () => {
     it("should sign out user and redirect to login", () => {
       // Step 1: From dashboard, verify we're authenticated
       cy.url().should("include", "/dashboard");
-      cy.get('[data-testid="user-avatar"]', { timeout: 20000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="user-avatar"]', { timeout: 20000 }).should("be.visible");
 
       // Step 2: Click user avatar dropdown
       cy.get('[data-testid="user-menu-trigger"]').click();
@@ -429,13 +399,9 @@ describe("Authentication Journey Tests", () => {
       cy.url({ timeout: 10000 }).should("include", "/login");
 
       // Complete login
-      cy.get('[data-testid="email-input"]').type(
-        testUsers.returningUser.email
-      );
+      cy.get('[data-testid="email-input"]').type(testUsers.returningUser.email);
       cy.get('[data-testid="send-code-button"]').click();
-      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
       cy.get('[data-testid="otp-input"]').type(testUsers.returningUser.otp);
 
       // Step 3: After login, should return to /dashboard
@@ -470,13 +436,9 @@ describe("Authentication Journey Tests", () => {
 
       // Login as returning user (who has profile)
       cy.visit("/login");
-      cy.get('[data-testid="email-input"]').type(
-        testUsers.returningUser.email
-      );
+      cy.get('[data-testid="email-input"]').type(testUsers.returningUser.email);
       cy.get('[data-testid="send-code-button"]').click();
-      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should(
-        "be.visible"
-      );
+      cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
       cy.get('[data-testid="otp-input"]').type(testUsers.returningUser.otp);
       cy.url({ timeout: 25000 }).should("include", "/dashboard");
     });
@@ -500,9 +462,7 @@ describe("Authentication Journey Tests", () => {
       // This is implicitly tested in Journey 1
       // New users (without profile) can access onboarding
       // This test documents the inverse of the previous test
-      cy.log(
-        "Users without profile can access onboarding (tested in Journey 1)"
-      );
+      cy.log("Users without profile can access onboarding (tested in Journey 1)");
     });
   });
 
@@ -522,9 +482,7 @@ describe("Authentication Journey Tests", () => {
       cy.get('[data-testid="send-code-button"]').click();
 
       // Should show error toast
-      cy.contains(/Failed to send code|error/i, { timeout: 10000 }).should(
-        "be.visible"
-      );
+      cy.contains(/Failed to send code|error/i, { timeout: 10000 }).should("be.visible");
 
       // Should remain on login page
       cy.url().should("include", "/login");
@@ -546,9 +504,7 @@ describe("Authentication Journey Tests", () => {
     it("should require both first and last name in onboarding", () => {
       // This test would need the user to be at onboarding stage
       // For now, we'll document the requirement
-      cy.log(
-        "First and last name are required fields (tested via form validation)"
-      );
+      cy.log("First and last name are required fields (tested via form validation)");
     });
 
     it("should handle rapid navigation", () => {

@@ -16,6 +16,6 @@ export async function updatePassword({
   await fetchMutation(
     api.users.updateUserPassword,
     { currentPassword, newPassword },
-    { token: token ?? undefined }
+    { token: token ?? undefined },
   );
 }

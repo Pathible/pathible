@@ -61,49 +61,38 @@ export const get = query({
  */
 export const list = query({
   args: {},
-  returns: v.union(
-    v.array(
-      v.object({
-        _id: v.id("households"),
-        _creationTime: v.number(),
-        name: v.string(),
-        description: v.optional(v.string()),
-        imageUrl: v.optional(v.string()),
-        primaryContactId: v.id("profiles"),
-        subscriptionTier: v.union(
-          v.literal("foundations"),
-          v.literal("heritage"),
-          v.literal("legacy"),
-        ),
-        subscriptionStatus: v.union(
-          v.literal("active"),
-          v.literal("inactive"),
-          v.literal("cancelled"),
-          v.literal("past_due"),
-        ),
-        updatedAt: v.number(),
-        // Include the user's role in this household
-        userRole: v.union(
-          v.literal("owner"),
-          v.literal("steward"),
-          v.literal("viewer"),
-          v.literal("executor"),
-        ),
-        memberCount: v.number(),
-      }),
-    ),
-    v.null(),
+  returns: v.array(
+    v.object({
+      _id: v.id("households"),
+      _creationTime: v.number(),
+      name: v.string(),
+      description: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      primaryContactId: v.id("profiles"),
+      subscriptionTier: v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+      ),
+      subscriptionStatus: v.union(
+        v.literal("active"),
+        v.literal("inactive"),
+        v.literal("cancelled"),
+        v.literal("past_due"),
+      ),
+      updatedAt: v.number(),
+      // Include the user's role in this household
+      userRole: v.union(
+        v.literal("owner"),
+        v.literal("steward"),
+        v.literal("viewer"),
+        v.literal("executor"),
+      ),
+      memberCount: v.number(),
+    }),
   ),
   handler: async (ctx) => {
-    // Handle auth race condition gracefully - return null instead of throwing
-    let profile;
-    try {
-      const auth = await requireAuth(ctx);
-      profile = auth.profile;
-    } catch {
-      // Auth not ready yet (race condition during page load)
-      return null;
-    }
+    const { profile } = await requireAuth(ctx);
 
     // Get all active memberships for this user
     const memberships = await ctx.db
@@ -167,6 +156,7 @@ export const listMembers = query({
         v.literal("executor"),
       ),
       status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+      invitedBy: v.optional(v.id("profiles")),
       joinedAt: v.optional(v.number()),
     }),
   ),
@@ -196,6 +186,7 @@ export const listMembers = query({
           relationship: membership.relationship,
           role: membership.role,
           status: membership.status,
+          invitedBy: membership.invitedBy,
           joinedAt: membership.joinedAt,
         };
       }),

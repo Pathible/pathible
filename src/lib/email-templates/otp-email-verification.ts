@@ -1,4 +1,8 @@
-export function getEmailVerificationOTPEmail(otp: string): { subject: string; html: string; text: string } {
+export function getEmailVerificationOTPEmail(otp: string): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   return {
     subject: "Verify Your Pathible Email Address",
     html: `

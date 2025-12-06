@@ -1,14 +1,7 @@
-import {
-  Shield,
-  Users,
-  FileText,
-  ArrowRight,
-  Heart,
-  Sparkles,
-} from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { DashboardStatCard } from "@/app/(auth)/dashboard/components/dashboard-stat-card";
+import { ArrowRight, FileText, Heart, Shield, Sparkles, Users } from "lucide-react";
 import Link from "next/link";
+import { DashboardStatCard } from "@/app/(auth)/dashboard/components/dashboard-stat-card";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function DashboardPage() {
   // Auth is validated by layout - user is authenticated
@@ -71,9 +64,7 @@ export default async function DashboardPage() {
       {/* Greeting */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Welcome back, {userName}.</h1>
-        <p className="text-muted-foreground text-lg">
-          Here&apos;s your legacy journey at a glance
-        </p>
+        <p className="text-muted-foreground text-lg">Here&apos;s your legacy journey at a glance</p>
       </div>
 
       {/* Progress Cards */}
@@ -116,9 +107,7 @@ export default async function DashboardPage() {
                   <h3 className="text-xl font-semibold">Next Step</h3>
                   <ArrowRight className="h-5 w-5 text-primary" />
                 </div>
-                <p className="text-lg font-medium text-foreground mb-1">
-                  {nextStep.title}
-                </p>
+                <p className="text-lg font-medium text-foreground mb-1">{nextStep.title}</p>
                 <p className="text-muted-foreground">{nextStep.description}</p>
               </div>
             </div>
@@ -138,9 +127,7 @@ export default async function DashboardPage() {
               <blockquote className="text-lg italic text-foreground mb-2">
                 &quot;{dailyQuote.text}&quot;
               </blockquote>
-              <p className="text-sm font-medium text-primary mb-3">
-                — {dailyQuote.reference}
-              </p>
+              <p className="text-sm font-medium text-primary mb-3">— {dailyQuote.reference}</p>
               <p className="text-muted-foreground">{dailyQuote.reflection}</p>
             </div>
           </div>

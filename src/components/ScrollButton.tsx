@@ -7,13 +7,7 @@ interface ScrollButtonProps {
   children: React.ReactNode;
   className?: string;
   size?: "default" | "sm" | "lg" | "icon";
-  variant?:
-    | "default"
-    | "destructive"
-    | "outline"
-    | "secondary"
-    | "ghost"
-    | "link";
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 }
 
 export function ScrollButton({
@@ -28,12 +22,7 @@ export function ScrollButton({
   };
 
   return (
-    <Button
-      size={size}
-      variant={variant}
-      className={className}
-      onClick={handleClick}
-    >
+    <Button size={size} variant={variant} className={className} onClick={handleClick}>
       {children}
     </Button>
   );

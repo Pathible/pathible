@@ -1,7 +1,7 @@
-import { DashboardLayout } from "@/app/(auth)/dashboard/components/DashboardLayout";
-import { ReactNode } from "react";
-import { getServerSession } from "@/lib/auth-session";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
+import { DashboardLayout } from "@/app/(auth)/dashboard/components/DashboardLayout";
+import { getServerSession } from "@/lib/auth-session";
 
 /**
  * Auth Layout - Wraps all authenticated routes

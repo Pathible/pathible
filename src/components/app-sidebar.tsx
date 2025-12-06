@@ -1,21 +1,12 @@
 "use client";
 
-import {
-  Shield,
-  BookOpen,
-  FileText,
-  Users,
-  LayoutDashboard,
-  TrendingUp,
-  Compass,
-} from "lucide-react";
+import { BookOpen, FileText, LayoutDashboard, Shield, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarHeader,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -74,11 +65,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      className="px-2"
-                    >
+                    <SidebarMenuButton asChild isActive={isActive} className="px-2">
                       <Link href={item.href}>
                         <Icon className="h-4 w-4" />
                         <span>{item.title}</span>

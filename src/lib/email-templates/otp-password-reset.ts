@@ -1,4 +1,8 @@
-export function getPasswordResetOTPEmail(otp: string): { subject: string; html: string; text: string } {
+export function getPasswordResetOTPEmail(otp: string): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   return {
     subject: "Reset Your Pathible Password",
     html: `

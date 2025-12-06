@@ -54,7 +54,7 @@ after(() => {
 });
 
 // Handle uncaught exceptions
-Cypress.on("uncaught:exception", (err, runnable) => {
+Cypress.on("uncaught:exception", (err) => {
   // Prevent Cypress from failing the test on certain errors
   // You can customize this based on your needs
 

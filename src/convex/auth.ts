@@ -1,5 +1,4 @@
 import { createClient } from "@convex-dev/better-auth";
-import { convex } from "@convex-dev/better-auth/plugins";
 import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
 import { v } from "convex/values";
@@ -26,9 +25,6 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 export const createAuth = (ctx: unknown) =>
   betterAuth({
     database: authComponent.adapter(ctx as Parameters<typeof authComponent.adapter>[0]),
-    // baseURL is required for the convex plugin to work correctly
-    // This should be the Convex site URL where auth endpoints are registered
-    baseURL: process.env.CONVEX_SITE_URL || "https://quaint-loris-658.convex.site",
     // Add trustedOrigins to allow requests from Next.js app
     // Note: Convex env vars are separate from Next.js .env.local
     trustedOrigins: [
@@ -40,9 +36,6 @@ export const createAuth = (ctx: unknown) =>
       enabled: false, // We use email OTP instead
     },
     plugins: [
-      // Convex plugin - MUST be included for JWT token generation
-      // This plugin sets the convex_jwt cookie after sign-in and provides /convex/token endpoint
-      convex(),
       emailOTP({
         expiresIn: 300, // 5 minutes - explicitly documented
         otpLength: 6, // 6-digit codes
