@@ -539,7 +539,7 @@ describe("Authentication Journey Tests", () => {
 
       // HTML5 validation should prevent submission
       cy.get('[data-testid="email-input"]').then(($input) => {
-        expect($input[0].validationMessage).to.not.be.empty;
+        expect(($input[0] as HTMLInputElement).validationMessage).to.not.be.empty;
       });
     });
 

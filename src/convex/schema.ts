@@ -193,13 +193,18 @@ export default defineSchema({
 
   /**
    * Vault documents - secure document storage with access control
+   * Files are stored in Backblaze B2 (S3-compatible storage)
    */
   vaultDocuments: defineTable({
     householdId: v.id("households"),
     uploadedBy: v.id("profiles"),
     name: v.string(),
     description: v.optional(v.string()),
-    storageId: v.id("_storage"), // Convex file storage reference
+    // Backblaze B2 storage fields (S3-compatible)
+    b2FileId: v.string(), // B2 file ID for deletion
+    b2FileName: v.string(), // Full path in B2 bucket
+    b2BucketName: v.string(), // Bucket name
+    fileHash: v.optional(v.string()), // SHA256 hash for integrity
     fileSize: v.number(), // bytes
     fileType: v.string(), // MIME type
     categories: v.array(v.string()),

@@ -1,12 +1,13 @@
 import { createClient } from "@convex-dev/better-auth";
+import { convex } from "@convex-dev/better-auth/plugins";
 import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
-import { Resend } from "resend";
-import { query } from "./_generated/server";
 import { v } from "convex/values";
-import type { QueryCtx, MutationCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import { Resend } from "resend";
 import { components } from "./_generated/api";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { internalQuery, query } from "./_generated/server";
 
 /**
  * Better Auth Configuration for Convex
@@ -15,16 +16,19 @@ import { components } from "./_generated/api";
  * for authentication and authorization in Convex functions.
  */
 
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 /**
  * Create the Better Auth instance with Convex adapter
  */
-export const createAuth = (ctx: any) =>
+// Note: ctx type uses unknown and type assertion because Better Auth's adapter
+// expects GenericCtx but we need to accept various Convex context types
+export const createAuth = (ctx: unknown) =>
   betterAuth({
-    database: authComponent.adapter(ctx),
+    database: authComponent.adapter(ctx as Parameters<typeof authComponent.adapter>[0]),
+    // baseURL is required for the convex plugin to work correctly
+    // This should be the Convex site URL where auth endpoints are registered
+    baseURL: process.env.CONVEX_SITE_URL || "https://quaint-loris-658.convex.site",
     // Add trustedOrigins to allow requests from Next.js app
     // Note: Convex env vars are separate from Next.js .env.local
     trustedOrigins: [
@@ -36,14 +40,16 @@ export const createAuth = (ctx: any) =>
       enabled: false, // We use email OTP instead
     },
     plugins: [
+      // Convex plugin - MUST be included for JWT token generation
+      // This plugin sets the convex_jwt cookie after sign-in and provides /convex/token endpoint
+      convex(),
       emailOTP({
         expiresIn: 300, // 5 minutes - explicitly documented
         otpLength: 6, // 6-digit codes
         allowedAttempts: 3, // Maximum 3 verification attempts per OTP
         storeOTP: "encrypted", // Encrypt OTPs in database for security
         async sendVerificationOTP({ email, otp, type }) {
-          const emailFrom =
-            process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
+          const emailFrom = process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
           const emailFromName = process.env.EMAIL_FROM_NAME || "Pathible";
 
           if (resend) {
@@ -55,8 +61,8 @@ export const createAuth = (ctx: any) =>
                   type === "sign-in"
                     ? "Your Pathible Sign-In Code"
                     : type === "email-verification"
-                    ? "Verify Your Pathible Email"
-                    : "Reset Your Pathible Password",
+                      ? "Verify Your Pathible Email"
+                      : "Reset Your Pathible Password",
                 html: `
                   <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                     <h1 style="color: #4B7F52;">Pathible</h1>
@@ -139,19 +145,23 @@ export interface AuthenticatedContext {
  *   }
  * });
  */
-export async function requireAuth(
-  ctx: QueryCtx | MutationCtx
-): Promise<AuthenticatedContext> {
+export async function requireAuth(ctx: QueryCtx | MutationCtx): Promise<AuthenticatedContext> {
   // Get the authenticated user from Better Auth
-  const user = await authComponent.getAuthUser(ctx as any);
+  // Note: Better Auth's context type doesn't perfectly match Convex's ctx, so we cast carefully
+  const user = await authComponent.getAuthUser(
+    ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
+  );
   if (!user) {
     throw new Error("Not authenticated");
   }
 
+  // Extract user ID safely
+  const userId = String(user._id);
+
   // Get the user's profile
   const profile = await ctx.db
     .query("profiles")
-    .withIndex("by_userId", (q) => q.eq("userId", user._id as any))
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
     .unique();
 
   if (!profile) {
@@ -160,7 +170,7 @@ export async function requireAuth(
 
   return {
     user: {
-      _id: user._id as any,
+      _id: userId,
       email: user.email,
     },
     profile,
@@ -196,15 +206,79 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx): Promise<void> {
 }
 
 /**
+ * Require household access and return membership
+ *
+ * Verifies that the authenticated user is an active member of the specified household.
+ * Returns the user's membership record.
+ *
+ * @example
+ * export const householdQuery = query({
+ *   handler: async (ctx, args) => {
+ *     const membership = await requireHouseholdAccess(ctx, args.householdId);
+ *     // membership.role contains "owner" | "steward" | "viewer" | "executor"
+ *   }
+ * });
+ */
+export async function requireHouseholdAccess(
+  ctx: QueryCtx | MutationCtx,
+  householdId: Id<"households">,
+): Promise<Doc<"householdMemberships">> {
+  const { profile } = await requireAuth(ctx);
+
+  // Check if user is a member of this household
+  const membership = await ctx.db
+    .query("householdMemberships")
+    .withIndex("by_household_and_user", (q) =>
+      q.eq("householdId", householdId).eq("userId", profile._id),
+    )
+    .unique();
+
+  if (!membership || membership.status !== "active") {
+    throw new Error("Access denied: Not a member of this household");
+  }
+
+  return membership;
+}
+
+/**
+ * Require household admin access (owner or steward)
+ *
+ * Verifies that the authenticated user is an active member with admin privileges
+ * (owner or steward role) in the specified household.
+ *
+ * @example
+ * export const adminMutation = mutation({
+ *   handler: async (ctx, args) => {
+ *     await requireHouseholdAdmin(ctx, args.householdId);
+ *     // User is confirmed to be owner or steward
+ *   }
+ * });
+ */
+export async function requireHouseholdAdmin(
+  ctx: QueryCtx | MutationCtx,
+  householdId: Id<"households">,
+): Promise<void> {
+  const membership = await requireHouseholdAccess(ctx, householdId);
+
+  // Only owners and stewards have admin privileges
+  if (membership.role !== "owner" && membership.role !== "steward") {
+    throw new Error("Access denied: Admin privileges required");
+  }
+}
+
+/**
  * Helper: Get the current authenticated user (without requiring a profile)
  *
  * Returns null if not authenticated.
  * Use this helper in other Convex functions when you need to check auth without throwing.
  */
 async function getCurrentUserHelper(
-  ctx: QueryCtx | MutationCtx
+  ctx: QueryCtx | MutationCtx,
 ): Promise<{ user: { _id: string; email: string } } | null> {
-  const user = await authComponent.safeGetAuthUser(ctx as any);
+  // Note: Better Auth's context type doesn't perfectly match Convex's ctx, so we cast carefully
+  const user = await authComponent.safeGetAuthUser(
+    ctx as unknown as Parameters<typeof authComponent.safeGetAuthUser>[0],
+  );
 
   if (!user) {
     return null;
@@ -212,7 +286,7 @@ async function getCurrentUserHelper(
 
   return {
     user: {
-      _id: user._id as any,
+      _id: String(user._id),
       email: user.email,
     },
   };
@@ -235,7 +309,7 @@ export const getCurrentUser = query({
         email: v.string(),
       }),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx) => {
     return await getCurrentUserHelper(ctx);
@@ -269,15 +343,15 @@ export const getCurrentUserWithProfile = query({
             v.literal("profile_complete"),
             v.literal("household_complete"),
             v.literal("preferences_complete"),
-            v.literal("complete")
-          )
+            v.literal("complete"),
+          ),
         ),
         onboardingStep: v.optional(v.number()),
         onboardingCompletedAt: v.optional(v.number()),
         updatedAt: v.number(),
       }),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx) => {
     try {
@@ -286,5 +360,105 @@ export const getCurrentUserWithProfile = query({
     } catch {
       return null;
     }
+  },
+});
+
+/**
+ * Internal Query: Require authentication (for use in actions)
+ * Throws if not authenticated
+ */
+export const requireAuthInternal = internalQuery({
+  args: {},
+  returns: v.object({
+    user: v.object({
+      _id: v.string(),
+      email: v.string(),
+    }),
+    profile: v.object({
+      _id: v.id("profiles"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      firstName: v.string(),
+      lastName: v.string(),
+      avatarUrl: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      dateOfBirth: v.optional(v.number()),
+      updatedAt: v.number(),
+      onboardingStatus: v.optional(
+        v.union(
+          v.literal("not_started"),
+          v.literal("profile_complete"),
+          v.literal("household_complete"),
+          v.literal("preferences_complete"),
+          v.literal("complete"),
+        ),
+      ),
+      onboardingStep: v.optional(v.number()),
+      onboardingCompletedAt: v.optional(v.number()),
+    }),
+  }),
+  handler: async (ctx) => {
+    return await requireAuth(ctx);
+  },
+});
+
+/**
+ * Internal Query: Require household access (for use in actions)
+ * Returns membership or throws if not authorized
+ */
+export const requireHouseholdAccessInternal = internalQuery({
+  args: {
+    householdId: v.id("households"),
+  },
+  returns: v.object({
+    _id: v.id("householdMemberships"),
+    _creationTime: v.number(),
+    householdId: v.id("households"),
+    userId: v.id("profiles"),
+    role: v.union(
+      v.literal("owner"),
+      v.literal("steward"),
+      v.literal("viewer"),
+      v.literal("executor"),
+    ),
+    status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+    invitedBy: v.optional(v.id("profiles")),
+    joinedAt: v.optional(v.number()),
+  }),
+  handler: async (ctx, args) => {
+    return await requireHouseholdAccess(ctx, args.householdId);
+  },
+});
+
+/**
+ * Internal Query: Get a document by ID (for use in actions)
+ */
+export const getDocumentInternal = internalQuery({
+  args: {
+    documentId: v.id("vaultDocuments"),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("vaultDocuments"),
+      _creationTime: v.number(),
+      householdId: v.id("households"),
+      uploadedBy: v.id("profiles"),
+      name: v.string(),
+      description: v.optional(v.string()),
+      b2FileId: v.string(),
+      b2FileName: v.string(),
+      b2BucketName: v.string(),
+      fileHash: v.optional(v.string()),
+      fileSize: v.number(),
+      fileType: v.string(),
+      categories: v.array(v.string()),
+      accessLevel: v.union(v.literal("household"), v.literal("admins"), v.literal("custom")),
+      sharedWithUsers: v.array(v.id("profiles")),
+      updatedAt: v.number(),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.documentId);
   },
 });

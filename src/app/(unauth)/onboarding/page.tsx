@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +9,11 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
 /**
  * Multi-Step Onboarding Wizard
@@ -25,8 +26,26 @@ import { ArrowRight, ArrowLeft, Check } from "lucide-react";
  */
 export default function OnboardingPage() {
   const router = useRouter();
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
+
+  // Wait for auth to be ready before allowing form submission
+  useEffect(() => {
+    if (!isSessionPending) {
+      if (session?.session) {
+        // Give Convex client time to sync the auth token
+        const timer = setTimeout(() => {
+          setIsAuthReady(true);
+        }, 500);
+        return () => clearTimeout(timer);
+      } else {
+        // Not authenticated, redirect to login
+        router.push("/login");
+      }
+    }
+  }, [session, isSessionPending, router]);
 
   // Step 1: Profile
   const [firstName, setFirstName] = useState("");
@@ -182,6 +201,25 @@ export default function OnboardingPage() {
   };
 
   const progressPercentage = (currentStep / totalSteps) * 100;
+
+  // Show loading while auth is syncing
+  if (isSessionPending || !isAuthReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
+        <div className="text-center space-y-4">
+          <Image
+            src="/pathible-logo.svg"
+            alt="Pathible"
+            width={150}
+            height={150}
+            className="h-12 w-auto mx-auto"
+          />
+          <div className="spinner mx-auto" />
+          <p className="text-muted-foreground">Preparing your onboarding...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
