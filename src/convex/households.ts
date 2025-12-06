@@ -1,10 +1,7 @@
-import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
-import {
-  requireAuth,
-  requireHouseholdAccess,
-  requireHouseholdAdmin,
-} from "./auth";
+import type { Id } from "./_generated/dataModel";
+import { mutation, query } from "./_generated/server";
+import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./auth";
 
 /**
  * Household management functions
@@ -36,17 +33,17 @@ export const get = query({
       subscriptionTier: v.union(
         v.literal("foundations"),
         v.literal("heritage"),
-        v.literal("legacy")
+        v.literal("legacy"),
       ),
       subscriptionStatus: v.union(
         v.literal("active"),
         v.literal("inactive"),
         v.literal("cancelled"),
-        v.literal("past_due")
+        v.literal("past_due"),
       ),
       updatedAt: v.number(),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx, args) => {
     try {
@@ -75,13 +72,13 @@ export const list = query({
       subscriptionTier: v.union(
         v.literal("foundations"),
         v.literal("heritage"),
-        v.literal("legacy")
+        v.literal("legacy"),
       ),
       subscriptionStatus: v.union(
         v.literal("active"),
         v.literal("inactive"),
         v.literal("cancelled"),
-        v.literal("past_due")
+        v.literal("past_due"),
       ),
       updatedAt: v.number(),
       // Include the user's role in this household
@@ -89,10 +86,10 @@ export const list = query({
         v.literal("owner"),
         v.literal("steward"),
         v.literal("viewer"),
-        v.literal("executor")
+        v.literal("executor"),
       ),
       memberCount: v.number(),
-    })
+    }),
   ),
   handler: async (ctx) => {
     const { profile } = await requireAuth(ctx);
@@ -115,9 +112,7 @@ export const list = query({
         const allMemberships = await ctx.db
           .query("householdMemberships")
           .withIndex("by_household_and_status", (q) =>
-            q
-              .eq("householdId", membership.householdId)
-              .eq("status", "active")
+            q.eq("householdId", membership.householdId).eq("status", "active"),
           )
           .collect();
 
@@ -126,7 +121,7 @@ export const list = query({
           userRole: membership.role,
           memberCount: allMemberships.length,
         };
-      })
+      }),
     );
 
     // Filter out any null values and return with proper typing
@@ -158,15 +153,12 @@ export const listMembers = query({
         v.literal("owner"),
         v.literal("steward"),
         v.literal("viewer"),
-        v.literal("executor")
+        v.literal("executor"),
       ),
-      status: v.union(
-        v.literal("active"),
-        v.literal("pending"),
-        v.literal("inactive")
-      ),
-      joinedAt: v.number(),
-    })
+      status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+      invitedBy: v.optional(v.id("profiles")),
+      joinedAt: v.optional(v.number()),
+    }),
   ),
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
@@ -194,9 +186,10 @@ export const listMembers = query({
           relationship: membership.relationship,
           role: membership.role,
           status: membership.status,
+          invitedBy: membership.invitedBy,
           joinedAt: membership.joinedAt,
         };
-      })
+      }),
     );
 
     // Filter out null values and sort by role (owners first, then stewards, etc.)
@@ -226,19 +219,16 @@ export const listInvitations = query({
         lastName: v.string(),
       }),
       relationship: v.optional(v.string()),
-      role: v.union(
-        v.literal("steward"),
-        v.literal("viewer"),
-        v.literal("executor")
-      ),
+      role: v.union(v.literal("steward"), v.literal("viewer"), v.literal("executor")),
       status: v.union(
         v.literal("pending"),
         v.literal("accepted"),
         v.literal("declined"),
-        v.literal("expired")
+        v.literal("expired"),
+        v.literal("failed"),
       ),
       expiresAt: v.number(),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     await requireHouseholdAdmin(ctx, args.householdId);
@@ -268,7 +258,7 @@ export const listInvitations = query({
           status: invitation.status,
           expiresAt: invitation.expiresAt,
         };
-      })
+      }),
     );
 
     type InvitationWithDetails = NonNullable<(typeof invitationsWithDetails)[number]>;
@@ -277,23 +267,8 @@ export const listInvitations = query({
 });
 
 // ============================================================================
-// ACTIONS (for cryptographic operations)
-// ============================================================================
-
-/**
- * Generate a cryptographically secure random token
- * This is an action because it uses Node.js crypto module
- */
-export const generateSecureToken = action({
-  args: {},
-  returns: v.string(),
-  handler: async () => {
-    // Use Node.js crypto module for cryptographically secure random tokens
-    // This is only available in actions, not mutations
-    const crypto = await import('crypto');
-    return crypto.randomBytes(32).toString('base64url');
-  },
-});
+// Note: The generateSecureToken action has been moved to src/convex/utils.ts
+// to use Node.js crypto module without affecting other functions in this file
 
 // ============================================================================
 // MUTATIONS
@@ -431,11 +406,7 @@ export const inviteMember = mutation({
     householdId: v.id("households"),
     email: v.string(),
     relationship: v.optional(v.string()),
-    role: v.union(
-      v.literal("steward"),
-      v.literal("viewer"),
-      v.literal("executor")
-    ),
+    role: v.union(v.literal("steward"), v.literal("viewer"), v.literal("executor")),
     secureToken: v.string(), // Pre-generated secure token from action
   },
   returns: v.id("householdInvitations"),
@@ -461,8 +432,8 @@ export const inviteMember = mutation({
         q.and(
           q.eq(q.field("householdId"), args.householdId),
           q.eq(q.field("status"), "pending"),
-          q.gt(q.field("expiresAt"), Date.now())
-        )
+          q.gt(q.field("expiresAt"), Date.now()),
+        ),
       )
       .unique();
 
@@ -492,7 +463,7 @@ export const inviteMember = mutation({
       actionType: "member_invited",
       entityType: "household",
       entityId: args.householdId,
-      description: "Invited " + args.email + " to join household",
+      description: `Invited ${args.email} to join household`,
     });
 
     // TODO: Send invitation email (implement in separate email service)
@@ -535,7 +506,7 @@ export const acceptInvitation = mutation({
     }
 
     // Check if email matches - safely access email from user object
-    const userEmail = (user as { email?: string }).email || '';
+    const userEmail = (user as { email?: string }).email || "";
     if (invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
       throw new Error("This invitation is for a different email address");
     }
@@ -544,7 +515,7 @@ export const acceptInvitation = mutation({
     const existingMembership = await ctx.db
       .query("householdMemberships")
       .withIndex("by_household_and_user", (q) =>
-        q.eq("householdId", invitation.householdId).eq("userId", profile._id)
+        q.eq("householdId", invitation.householdId).eq("userId", profile._id),
       )
       .unique();
 
@@ -553,7 +524,7 @@ export const acceptInvitation = mutation({
     }
 
     // Create or update membership
-    let membershipId: string;
+    let membershipId: Id<"householdMemberships">;
     if (existingMembership) {
       // Reactivate existing membership
       await ctx.db.patch(existingMembership._id, {
@@ -585,7 +556,7 @@ export const acceptInvitation = mutation({
       actionType: "member_joined",
       entityType: "household",
       entityId: invitation.householdId,
-      description: profile.firstName + " " + profile.lastName + " joined the household",
+      description: `${profile.firstName} ${profile.lastName} joined the household`,
     });
 
     // Create notification for inviter
@@ -594,7 +565,7 @@ export const acceptInvitation = mutation({
       householdId: invitation.householdId,
       type: "invitation",
       title: "Invitation Accepted",
-      message: profile.firstName + " " + profile.lastName + " has joined your household",
+      message: `${profile.firstName} ${profile.lastName} has joined your household`,
       isRead: false,
     });
 
@@ -642,13 +613,11 @@ export const removeMember = mutation({
         .collect();
 
       const ownerCount = allMemberships.filter(
-        (m) => m.role === "owner" && m.status === "active"
+        (m) => m.role === "owner" && m.status === "active",
       ).length;
 
       if (ownerCount <= 1) {
-        throw new Error(
-          "Cannot remove the last owner. Transfer ownership first."
-        );
+        throw new Error("Cannot remove the last owner. Transfer ownership first.");
       }
     }
 
@@ -659,7 +628,11 @@ export const removeMember = mutation({
     const targetProfile = await ctx.db.get(targetMembership.userId);
     const description = isSelf
       ? "Left the household"
-      : "Removed " + (targetProfile?.firstName || "") + " " + (targetProfile?.lastName || "") + " from household";
+      : "Removed " +
+        (targetProfile?.firstName || "") +
+        " " +
+        (targetProfile?.lastName || "") +
+        " from household";
 
     await ctx.db.insert("activityLog", {
       householdId: args.householdId,
@@ -686,7 +659,7 @@ export const updateMemberRole = mutation({
       v.literal("owner"),
       v.literal("steward"),
       v.literal("viewer"),
-      v.literal("executor")
+      v.literal("executor"),
     ),
   },
   returns: v.null(),
@@ -721,13 +694,11 @@ export const updateMemberRole = mutation({
         .collect();
 
       const ownerCount = allMemberships.filter(
-        (m) => m.role === "owner" && m.status === "active"
+        (m) => m.role === "owner" && m.status === "active",
       ).length;
 
       if (ownerCount <= 1) {
-        throw new Error(
-          "Cannot change role: You are the last owner. Assign another owner first."
-        );
+        throw new Error("Cannot change role: You are the last owner. Assign another owner first.");
       }
     }
 
@@ -736,7 +707,13 @@ export const updateMemberRole = mutation({
 
     // Log the activity
     const targetProfile = await ctx.db.get(targetMembership.userId);
-    const description = "Changed " + (targetProfile?.firstName || "") + " " + (targetProfile?.lastName || "") + "'s role to " + args.role;
+    const description =
+      "Changed " +
+      (targetProfile?.firstName || "") +
+      " " +
+      (targetProfile?.lastName || "") +
+      "'s role to " +
+      args.role;
 
     await ctx.db.insert("activityLog", {
       householdId: args.householdId,

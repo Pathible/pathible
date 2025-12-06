@@ -1,5 +1,5 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { MobileNav } from "./MobileNav";
@@ -64,18 +64,12 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
               <p className="font-semibold text-foreground mb-3">Resources</p>
               <ul className="space-y-2 text-muted-foreground">
                 <li>
-                  <Link
-                    href="/security"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <Link href="/security" className="hover:text-foreground transition-colors">
                     Security
                   </Link>
                 </li>
                 <li>
-                  <Link
-                    href="/pricing"
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <Link href="/pricing" className="hover:text-foreground transition-colors">
                     Pricing
                   </Link>
                 </li>

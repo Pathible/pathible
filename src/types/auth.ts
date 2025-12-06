@@ -57,35 +57,49 @@ export interface SessionInfo {
 /**
  * Type guard to check if an object is a BetterAuthUser
  */
-export function isBetterAuthUser(obj: any): obj is BetterAuthUser {
+export function isBetterAuthUser(obj: unknown): obj is BetterAuthUser {
   return (
-    obj &&
-    typeof obj._id === 'string' &&
-    typeof obj.email === 'string' &&
-    typeof obj.emailVerified === 'boolean' &&
-    typeof obj.createdAt === 'number' &&
-    typeof obj.updatedAt === 'number'
+    typeof obj === "object" &&
+    obj !== null &&
+    "_id" in obj &&
+    "email" in obj &&
+    "emailVerified" in obj &&
+    "createdAt" in obj &&
+    "updatedAt" in obj &&
+    typeof (obj as Record<string, unknown>)._id === "string" &&
+    typeof (obj as Record<string, unknown>).email === "string" &&
+    typeof (obj as Record<string, unknown>).emailVerified === "boolean" &&
+    typeof (obj as Record<string, unknown>).createdAt === "number" &&
+    typeof (obj as Record<string, unknown>).updatedAt === "number"
   );
 }
 
 /**
  * Extract email safely from a Better Auth user object
  */
-export function getUserEmail(user: any): string {
+export function getUserEmail(user: unknown): string {
   if (isBetterAuthUser(user)) {
     return user.email;
   }
-  // Fallback for unsafe access
-  return user?.email || '';
+  // Fallback for unsafe access with proper type checking
+  if (typeof user === "object" && user !== null && "email" in user) {
+    const email = (user as Record<string, unknown>).email;
+    return typeof email === "string" ? email : "";
+  }
+  return "";
 }
 
 /**
  * Extract user ID safely from a Better Auth user object
  */
-export function getUserId(user: any): string {
+export function getUserId(user: unknown): string {
   if (isBetterAuthUser(user)) {
     return user._id;
   }
-  // Fallback for unsafe access
-  return user?._id || '';
+  // Fallback for unsafe access with proper type checking
+  if (typeof user === "object" && user !== null && "_id" in user) {
+    const id = (user as Record<string, unknown>)._id;
+    return typeof id === "string" ? id : "";
+  }
+  return "";
 }

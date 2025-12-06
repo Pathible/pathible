@@ -1,5 +1,3 @@
-import { fetchMutation } from "convex/nextjs";
-import { api } from "@/convex/_generated/api";
 import { cookies } from "next/headers";
 
 /**

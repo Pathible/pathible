@@ -1,6 +1,6 @@
-import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, authComponent } from "./auth";
+import { mutation, query } from "./_generated/server";
+import { authComponent, requireAuth } from "./auth";
 
 /**
  * Profile management functions
@@ -31,7 +31,7 @@ export const get = query({
       dateOfBirth: v.optional(v.number()),
       updatedAt: v.number(),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx) => {
     try {
@@ -58,7 +58,7 @@ export const getById = query({
       lastName: v.string(),
       avatarUrl: v.optional(v.string()),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx, args) => {
     const profile = await ctx.db.get(args.profileId);
@@ -106,7 +106,7 @@ export const create = mutation({
     // Check if profile already exists
     const existing = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", user._id as any))
+      .withIndex("by_userId", (q) => q.eq("userId", String(user._id)))
       .unique();
 
     if (existing) {
@@ -140,7 +140,7 @@ export const create = mutation({
 
     // Create the profile
     const profileId = await ctx.db.insert("profiles", {
-      userId: user._id as any,
+      userId: String(user._id),
       firstName: args.firstName.trim(),
       lastName: args.lastName.trim(),
       phone: args.phone,
@@ -171,7 +171,14 @@ export const update = mutation({
     const { profile } = await requireAuth(ctx);
 
     // Build update object with only provided fields
-    const updates: Record<string, any> = {
+    const updates: {
+      updatedAt: number;
+      firstName?: string;
+      lastName?: string;
+      avatarUrl?: string;
+      phone?: string;
+      dateOfBirth?: number;
+    } = {
       updatedAt: Date.now(),
     };
 
@@ -204,8 +211,7 @@ export const update = mutation({
       if (args.dateOfBirth > Date.now()) {
         throw new Error("Date of birth cannot be in the future");
       }
-      const age =
-        (Date.now() - args.dateOfBirth) / (1000 * 60 * 60 * 24 * 365);
+      const age = (Date.now() - args.dateOfBirth) / (1000 * 60 * 60 * 24 * 365);
       if (age > 150) {
         throw new Error("Invalid date of birth");
       }
@@ -233,14 +239,12 @@ export const deleteProfile = mutation({
     // Check if user is the primary contact for any households
     const householdsAsPrimary = await ctx.db
       .query("households")
-      .withIndex("by_primaryContactId", (q) =>
-        q.eq("primaryContactId", profile._id)
-      )
+      .withIndex("by_primaryContactId", (q) => q.eq("primaryContactId", profile._id))
       .collect();
 
     if (householdsAsPrimary.length > 0) {
       throw new Error(
-        "Cannot delete profile: You are the primary contact for one or more households. Please transfer ownership first."
+        "Cannot delete profile: You are the primary contact for one or more households. Please transfer ownership first.",
       );
     }
 
@@ -258,18 +262,16 @@ export const deleteProfile = mutation({
           // Count other owners
           const otherOwners = await ctx.db
             .query("householdMemberships")
-            .withIndex("by_household", (q) =>
-              q.eq("householdId", membership.householdId)
-            )
+            .withIndex("by_household", (q) => q.eq("householdId", membership.householdId))
             .collect();
 
           const hasOtherOwner = otherOwners.some(
-            (m) => m.role === "owner" && m.userId !== profile._id
+            (m) => m.role === "owner" && m.userId !== profile._id,
           );
 
           if (!hasOtherOwner) {
             throw new Error(
-              `Cannot delete profile: You are the only owner of household "${household.name}". Please transfer ownership first.`
+              `Cannot delete profile: You are the only owner of household "${household.name}". Please transfer ownership first.`,
             );
           }
         }

@@ -1,21 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Mail } from "lucide-react";
 import Image from "next/image";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Mail, ArrowLeft } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -261,8 +255,7 @@ export default function LoginPage() {
             </div>
             <h2 className="text-h2 text-foreground">Enter Code</h2>
             <p className="text-body text-muted-foreground">
-              We sent a 6-digit code to{" "}
-              <strong className="text-foreground">{email}</strong>
+              We sent a 6-digit code to <strong className="text-foreground">{email}</strong>
             </p>
           </div>
 
@@ -295,8 +288,7 @@ export default function LoginPage() {
               <p className="text-sm text-muted-foreground">
                 Code expires in{" "}
                 <span className="font-medium text-foreground">
-                  {Math.floor(otpExpiresIn / 60)}:
-                  {String(otpExpiresIn % 60).padStart(2, "0")}
+                  {Math.floor(otpExpiresIn / 60)}:{String(otpExpiresIn % 60).padStart(2, "0")}
                 </span>
               </p>
             </div>
@@ -321,9 +313,7 @@ export default function LoginPage() {
 
             <div className="text-center space-y-2">
               {!canResend ? (
-                <p className="text-sm text-muted-foreground">
-                  Resend code in {countdown}s
-                </p>
+                <p className="text-sm text-muted-foreground">Resend code in {countdown}s</p>
               ) : (
                 <Button
                   variant="ghost"

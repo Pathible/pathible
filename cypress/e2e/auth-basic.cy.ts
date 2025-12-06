@@ -11,7 +11,6 @@
 
 describe("Basic Authentication Tests", () => {
   const testEmail = `test-${Date.now()}@pathible.com`;
-  const testOtp = "123456"; // Default test OTP from Better Auth config
 
   beforeEach(() => {
     // Clear all state before each test

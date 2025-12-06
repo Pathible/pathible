@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Crimson_Text, Inter } from "next/font/google";
+import { Crimson_Text, Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
-import { ConvexClientProvider } from "./ConvexClientProvider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { ConvexClientProvider } from "./ConvexClientProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +28,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Pathible - A peaceful home for everything your family will need",
-  description: "Keep your most important documents, stories, and wishes together in one secure place.",
+  description:
+    "Keep your most important documents, stories, and wishes together in one secure place.",
 };
 
 export default function RootLayout({

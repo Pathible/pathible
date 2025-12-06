@@ -32,8 +32,8 @@ export default defineSchema({
         v.literal("profile_complete"),
         v.literal("household_complete"),
         v.literal("preferences_complete"),
-        v.literal("complete")
-      )
+        v.literal("complete"),
+      ),
     ),
     onboardingStep: v.optional(v.number()), // 1-4, current step
     onboardingCompletedAt: v.optional(v.number()), // Unix timestamp
@@ -64,8 +64,8 @@ export default defineSchema({
         v.literal("family_heritage"),
         v.literal("financial_clarity"),
         v.literal("estate_planning"),
-        v.literal("end_of_life_planning")
-      )
+        v.literal("end_of_life_planning"),
+      ),
     ),
     // Communication preferences
     emailNotifications: v.boolean(),
@@ -89,16 +89,12 @@ export default defineSchema({
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     primaryContactId: v.id("profiles"),
-    subscriptionTier: v.union(
-      v.literal("foundations"),
-      v.literal("heritage"),
-      v.literal("legacy")
-    ),
+    subscriptionTier: v.union(v.literal("foundations"), v.literal("heritage"), v.literal("legacy")),
     subscriptionStatus: v.union(
       v.literal("active"),
       v.literal("inactive"),
       v.literal("cancelled"),
-      v.literal("past_due")
+      v.literal("past_due"),
     ),
     updatedAt: v.number(),
   }).index("by_primaryContactId", ["primaryContactId"]),
@@ -114,14 +110,11 @@ export default defineSchema({
       v.literal("owner"),
       v.literal("steward"),
       v.literal("viewer"),
-      v.literal("executor")
+      v.literal("executor"),
     ),
-    status: v.union(
-      v.literal("active"),
-      v.literal("pending"),
-      v.literal("inactive")
-    ),
-    joinedAt: v.number(), // Unix timestamp
+    status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+    invitedBy: v.optional(v.id("profiles")), // Profile that invited this member
+    joinedAt: v.optional(v.number()), // Unix timestamp when member joined
   })
     .index("by_household", ["householdId"])
     .index("by_user", ["userId"])
@@ -136,18 +129,14 @@ export default defineSchema({
     email: v.string(),
     invitedBy: v.id("profiles"),
     relationship: v.optional(v.string()),
-    role: v.union(
-      v.literal("steward"),
-      v.literal("viewer"),
-      v.literal("executor")
-    ),
+    role: v.union(v.literal("steward"), v.literal("viewer"), v.literal("executor")),
     token: v.string(), // Unique invitation token
     status: v.union(
       v.literal("pending"),
       v.literal("accepted"),
       v.literal("declined"),
       v.literal("expired"),
-      v.literal("failed") // Email send failure
+      v.literal("failed"), // Email send failure
     ),
     expiresAt: v.number(), // Unix timestamp
   })
@@ -167,17 +156,13 @@ export default defineSchema({
     householdId: v.id("households"),
     stripeCustomerId: v.string(),
     stripeSubscriptionId: v.string(),
-    tier: v.union(
-      v.literal("foundations"),
-      v.literal("heritage"),
-      v.literal("legacy")
-    ),
+    tier: v.union(v.literal("foundations"), v.literal("heritage"), v.literal("legacy")),
     status: v.union(
       v.literal("active"),
       v.literal("inactive"),
       v.literal("cancelled"),
       v.literal("past_due"),
-      v.literal("trialing")
+      v.literal("trialing"),
     ),
     currentPeriodStart: v.number(), // Unix timestamp
     currentPeriodEnd: v.number(), // Unix timestamp
@@ -192,28 +177,36 @@ export default defineSchema({
   // ============================================================================
 
   /**
-   * Vault documents - secure document storage with access control
+   * Vault documents - secure document storage with Backblaze B2 and access control
    */
   vaultDocuments: defineTable({
     householdId: v.id("households"),
     uploadedBy: v.id("profiles"),
     name: v.string(),
     description: v.optional(v.string()),
-    storageId: v.id("_storage"), // Convex file storage reference
+
+    // Backblaze B2 storage references
+    b2FileId: v.string(), // Backblaze file ID
+    b2FileName: v.string(), // Full path in bucket (e.g., "household_123/timestamp_uuid_filename.pdf")
+    b2BucketName: v.string(), // Bucket name for flexibility
+
     fileSize: v.number(), // bytes
     fileType: v.string(), // MIME type
+    fileHash: v.optional(v.string()), // SHA1 hash for integrity verification
+
     categories: v.array(v.string()),
     accessLevel: v.union(
       v.literal("household"), // All household members
       v.literal("admins"), // Household admins only
-      v.literal("custom") // Specific users via sharedWithUsers
+      v.literal("custom"), // Specific users via sharedWithUsers
     ),
     sharedWithUsers: v.array(v.id("profiles")), // For custom access level
     updatedAt: v.number(),
   })
     .index("by_household", ["householdId"])
     .index("by_uploadedBy", ["uploadedBy"])
-    .index("by_household_and_accessLevel", ["householdId", "accessLevel"]),
+    .index("by_household_and_accessLevel", ["householdId", "accessLevel"])
+    .index("by_b2FileId", ["b2FileId"]), // For cleanup operations
 
   /**
    * Vault categories - custom categorization for documents
@@ -241,14 +234,14 @@ export default defineSchema({
       v.literal("lessons"),
       v.literal("stories"),
       v.literal("advice"),
-      v.literal("traditions")
+      v.literal("traditions"),
     ),
     tags: v.array(v.string()),
     isPublished: v.boolean(),
     sharedWith: v.union(
       v.literal("household"), // All household members
       v.literal("descendants"), // Future generations
-      v.literal("specific") // Specific recipients
+      v.literal("specific"), // Specific recipients
     ),
     mediaStorageIds: v.array(v.id("_storage")), // Attached images/videos
     updatedAt: v.number(),
@@ -269,14 +262,14 @@ export default defineSchema({
     recipientType: v.union(
       v.literal("individual"),
       v.literal("role"), // e.g., "my children"
-      v.literal("household")
+      v.literal("household"),
     ),
     recipientIds: v.array(v.id("profiles")), // Empty if recipientType is "role" or "household"
     deliveryCondition: v.union(
       v.literal("specific_date"),
       v.literal("after_death"),
       v.literal("milestone"), // e.g., wedding, graduation
-      v.literal("manual")
+      v.literal("manual"),
     ),
     deliveryDate: v.optional(v.number()), // Unix timestamp, for specific_date
     isDelivered: v.boolean(),
@@ -302,7 +295,7 @@ export default defineSchema({
       v.literal("work"),
       v.literal("community"),
       v.literal("personal"),
-      v.literal("other")
+      v.literal("other"),
     ),
     orderIndex: v.number(), // For manual ordering
     updatedAt: v.number(),
@@ -347,7 +340,7 @@ export default defineSchema({
       v.literal("trustee"),
       v.literal("guardian"),
       v.literal("healthcare_proxy"),
-      v.literal("other")
+      v.literal("other"),
     ),
     phone: v.optional(v.string()),
     email: v.optional(v.string()),
@@ -373,7 +366,7 @@ export default defineSchema({
       v.literal("investment"),
       v.literal("retirement"),
       v.literal("crypto"),
-      v.literal("other")
+      v.literal("other"),
     ),
     institution: v.string(),
     accountNumberLast4: v.optional(v.string()), // Last 4 digits for security
@@ -395,7 +388,7 @@ export default defineSchema({
       v.literal("rental"),
       v.literal("land"),
       v.literal("commercial"),
-      v.literal("other")
+      v.literal("other"),
     ),
     address: v.optional(v.string()),
     estimatedValue: v.optional(v.number()),
@@ -417,7 +410,7 @@ export default defineSchema({
       v.literal("disability"),
       v.literal("long_term_care"),
       v.literal("umbrella"),
-      v.literal("other")
+      v.literal("other"),
     ),
     provider: v.string(),
     policyNumberLast4: v.optional(v.string()), // Last 4 digits for security
@@ -428,8 +421,8 @@ export default defineSchema({
         v.literal("monthly"),
         v.literal("quarterly"),
         v.literal("semi_annual"),
-        v.literal("annual")
-      )
+        v.literal("annual"),
+      ),
     ),
     beneficiaries: v.optional(v.string()), // JSON string of beneficiary info
     expirationDate: v.optional(v.number()), // Unix timestamp
@@ -473,15 +466,11 @@ export default defineSchema({
       v.literal("insurance"),
       v.literal("digital_legacy"),
       v.literal("end_of_life"),
-      v.literal("other")
+      v.literal("other"),
     ),
     readTimeMinutes: v.number(),
     featuredImageUrl: v.optional(v.string()),
-    status: v.union(
-      v.literal("draft"),
-      v.literal("published"),
-      v.literal("archived")
-    ),
+    status: v.union(v.literal("draft"), v.literal("published"), v.literal("archived")),
     viewCount: v.number(),
     authorId: v.string(), // Better Auth user ID (admin author)
     publishedAt: v.optional(v.number()), // Unix timestamp
@@ -504,7 +493,7 @@ export default defineSchema({
       v.literal("financial"),
       v.literal("legal"),
       v.literal("legacy"),
-      v.literal("other")
+      v.literal("other"),
     ),
     priority: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
     icon: v.optional(v.string()), // Icon identifier
@@ -524,11 +513,7 @@ export default defineSchema({
     userId: v.id("profiles"),
     householdId: v.id("households"),
     suggestionId: v.id("smartSuggestions"),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("dismissed"),
-      v.literal("completed")
-    ),
+    status: v.union(v.literal("pending"), v.literal("dismissed"), v.literal("completed")),
     dismissedAt: v.optional(v.number()), // Unix timestamp
     completedAt: v.optional(v.number()), // Unix timestamp
   })
@@ -570,7 +555,7 @@ export default defineSchema({
       v.literal("member_invited"),
       v.literal("member_joined"),
       v.literal("plan_updated"),
-      v.literal("other")
+      v.literal("other"),
     ),
     entityType: v.optional(
       v.union(
@@ -579,8 +564,8 @@ export default defineSchema({
         v.literal("letter"),
         v.literal("plan"),
         v.literal("household"),
-        v.literal("other")
-      )
+        v.literal("other"),
+      ),
     ),
     entityId: v.optional(v.string()), // ID of the affected entity
     description: v.string(),
@@ -600,7 +585,7 @@ export default defineSchema({
       v.literal("letter_delivered"),
       v.literal("reminder"),
       v.literal("system"),
-      v.literal("other")
+      v.literal("other"),
     ),
     title: v.string(),
     message: v.string(),

@@ -1,7 +1,7 @@
-import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { authComponent } from "./auth";
 import type { BetterAuthUser } from "../types/auth";
+import { query } from "./_generated/server";
+import { authComponent } from "./auth";
 
 /**
  * DEBUG QUERIES FOR TROUBLESHOOTING
@@ -36,7 +36,10 @@ export const checkBetterAuthStatus = query({
   handler: async (ctx) => {
     try {
       // Try to get current user
-      const user = await authComponent.getAuthUser(ctx);
+      // Note: Type assertion needed for Better Auth's context expectations
+      const user = await authComponent.getAuthUser(
+        ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
+      );
 
       if (!user) {
         return {
@@ -50,7 +53,7 @@ export const checkBetterAuthStatus = query({
         };
       }
 
-      const typedUser = user as BetterAuthUser;
+      const typedUser = user as unknown as BetterAuthUser;
       return {
         componentWorking: true,
         hasCurrentUser: true,
@@ -98,15 +101,17 @@ export const getCurrentAuthUser = query({
     v.object({
       authenticated: v.literal(false),
       error: v.optional(v.string()),
-    })
+    }),
   ),
   handler: async (ctx) => {
     try {
-      const user = await authComponent.getAuthUser(ctx);
+      const user = await authComponent.getAuthUser(
+        ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
+      );
       if (!user) {
         return { authenticated: false as const };
       }
-      const typedUser = user as BetterAuthUser;
+      const typedUser = user as unknown as BetterAuthUser;
       return {
         authenticated: true as const,
         user: {
@@ -139,7 +144,7 @@ export const listAllProfiles = query({
       firstName: v.string(),
       lastName: v.string(),
       createdAt: v.number(),
-    })
+    }),
   ),
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
@@ -166,7 +171,7 @@ export const listAllRoles = query({
       userId: v.string(), // Better Auth user ID
       role: v.union(v.literal("admin"), v.literal("user")),
       createdAt: v.number(),
-    })
+    }),
   ),
   handler: async (ctx) => {
     const roles = await ctx.db.query("userRoles").collect();
@@ -194,16 +199,16 @@ export const listAllHouseholds = query({
       subscriptionTier: v.union(
         v.literal("foundations"),
         v.literal("heritage"),
-        v.literal("legacy")
+        v.literal("legacy"),
       ),
       subscriptionStatus: v.union(
         v.literal("active"),
         v.literal("inactive"),
         v.literal("cancelled"),
-        v.literal("past_due")
+        v.literal("past_due"),
       ),
       createdAt: v.number(),
-    })
+    }),
   ),
   handler: async (ctx) => {
     const households = await ctx.db.query("households").collect();
@@ -243,7 +248,7 @@ export const getMyCompleteInfo = query({
           phone: v.optional(v.string()),
           createdAt: v.number(),
         }),
-        v.null()
+        v.null(),
       ),
       systemRole: v.union(v.literal("admin"), v.literal("user")),
       households: v.array(
@@ -254,28 +259,26 @@ export const getMyCompleteInfo = query({
             v.literal("owner"),
             v.literal("steward"),
             v.literal("viewer"),
-            v.literal("executor")
+            v.literal("executor"),
           ),
-          status: v.union(
-            v.literal("active"),
-            v.literal("pending"),
-            v.literal("inactive")
-          ),
-        })
+          status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+        }),
       ),
     }),
     v.object({
       error: v.string(),
-    })
+    }),
   ),
   handler: async (ctx) => {
     try {
-      const user = await authComponent.getAuthUser(ctx);
+      const user = await authComponent.getAuthUser(
+        ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
+      );
       if (!user) {
         return { error: "Not authenticated" };
       }
 
-      const typedUser = user as BetterAuthUser;
+      const typedUser = user as unknown as BetterAuthUser;
 
       // Get profile
       const profile = await ctx.db
@@ -307,7 +310,7 @@ export const getMyCompleteInfo = query({
             userRole: m.role,
             status: m.status,
           };
-        })
+        }),
       );
 
       return {
@@ -368,13 +371,34 @@ export const getDatabaseStats = query({
       wisdomCount,
       lettersCount,
     ] = await Promise.all([
-      ctx.db.query("profiles").collect().then((r) => r.length),
-      ctx.db.query("userRoles").collect().then((r) => r.length),
-      ctx.db.query("households").collect().then((r) => r.length),
-      ctx.db.query("householdMemberships").collect().then((r) => r.length),
-      ctx.db.query("vaultDocuments").collect().then((r) => r.length),
-      ctx.db.query("wisdomEntries").collect().then((r) => r.length),
-      ctx.db.query("letters").collect().then((r) => r.length),
+      ctx.db
+        .query("profiles")
+        .collect()
+        .then((r) => r.length),
+      ctx.db
+        .query("userRoles")
+        .collect()
+        .then((r) => r.length),
+      ctx.db
+        .query("households")
+        .collect()
+        .then((r) => r.length),
+      ctx.db
+        .query("householdMemberships")
+        .collect()
+        .then((r) => r.length),
+      ctx.db
+        .query("vaultDocuments")
+        .collect()
+        .then((r) => r.length),
+      ctx.db
+        .query("wisdomEntries")
+        .collect()
+        .then((r) => r.length),
+      ctx.db
+        .query("letters")
+        .collect()
+        .then((r) => r.length),
     ]);
 
     // Calculate profiles without households
@@ -421,12 +445,14 @@ export const amIAuthenticated = query({
   }),
   handler: async (ctx) => {
     try {
-      const user = await authComponent.getAuthUser(ctx);
+      const user = await authComponent.getAuthUser(
+        ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
+      );
       if (!user) {
         return { authenticated: false, hasProfile: false };
       }
 
-      const typedUser = user as BetterAuthUser;
+      const typedUser = user as unknown as BetterAuthUser;
 
       const profile = await ctx.db
         .query("profiles")

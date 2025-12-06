@@ -1,17 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Menu } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
@@ -32,7 +26,9 @@ export function MobileNav() {
         </SheetHeader>
         <div className="flex flex-col gap-6 mt-8">
           <div className="flex flex-col gap-4">
-            <p className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Product</p>
+            <p className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+              Product
+            </p>
             <Link
               href="/product/heritage-vault"
               onClick={handleClose}
@@ -74,7 +70,9 @@ export function MobileNav() {
           </Link>
 
           <Button asChild className="btn-primary w-full">
-            <Link href="/login" onClick={handleClose}>Sign in</Link>
+            <Link href="/login" onClick={handleClose}>
+              Sign in
+            </Link>
           </Button>
         </div>
       </SheetContent>

@@ -1,9 +1,9 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
+import Link from "next/link";
 import { PublicPageLayout } from "@/components/PublicPageLayout";
 import { ScrollButton } from "@/components/ScrollButton";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Index() {
   return (
@@ -29,9 +29,8 @@ function HeroSection() {
             A peaceful home for everything your family will need and remember.
           </h1>
           <p className="mt-6 text-xl sm:text-2xl text-muted-foreground leading-relaxed">
-            Pathible brings your most important documents, stories, and wishes
-            together in one secure place so the people you love have clarity,
-            not confusion.
+            Pathible brings your most important documents, stories, and wishes together in one
+            secure place so the people you love have clarity, not confusion.
           </p>
           <div className="mt-10 flex gap-4 flex-wrap justify-center">
             <Button
@@ -64,10 +63,7 @@ function TrustBar() {
     "Built for families",
   ];
   return (
-    <section
-      aria-label="trust"
-      className="border-y border-accent/20 bg-card/60"
-    >
+    <section aria-label="trust" className="border-y border-accent/20 bg-card/60">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
         {items.map((t) => (
           <div key={t} className="flex items-center gap-2">
@@ -100,9 +96,7 @@ function ValuePillars() {
     <section className="py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="font-crimson text-4xl sm:text-5xl mb-4">
-            What makes Pathible different
-          </h2>
+          <h2 className="font-crimson text-4xl sm:text-5xl mb-4">What makes Pathible different</h2>
           <p className="text-xl text-muted-foreground">
             Security, story, and stewardship. All in one calm experience.
           </p>
@@ -114,14 +108,10 @@ function ValuePillars() {
               className="rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-300 p-8 bg-card border-border/50"
             >
               <CardHeader className="p-0 pb-4">
-                <CardTitle className="font-crimson text-2xl">
-                  {p.title}
-                </CardTitle>
+                <CardTitle className="font-crimson text-2xl">{p.title}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <p className="text-muted-foreground text-lg leading-relaxed">
-                  {p.body}
-                </p>
+                <p className="text-muted-foreground text-lg leading-relaxed">{p.body}</p>
               </CardContent>
             </Card>
           ))}
@@ -148,18 +138,11 @@ function HowItWorks() {
     },
   ];
   return (
-    <section
-      id="how-it-works"
-      className="py-20 sm:py-28 bg-linear-to-b from-card/30 to-background"
-    >
+    <section id="how-it-works" className="py-20 sm:py-28 bg-linear-to-b from-card/30 to-background">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="font-crimson text-4xl sm:text-5xl mb-4">
-            How it works
-          </h2>
-          <p className="text-xl text-muted-foreground">
-            Three simple steps to peace of mind.
-          </p>
+          <h2 className="font-crimson text-4xl sm:text-5xl mb-4">How it works</h2>
+          <p className="text-xl text-muted-foreground">Three simple steps to peace of mind.</p>
         </div>
         <div className="grid gap-8 sm:grid-cols-3">
           {steps.map((s, i) => (
@@ -171,14 +154,10 @@ function HowItWorks() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/20 text-accent font-crimson text-xl mb-4">
                   {i + 1}
                 </div>
-                <CardTitle className="font-crimson text-2xl">
-                  {s.title}
-                </CardTitle>
+                <CardTitle className="font-crimson text-2xl">{s.title}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <p className="text-muted-foreground text-lg leading-relaxed">
-                  {s.body}
-                </p>
+                <p className="text-muted-foreground text-lg leading-relaxed">{s.body}</p>
               </CardContent>
             </Card>
           ))}
@@ -232,8 +211,7 @@ function ModulesPreview() {
             Everything in one peaceful place
           </h2>
           <p className="text-xl text-muted-foreground">
-            No more scattered files, forgotten passwords, or wondering where
-            things are.
+            No more scattered files, forgotten passwords, or wondering where things are.
           </p>
         </div>
         <div className="grid gap-8 md:grid-cols-2">
@@ -243,18 +221,14 @@ function ModulesPreview() {
               className="rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-300 p-8 bg-card border-border/50"
             >
               <CardHeader className="p-0 pb-6">
-                <CardTitle className="font-crimson text-2xl">
-                  {m.title}
-                </CardTitle>
+                <CardTitle className="font-crimson text-2xl">{m.title}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <ul className="space-y-3 text-muted-foreground">
                   {m.lines.map((l) => (
                     <li key={l} className="flex items-start gap-3">
                       <Check className="mt-1 h-5 w-5 text-accent shrink-0" />
-                      <span className="text-base sm:text-lg leading-relaxed">
-                        {l}
-                      </span>
+                      <span className="text-base sm:text-lg leading-relaxed">{l}</span>
                     </li>
                   ))}
                 </ul>
@@ -274,12 +248,10 @@ function Testimonial() {
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <Card className="rounded-3xl p-12 sm:p-16 text-center bg-card border-border/50 shadow-lg">
           <p className="font-crimson text-3xl sm:text-4xl leading-relaxed text-foreground">
-            "For the first time, everything my family needs is in one place. And
-            so is what I want them to remember."
+            "For the first time, everything my family needs is in one place. And so is what I want
+            them to remember."
           </p>
-          <p className="mt-6 text-lg text-muted-foreground">
-            — Pathible member
-          </p>
+          <p className="mt-6 text-lg text-muted-foreground">— Pathible member</p>
         </Card>
       </div>
     </section>

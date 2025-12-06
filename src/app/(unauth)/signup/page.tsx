@@ -1,20 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { ArrowLeft, Mail } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Mail, ArrowLeft } from "lucide-react";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -99,12 +95,9 @@ export default function SignupPage() {
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
               <Mail className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-3xl font-crimson font-semibold text-foreground">
-              Enter Code
-            </h2>
+            <h2 className="text-3xl font-crimson font-semibold text-foreground">Enter Code</h2>
             <p className="text-muted-foreground leading-relaxed">
-              We sent a 6-digit code to{" "}
-              <strong className="text-foreground">{email}</strong>
+              We sent a 6-digit code to <strong className="text-foreground">{email}</strong>
             </p>
           </div>
 
@@ -149,9 +142,7 @@ export default function SignupPage() {
 
             <div className="text-center space-y-2">
               {!canResend ? (
-                <p className="text-sm text-muted-foreground">
-                  Resend code in {countdown}s
-                </p>
+                <p className="text-sm text-muted-foreground">Resend code in {countdown}s</p>
               ) : (
                 <Button
                   variant="ghost"
@@ -173,10 +164,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-background to-card/30 px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link
-            href="/"
-            className="inline-block hover:opacity-80 transition-opacity"
-          >
+          <Link href="/" className="inline-block hover:opacity-80 transition-opacity">
             <Image
               src="/pathible-logo.svg"
               alt="Pathible"
@@ -198,10 +186,7 @@ export default function SignupPage() {
         <div className="bg-card rounded-xl p-8 shadow-lg space-y-6 border border-border/20">
           <form onSubmit={handleSendOtp} className="space-y-5">
             <div className="space-y-2">
-              <Label
-                htmlFor="email"
-                className="text-sm font-medium text-foreground"
-              >
+              <Label htmlFor="email" className="text-sm font-medium text-foreground">
                 Email Address
               </Label>
               <Input
@@ -219,11 +204,7 @@ export default function SignupPage() {
               </p>
             </div>
 
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full mt-6"
-            >
+            <Button type="submit" disabled={isLoading} className="btn-primary w-full mt-6">
               {isLoading ? (
                 <>
                   <div className="spinner mr-2" />
@@ -242,11 +223,7 @@ export default function SignupPage() {
             </span>
           </div>
 
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => router.push("/login")}
-          >
+          <Button variant="outline" className="w-full" onClick={() => router.push("/login")}>
             Sign in instead
           </Button>
 
