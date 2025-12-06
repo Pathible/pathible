@@ -22,10 +22,9 @@ export async function POST(request: Request) {
   try {
     // Step 0: Validate origin for CSRF protection
     const origin = request.headers.get("origin");
-    const allowedOrigins = [
-      process.env.SITE_URL,
-      process.env.NEXT_PUBLIC_CONVEX_SITE_URL,
-    ].filter(Boolean);
+    const allowedOrigins = [process.env.SITE_URL, process.env.NEXT_PUBLIC_CONVEX_SITE_URL].filter(
+      Boolean,
+    );
 
     if (origin && allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
       console.error("[Download URL] Invalid origin:", origin);

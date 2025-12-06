@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { getToken } from "@/lib/auth-server";
 import { getServerSession } from "@/lib/auth-session";
-import { generateB2FileName, validateUploadParams, B2_CONSTANTS } from "@/lib/backblaze/config";
+import { B2_CONSTANTS, generateB2FileName, validateUploadParams } from "@/lib/backblaze/config";
 import { getBackblazeS3Client } from "@/lib/backblaze/s3-client";
 
 /**
@@ -24,10 +24,9 @@ export async function POST(request: Request) {
   try {
     // Step 0: Validate origin for CSRF protection
     const origin = request.headers.get("origin");
-    const allowedOrigins = [
-      process.env.SITE_URL,
-      process.env.NEXT_PUBLIC_CONVEX_SITE_URL,
-    ].filter(Boolean);
+    const allowedOrigins = [process.env.SITE_URL, process.env.NEXT_PUBLIC_CONVEX_SITE_URL].filter(
+      Boolean,
+    );
 
     if (origin && allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
       console.error("[Upload URL] Invalid origin:", origin);
@@ -74,14 +73,14 @@ export async function POST(request: Request) {
       if (!household) {
         return NextResponse.json(
           { error: "Access denied: Not a member of this household" },
-          { status: 403 }
+          { status: 403 },
         );
       }
     } catch (error) {
       console.error("[Upload URL] Household access check failed:", error);
       return NextResponse.json(
         { error: "Access denied: Unable to verify household membership" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
