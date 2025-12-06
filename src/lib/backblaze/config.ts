@@ -206,7 +206,7 @@ export function validateUploadParams(params: {
   // Security: Validate MIME type against allowlist
   if (!ALLOWED_MIME_TYPES.has(fileType)) {
     throw new Error(
-      `File type "${fileType}" is not allowed. Please upload documents, images, audio, or video files.`
+      `File type "${fileType}" is not allowed. Please upload documents, images, audio, or video files.`,
     );
   }
 }
@@ -231,9 +231,13 @@ export function generateB2FileName(householdId: string, originalFileName: string
 
   // Extract extension safely
   const parts = cleanBasename.split(".");
-  const extension = parts.length > 1
-    ? parts.pop()?.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") || "bin"
-    : "bin";
+  const extension =
+    parts.length > 1
+      ? parts
+          .pop()
+          ?.toLowerCase()
+          .replace(/[^a-zA-Z0-9]/g, "") || "bin"
+      : "bin";
 
   // Enforce max extension length (prevent abuse)
   const safeExtension = extension.slice(0, 10);
@@ -296,21 +300,66 @@ export const ALLOWED_MIME_TYPES = new Set([
  * Blocked file extensions (security blocklist)
  */
 export const BLOCKED_EXTENSIONS = new Set([
-  "exe", "dll", "bat", "cmd", "com", "scr", "vbs", "vbe",
-  "js", "jse", "ws", "wsf", "wsc", "wsh",
-  "ps1", "psd1", "psm1", "psc1", "psc2",
-  "msi", "msp", "mst",
-  "jar", "class",
-  "sh", "bash", "zsh", "csh", "ksh",
-  "app", "dmg", "pkg",
-  "deb", "rpm",
-  "php", "phtml", "php3", "php4", "php5", "php7", "phps",
-  "asp", "aspx", "cer", "csr",
-  "py", "pyc", "pyo", "pyw",
-  "pl", "pm", "cgi",
-  "rb", "rbw",
-  "html", "htm", "xhtml", "svg", // Can contain scripts
-  "swf", "fla",
+  "exe",
+  "dll",
+  "bat",
+  "cmd",
+  "com",
+  "scr",
+  "vbs",
+  "vbe",
+  "js",
+  "jse",
+  "ws",
+  "wsf",
+  "wsc",
+  "wsh",
+  "ps1",
+  "psd1",
+  "psm1",
+  "psc1",
+  "psc2",
+  "msi",
+  "msp",
+  "mst",
+  "jar",
+  "class",
+  "sh",
+  "bash",
+  "zsh",
+  "csh",
+  "ksh",
+  "app",
+  "dmg",
+  "pkg",
+  "deb",
+  "rpm",
+  "php",
+  "phtml",
+  "php3",
+  "php4",
+  "php5",
+  "php7",
+  "phps",
+  "asp",
+  "aspx",
+  "cer",
+  "csr",
+  "py",
+  "pyc",
+  "pyo",
+  "pyw",
+  "pl",
+  "pm",
+  "cgi",
+  "rb",
+  "rbw",
+  "html",
+  "htm",
+  "xhtml",
+  "svg", // Can contain scripts
+  "swf",
+  "fla",
 ]);
 
 /**

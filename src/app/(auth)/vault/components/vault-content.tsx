@@ -100,6 +100,9 @@ export function VaultContent() {
     );
   }
 
+  // DEBUG: Fetch helper
+  const debugTest = useQuery(api.debug_auth_test.testAuth);
+
   // Auth sync failed after all retries - show helpful error
   if (households === null) {
     return (
@@ -107,9 +110,14 @@ export function VaultContent() {
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">Connection Issue</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-sm">
+          <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
             Unable to load your household data. Please refresh the page or try again later.
           </p>
+          {debugTest && (
+            <div className="bg-yellow-100 p-2 rounded text-xs font-mono text-left w-full max-w-md border border-yellow-300">
+              {debugTest}
+            </div>
+          )}
         </CardContent>
       </Card>
     );

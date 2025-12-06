@@ -123,7 +123,9 @@ export function UploadButton({ householdId, categories, className }: UploadButto
       }
     } catch (error) {
       console.error("Upload failed:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to upload document. Please try again.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload document. Please try again.",
+      );
     } finally {
       setIsUploading(false);
     }

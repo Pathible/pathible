@@ -13,9 +13,9 @@ export function getSignInOTPEmail(otp: string): {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Sign In to Pathible</title>
         </head>
-        <body style="margin: 0; padding: 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <body style="margin: 0; padding: 0; background-color: #F6F4F1; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
           <!-- Email Container -->
-          <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb;">
+          <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #F6F4F1;">
             <tr>
               <td style="padding: 40px 20px;">
                 <!-- Main Content Card -->
@@ -24,45 +24,19 @@ export function getSignInOTPEmail(otp: string): {
                   <!-- Header with Logo -->
                   <tr>
                     <td style="padding: 48px 48px 32px 48px; text-align: center;">
-                      <div style="font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px;">
+                      <div style="font-size: 32px; font-weight: 700; color: #4B7F52; margin-bottom: 8px;">
                         Pathible
                       </div>
-                      <div style="font-size: 13px; color: #9ca3af; letter-spacing: 0.5px;">
-                        Legacy & Heritage Management
+                      <div style="font-size: 13px; color: #8B8680; letter-spacing: 0.5px;">
+                        Your voice. Your values. Your legacy.
                       </div>
-                    </td>
-                  </tr>
-
-                  <!-- Icon Illustration -->
-                  <tr>
-                    <td style="padding: 0 48px 32px 48px; text-align: center;">
-                      <svg width="120" height="120" viewBox="0 0 120 120" style="display: inline-block;">
-                        <!-- Outer Circle Background -->
-                        <circle cx="60" cy="60" r="58" fill="#f3f4f6" stroke="#e5e7eb" stroke-width="2"/>
-
-                        <!-- Shield Shape -->
-                        <defs>
-                          <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
-                          </linearGradient>
-                        </defs>
-                        <path d="M60 25 L45 30 L45 50 Q45 70 60 85 Q75 70 75 50 L75 30 Z" fill="url(#shieldGradient)" opacity="0.15"/>
-                        <path d="M60 30 L48 34 L48 50 Q48 67 60 80 Q72 67 72 50 L72 34 Z" fill="url(#shieldGradient)"/>
-
-                        <!-- Key Icon Inside Shield -->
-                        <circle cx="60" cy="48" r="4" fill="white"/>
-                        <rect x="58.5" y="50" width="3" height="12" rx="1.5" fill="white"/>
-                        <rect x="58.5" y="58" width="3" height="2" fill="white"/>
-                        <rect x="58.5" y="62" width="3" height="2" fill="white"/>
-                      </svg>
                     </td>
                   </tr>
 
                   <!-- Main Heading -->
                   <tr>
                     <td style="padding: 0 48px 16px 48px; text-align: center;">
-                      <h1 style="margin: 0; font-size: 26px; font-weight: 600; color: #111827; line-height: 1.3;">
+                      <h1 style="margin: 0; font-size: 26px; font-weight: 600; color: #2C2C2C; line-height: 1.3;">
                         Your Sign In Code
                       </h1>
                     </td>
@@ -71,7 +45,7 @@ export function getSignInOTPEmail(otp: string): {
                   <!-- Description -->
                   <tr>
                     <td style="padding: 0 48px 32px 48px; text-align: center;">
-                      <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.6;">
+                      <p style="margin: 0; font-size: 15px; color: #8B8680; line-height: 1.6;">
                         Enter this code to securely access your Pathible account
                       </p>
                     </td>
@@ -82,8 +56,8 @@ export function getSignInOTPEmail(otp: string): {
                     <td style="padding: 0 48px 32px 48px;">
                       <table role="presentation" style="width: 100%; border-collapse: collapse;">
                         <tr>
-                          <td style="background: linear-gradient(135deg, #eef2ff 0%, #f3e8ff 100%); border: 2px solid #c7d2fe; border-radius: 12px; padding: 32px 24px; text-align: center;">
-                            <div style="font-size: 48px; font-weight: 700; letter-spacing: 16px; color: #4f46e5; font-family: 'Courier New', Courier, monospace; line-height: 1.2;">
+                          <td style="background: linear-gradient(135deg, #f0f7f1 0%, #e8f0e9 100%); border: 2px solid #7BA083; border-radius: 12px; padding: 32px 24px; text-align: center;">
+                            <div style="font-size: 48px; font-weight: 700; letter-spacing: 16px; color: #4B7F52; font-family: 'Courier New', Courier, monospace; line-height: 1.2;">
                               ${otp}
                             </div>
                           </td>
@@ -95,8 +69,8 @@ export function getSignInOTPEmail(otp: string): {
                   <!-- Expiration Notice -->
                   <tr>
                     <td style="padding: 0 48px 40px 48px; text-align: center;">
-                      <p style="margin: 0; font-size: 13px; color: #9ca3af; line-height: 1.6;">
-                        Code expires in <span style="font-weight: 600; color: #6b7280;">5 minutes</span>
+                      <p style="margin: 0; font-size: 13px; color: #8B8680; line-height: 1.6;">
+                        Code expires in <span style="font-weight: 600; color: #2C2C2C;">5 minutes</span>
                       </p>
                     </td>
                   </tr>
@@ -111,11 +85,11 @@ export function getSignInOTPEmail(otp: string): {
                   <!-- Security Notice -->
                   <tr>
                     <td style="padding: 32px 48px 48px 48px;">
-                      <p style="margin: 0 0 16px 0; font-size: 14px; color: #6b7280; line-height: 1.6; text-align: center;">
+                      <p style="margin: 0 0 16px 0; font-size: 14px; color: #8B8680; line-height: 1.6; text-align: center;">
                         If you didn't request this code, you can safely ignore this email. Your account remains secure.
                       </p>
-                      <p style="margin: 0; font-size: 13px; color: #9ca3af; text-align: center;">
-                        <a href="https://pathible.com" style="color: #6366f1; text-decoration: none; font-weight: 500;">pathible.com</a>
+                      <p style="margin: 0; font-size: 13px; color: #8B8680; text-align: center;">
+                        <a href="https://pathible.com" style="color: #4B7F52; text-decoration: none; font-weight: 500;">pathible.com</a>
                       </p>
                     </td>
                   </tr>
@@ -126,7 +100,7 @@ export function getSignInOTPEmail(otp: string): {
                 <table role="presentation" style="max-width: 560px; margin: 24px auto 0 auto; border-collapse: collapse;">
                   <tr>
                     <td style="padding: 0 20px; text-align: center;">
-                      <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">
+                      <p style="margin: 0; font-size: 12px; color: #8B8680; line-height: 1.5;">
                         This is an automated message from Pathible. Please do not reply to this email.
                       </p>
                     </td>
