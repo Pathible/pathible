@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
+import { authClient } from "@/lib/auth-client";
 import { CategoryManager } from "./category-manager";
 import { DocumentList } from "./document-list";
 import { SearchAndFilter } from "./search-and-filter";
@@ -17,8 +18,11 @@ export function VaultContent() {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
 
-  // Get user's households
-  const households = useQuery(api.households.list);
+  // Check Better Auth session status
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
+
+  // Get user's households (only if authenticated)
+  const households = useQuery(api.households.list, session?.user ? {} : "skip");
 
   // Use the first household (most users will only have one)
   const householdId = households?.[0]?._id;
@@ -37,12 +41,27 @@ export function VaultContent() {
   );
   const categories = useQuery(api.vault.listCategories, householdId ? { householdId } : "skip");
 
-  // Loading state
-  if (households === undefined) {
+  // Loading state - wait for session and households
+  if (isSessionPending || households === undefined) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
+    );
+  }
+
+  // Not authenticated (shouldn't happen due to layout protection, but handle gracefully)
+  if (!session?.user) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+          <p className="text-sm text-muted-foreground text-center max-w-sm">
+            Please sign in to access the Heritage Vault.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
