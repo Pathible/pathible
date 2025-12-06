@@ -3,6 +3,7 @@
 import { useMutation } from "convex/react";
 import { Calendar, Download, Edit2, FileText, Trash2, User, X } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -116,7 +117,7 @@ export function DocumentDetailModal({
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to update document:", error);
-      alert("Failed to update document");
+      toast.error(error instanceof Error ? error.message : "Failed to update document");
     } finally {
       setIsSaving(false);
     }
@@ -124,12 +125,30 @@ export function DocumentDetailModal({
 
   const handleDelete = async () => {
     try {
+      // Step 1: Delete from B2 via Next.js API route
+      const deleteResponse = await fetch("/api/vault/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          documentId: document._id,
+        }),
+      });
+
+      if (!deleteResponse.ok) {
+        const error = await deleteResponse.json();
+        throw new Error(error.error || "Failed to delete file from storage");
+      }
+
+      // Step 2: Delete metadata from Convex
       await deleteDocument({ documentId: document._id });
+
       setDeleteDialogOpen(false);
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to delete document:", error);
-      alert("Failed to delete document");
+      toast.error(error instanceof Error ? error.message : "Failed to delete document");
     }
   };
 

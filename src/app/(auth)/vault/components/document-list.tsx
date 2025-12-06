@@ -1,12 +1,11 @@
 "use client";
 
-import { useAction } from "convex/react";
 import { Calendar, Download, Eye, FileText, Loader2, User } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DocumentDetailModal } from "./document-detail-modal";
 
@@ -61,19 +60,30 @@ function getFileIcon(_fileType: string) {
 
 export function DocumentList({ documents, categories, householdId, isLoading }: DocumentListProps) {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const generateDownloadUrl = useAction(api.vaultActions.generateDownloadUrl);
 
   const handleDownload = async (document: Document) => {
     try {
-      // Generate a signed download URL and auth token from B2
-      const { url, authToken } = await generateDownloadUrl({ documentId: document._id });
-
-      // Download the file with Authorization header
-      const response = await fetch(url, {
+      // Generate a signed download URL and auth token from Next.js API route
+      const downloadUrlResponse = await fetch("/api/vault/download-url", {
+        method: "POST",
         headers: {
-          Authorization: authToken,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          documentId: document._id,
+        }),
       });
+
+      if (!downloadUrlResponse.ok) {
+        const error = await downloadUrlResponse.json();
+        throw new Error(error.error || "Failed to generate download URL");
+      }
+
+      const { url } = await downloadUrlResponse.json();
+
+      // Download the file - S3 presigned URLs don't need Authorization header
+      // Credentials are embedded in the URL signature
+      const response = await fetch(url);
       const blob = await response.blob();
       const objectUrl = window.URL.createObjectURL(blob);
       const a = window.document.createElement("a");
@@ -85,7 +95,7 @@ export function DocumentList({ documents, categories, householdId, isLoading }: 
       window.document.body.removeChild(a);
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Failed to download document");
+      toast.error(error instanceof Error ? error.message : "Failed to download document");
     }
   };
 

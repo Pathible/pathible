@@ -1,8 +1,12 @@
 import { createClient } from "@convex-dev/better-auth";
+import { convex as convexPlugin } from "@convex-dev/better-auth/plugins";
 import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
 import { v } from "convex/values";
 import { Resend } from "resend";
+import { getEmailVerificationOTPEmail } from "../lib/email-templates/otp-email-verification";
+import { getPasswordResetOTPEmail } from "../lib/email-templates/otp-password-reset";
+import { getSignInOTPEmail } from "../lib/email-templates/otp-sign-in";
 import { components } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -15,7 +19,9 @@ import { internalQuery, query } from "./_generated/server";
  * for authentication and authorization in Convex functions.
  */
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 /**
  * Create the Better Auth instance with Convex adapter
@@ -24,53 +30,55 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 // expects GenericCtx but we need to accept various Convex context types
 export const createAuth = (ctx: unknown) =>
   betterAuth({
-    database: authComponent.adapter(ctx as Parameters<typeof authComponent.adapter>[0]),
+    database: authComponent.adapter(
+      ctx as Parameters<typeof authComponent.adapter>[0]
+    ),
+    // CRITICAL: baseURL is required for Convex JWT token validation
+    // This must point to your Convex site URL
+    baseURL: process.env.CONVEX_SITE_URL,
     // Add trustedOrigins to allow requests from Next.js app
     // Note: Convex env vars are separate from Next.js .env.local
     trustedOrigins: [
-      "https://quaint-loris-658.convex.site",
-      "http://localhost:3000",
+      process.env.CONVEX_SITE_URL || "",
+      process.env.SITE_URL || "http://localhost:3000",
       "http://localhost:3001",
     ],
     emailAndPassword: {
       enabled: false, // We use email OTP instead
     },
     plugins: [
+      // CRITICAL: convex() plugin is required for JWT token generation
+      // and OIDC endpoint configuration. Without this, Convex cannot
+      // validate JWT tokens and ctx.auth.getUserIdentity() returns null
+      convexPlugin({
+        jwtExpirationSeconds: 60 * 15, // 15 minutes
+      }),
       emailOTP({
         expiresIn: 300, // 5 minutes - explicitly documented
         otpLength: 6, // 6-digit codes
         allowedAttempts: 3, // Maximum 3 verification attempts per OTP
         storeOTP: "encrypted", // Encrypt OTPs in database for security
         async sendVerificationOTP({ email, otp, type }) {
-          const emailFrom = process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
+          const emailFrom =
+            process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
           const emailFromName = process.env.EMAIL_FROM_NAME || "Pathible";
+
+          // Get the appropriate email template based on type
+          const emailTemplate =
+            type === "sign-in"
+              ? getSignInOTPEmail(otp)
+              : type === "email-verification"
+              ? getEmailVerificationOTPEmail(otp)
+              : getPasswordResetOTPEmail(otp);
 
           if (resend) {
             try {
               await resend.emails.send({
                 from: `${emailFromName} <${emailFrom}>`,
                 to: email,
-                subject:
-                  type === "sign-in"
-                    ? "Your Pathible Sign-In Code"
-                    : type === "email-verification"
-                      ? "Verify Your Pathible Email"
-                      : "Reset Your Pathible Password",
-                html: `
-                  <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h1 style="color: #4B7F52;">Pathible</h1>
-                    <h2>Your verification code is:</h2>
-                    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center;">
-                      <h1 style="font-size: 32px; letter-spacing: 8px; margin: 0;">${otp}</h1>
-                    </div>
-                    <p style="color: #666; margin-top: 20px;">
-                      This code will expire in 5 minutes.
-                    </p>
-                    <p style="color: #999; font-size: 12px;">
-                      If you didn't request this code, please ignore this email.
-                    </p>
-                  </div>
-                `,
+                subject: emailTemplate.subject,
+                html: emailTemplate.html,
+                text: emailTemplate.text,
               });
               console.log(`[Auth] OTP sent to ${email}`);
             } catch (error) {
@@ -138,11 +146,13 @@ export interface AuthenticatedContext {
  *   }
  * });
  */
-export async function requireAuth(ctx: QueryCtx | MutationCtx): Promise<AuthenticatedContext> {
+export async function requireAuth(
+  ctx: QueryCtx | MutationCtx
+): Promise<AuthenticatedContext> {
   // Get the authenticated user from Better Auth
   // Note: Better Auth's context type doesn't perfectly match Convex's ctx, so we cast carefully
   const user = await authComponent.getAuthUser(
-    ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
+    ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0]
   );
   if (!user) {
     throw new Error("Not authenticated");
@@ -214,7 +224,7 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx): Promise<void> {
  */
 export async function requireHouseholdAccess(
   ctx: QueryCtx | MutationCtx,
-  householdId: Id<"households">,
+  householdId: Id<"households">
 ): Promise<Doc<"householdMemberships">> {
   const { profile } = await requireAuth(ctx);
 
@@ -222,7 +232,7 @@ export async function requireHouseholdAccess(
   const membership = await ctx.db
     .query("householdMemberships")
     .withIndex("by_household_and_user", (q) =>
-      q.eq("householdId", householdId).eq("userId", profile._id),
+      q.eq("householdId", householdId).eq("userId", profile._id)
     )
     .unique();
 
@@ -249,7 +259,7 @@ export async function requireHouseholdAccess(
  */
 export async function requireHouseholdAdmin(
   ctx: QueryCtx | MutationCtx,
-  householdId: Id<"households">,
+  householdId: Id<"households">
 ): Promise<void> {
   const membership = await requireHouseholdAccess(ctx, householdId);
 
@@ -266,11 +276,11 @@ export async function requireHouseholdAdmin(
  * Use this helper in other Convex functions when you need to check auth without throwing.
  */
 async function getCurrentUserHelper(
-  ctx: QueryCtx | MutationCtx,
+  ctx: QueryCtx | MutationCtx
 ): Promise<{ user: { _id: string; email: string } } | null> {
   // Note: Better Auth's context type doesn't perfectly match Convex's ctx, so we cast carefully
   const user = await authComponent.safeGetAuthUser(
-    ctx as unknown as Parameters<typeof authComponent.safeGetAuthUser>[0],
+    ctx as unknown as Parameters<typeof authComponent.safeGetAuthUser>[0]
   );
 
   if (!user) {
@@ -302,7 +312,7 @@ export const getCurrentUser = query({
         email: v.string(),
       }),
     }),
-    v.null(),
+    v.null()
   ),
   handler: async (ctx) => {
     return await getCurrentUserHelper(ctx);
@@ -336,15 +346,15 @@ export const getCurrentUserWithProfile = query({
             v.literal("profile_complete"),
             v.literal("household_complete"),
             v.literal("preferences_complete"),
-            v.literal("complete"),
-          ),
+            v.literal("complete")
+          )
         ),
         onboardingStep: v.optional(v.number()),
         onboardingCompletedAt: v.optional(v.number()),
         updatedAt: v.number(),
       }),
     }),
-    v.null(),
+    v.null()
   ),
   handler: async (ctx) => {
     try {
@@ -383,8 +393,8 @@ export const requireAuthInternal = internalQuery({
           v.literal("profile_complete"),
           v.literal("household_complete"),
           v.literal("preferences_complete"),
-          v.literal("complete"),
-        ),
+          v.literal("complete")
+        )
       ),
       onboardingStep: v.optional(v.number()),
       onboardingCompletedAt: v.optional(v.number()),
@@ -412,9 +422,13 @@ export const requireHouseholdAccessInternal = internalQuery({
       v.literal("owner"),
       v.literal("steward"),
       v.literal("viewer"),
-      v.literal("executor"),
+      v.literal("executor")
     ),
-    status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+    status: v.union(
+      v.literal("active"),
+      v.literal("pending"),
+      v.literal("inactive")
+    ),
     invitedBy: v.optional(v.id("profiles")),
     joinedAt: v.optional(v.number()),
   }),
@@ -445,11 +459,15 @@ export const getDocumentInternal = internalQuery({
       fileSize: v.number(),
       fileType: v.string(),
       categories: v.array(v.string()),
-      accessLevel: v.union(v.literal("household"), v.literal("admins"), v.literal("custom")),
+      accessLevel: v.union(
+        v.literal("household"),
+        v.literal("admins"),
+        v.literal("custom")
+      ),
       sharedWithUsers: v.array(v.id("profiles")),
       updatedAt: v.number(),
     }),
-    v.null(),
+    v.null()
   ),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.documentId);

@@ -1,7 +1,12 @@
 "use client";
 
 import { Clock, FileText, FolderOpen, HardDrive } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface VaultStatsProps {
   stats: {
@@ -24,58 +29,70 @@ export function VaultStats({ stats }: VaultStatsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Total Documents */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <FileText className="h-8 w-8 text-primary" />
+      <Card className="py-2">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-3">
+            <FileText className="h-6 w-6 text-primary shrink-0" />
+            <div className="text-2xl font-bold">{stats.totalDocuments}</div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold mb-1">{stats.totalDocuments}</div>
-          <CardTitle className="text-base mb-1">Total Documents</CardTitle>
-          <CardDescription>Stored securely</CardDescription>
+          <div className="mt-1">
+            <CardTitle className="text-sm font-medium">
+              Total Documents
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Stored securely
+            </CardDescription>
+          </div>
         </CardContent>
       </Card>
 
       {/* Total Storage */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <HardDrive className="h-8 w-8 text-accent" />
+      <Card className="py-2">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-3">
+            <HardDrive className="h-6 w-6 text-accent shrink-0" />
+            <div className="text-2xl font-bold">
+              {formatBytes(stats.totalSize)}
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold mb-1">{formatBytes(stats.totalSize)}</div>
-          <CardTitle className="text-base mb-1">Storage Used</CardTitle>
-          <CardDescription>Total file size</CardDescription>
+          <div className="mt-1">
+            <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
+            <CardDescription className="text-xs">
+              Total file size
+            </CardDescription>
+          </div>
         </CardContent>
       </Card>
 
       {/* Categories */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <FolderOpen className="h-8 w-8 text-secondary" />
+      <Card className="py-2">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-3">
+            <FolderOpen className="h-6 w-6 text-secondary shrink-0" />
+            <div className="text-2xl font-bold">{stats.totalCategories}</div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold mb-1">{stats.totalCategories}</div>
-          <CardTitle className="text-base mb-1">Categories</CardTitle>
-          <CardDescription>Organization tags</CardDescription>
+          <div className="mt-1">
+            <CardTitle className="text-sm font-medium">Categories</CardTitle>
+            <CardDescription className="text-xs">
+              Organization tags
+            </CardDescription>
+          </div>
         </CardContent>
       </Card>
 
       {/* Recent Uploads */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <Clock className="h-8 w-8 text-muted-foreground" />
+      <Card className="py-2">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-3">
+            <Clock className="h-6 w-6 text-muted-foreground shrink-0" />
+            <div className="text-2xl font-bold">{stats.recentUploads}</div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold mb-1">{stats.recentUploads}</div>
-          <CardTitle className="text-base mb-1">Recent Uploads</CardTitle>
-          <CardDescription>Last 30 days</CardDescription>
+          <div className="mt-1">
+            <CardTitle className="text-sm font-medium">
+              Recent Uploads
+            </CardTitle>
+            <CardDescription className="text-xs">Last 30 days</CardDescription>
+          </div>
         </CardContent>
       </Card>
     </div>

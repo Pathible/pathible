@@ -9,7 +9,6 @@ import { B2_CONSTANTS, getBackblazeConfig } from "./config";
 import type {
   B2AuthorizeAccountResponse,
   B2DeleteFileVersionResponse,
-  B2Error,
   B2GetUploadUrlResponse,
   B2UploadFileResponse,
 } from "./types";
@@ -36,22 +35,55 @@ export class BackblazeClient {
       "base64",
     );
 
-    const response = await fetch(
-      `${B2_CONSTANTS.B2_API_URL}/${B2_CONSTANTS.B2_API_VERSION}/b2_authorize_account`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Basic ${authString}`,
-        },
+    const url = `${B2_CONSTANTS.B2_API_BASE_URL}${B2_CONSTANTS.B2_API_PATH_PREFIX}/${B2_CONSTANTS.B2_API_VERSION}/b2_authorize_account`;
+    console.log("[B2 Client] Attempting authorization...", {
+      url,
+      keyId: `${this.config.keyId.substring(0, 8)}...`,
+    });
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Basic ${authString}`,
+        "User-Agent": "pathible-b2-client/1.0 (node)",
       },
-    );
+    });
 
     if (!response.ok) {
-      const error: B2Error = await response.json();
-      throw new Error(`B2 authorization failed: ${error.message}`);
+      let errorMessage = `HTTP ${response.status} ${response.statusText}`;
+      try {
+        const errorBody = await response.text();
+        console.error("[B2 Client] Authorization failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorBody,
+        });
+
+        // Try to parse as JSON to get structured error
+        try {
+          const errorJson = JSON.parse(errorBody);
+          errorMessage = errorJson.message || errorJson.code || errorMessage;
+        } catch {
+          // If not JSON, use the text body
+          errorMessage = errorBody || errorMessage;
+        }
+      } catch (parseError) {
+        console.error("[B2 Client] Failed to parse error response:", parseError);
+      }
+      console.error("[B2 Client] Authorization failed:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorMessage,
+      });
+      throw new Error(`B2 authorization failed: ${errorMessage}`);
     }
 
     const data: B2AuthorizeAccountResponse = await response.json();
+    console.log("[B2 Client] Authorization successful", {
+      apiUrl: data.apiUrl,
+      downloadUrl: data.downloadUrl,
+    });
+
     this.authToken = data.authorizationToken;
     this.apiUrl = data.apiUrl;
     this.downloadUrl = data.downloadUrl;
@@ -77,7 +109,14 @@ export class BackblazeClient {
   async getUploadUrl(): Promise<B2GetUploadUrlResponse> {
     const { authToken, apiUrl } = await this.ensureAuth();
 
-    const response = await fetch(`${apiUrl}/${B2_CONSTANTS.B2_API_VERSION}/b2_get_upload_url`, {
+    const url = `${apiUrl}${B2_CONSTANTS.B2_API_PATH_PREFIX}/${B2_CONSTANTS.B2_API_VERSION}/b2_get_upload_url`;
+
+    console.log("[B2 Client] Requesting upload URL...", {
+      url,
+      bucketId: this.config.bucketId,
+    });
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: authToken,
@@ -89,11 +128,31 @@ export class BackblazeClient {
     });
 
     if (!response.ok) {
-      const error: B2Error = await response.json();
-      throw new Error(`Failed to get upload URL: ${error.message}`);
+      let errorMessage = `HTTP ${response.status} ${response.statusText}`;
+      try {
+        const errorBody = await response.text();
+        console.error("[B2 Client] Get upload URL failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorBody,
+        });
+
+        try {
+          const errorJson = JSON.parse(errorBody);
+          errorMessage = errorJson.message || errorJson.code || errorMessage;
+        } catch {
+          errorMessage = errorBody || errorMessage;
+        }
+      } catch (parseError) {
+        console.error("[B2 Client] Failed to parse error response:", parseError);
+      }
+
+      throw new Error(`Failed to get upload URL: ${errorMessage}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log("[B2 Client] Upload URL obtained successfully");
+    return result;
   }
 
   /**
@@ -127,8 +186,27 @@ export class BackblazeClient {
     });
 
     if (!response.ok) {
-      const error: B2Error = await response.json();
-      throw new Error(`File upload failed: ${error.message}`);
+      let errorMessage = `HTTP ${response.status} ${response.statusText}`;
+      try {
+        const errorBody = await response.text();
+        console.error("[B2 Client] File upload failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          fileName,
+          body: errorBody,
+        });
+
+        try {
+          const errorJson = JSON.parse(errorBody);
+          errorMessage = errorJson.message || errorJson.code || errorMessage;
+        } catch {
+          errorMessage = errorBody || errorMessage;
+        }
+      } catch (parseError) {
+        console.error("[B2 Client] Failed to parse error response:", parseError);
+      }
+
+      throw new Error(`File upload failed: ${errorMessage}`);
     }
 
     return response.json();
@@ -145,7 +223,7 @@ export class BackblazeClient {
     const { authToken, apiUrl } = await this.ensureAuth();
 
     const response = await fetch(
-      `${apiUrl}/${B2_CONSTANTS.B2_API_VERSION}/b2_get_download_authorization`,
+      `${apiUrl}${B2_CONSTANTS.B2_API_PATH_PREFIX}/${B2_CONSTANTS.B2_API_VERSION}/b2_get_download_authorization`,
       {
         method: "POST",
         headers: {
@@ -161,8 +239,27 @@ export class BackblazeClient {
     );
 
     if (!response.ok) {
-      const error: B2Error = await response.json();
-      throw new Error(`Failed to get download authorization: ${error.message}`);
+      let errorMessage = `HTTP ${response.status} ${response.statusText}`;
+      try {
+        const errorBody = await response.text();
+        console.error("[B2 Client] Get download authorization failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          fileNamePrefix,
+          body: errorBody,
+        });
+
+        try {
+          const errorJson = JSON.parse(errorBody);
+          errorMessage = errorJson.message || errorJson.code || errorMessage;
+        } catch {
+          errorMessage = errorBody || errorMessage;
+        }
+      } catch (parseError) {
+        console.error("[B2 Client] Failed to parse error response:", parseError);
+      }
+
+      throw new Error(`Failed to get download authorization: ${errorMessage}`);
     }
 
     const data = await response.json();
@@ -174,16 +271,14 @@ export class BackblazeClient {
    * Returns both URL and auth token - client must include token in Authorization header
    */
   async getDownloadUrl(fileName: string): Promise<{ url: string; authToken: string }> {
-    await this.authorize();
+    await this.ensureAuth();
 
-    // For private buckets, we need download authorization
-    const authToken = await this.getDownloadAuthorization(fileName);
+    const downloadAuthToken = await this.getDownloadAuthorization(fileName);
 
-    // Construct download URL (auth token goes in Authorization header, not query params)
     const encodedFileName = encodeURIComponent(fileName);
     const url = `${this.downloadUrl}/file/${this.config.bucketName}/${encodedFileName}`;
 
-    return { url, authToken };
+    return { url, authToken: downloadAuthToken };
   }
 
   /**
@@ -193,7 +288,7 @@ export class BackblazeClient {
     const { authToken, apiUrl } = await this.ensureAuth();
 
     const response = await fetch(
-      `${apiUrl}/${B2_CONSTANTS.B2_API_VERSION}/b2_delete_file_version`,
+      `${apiUrl}${B2_CONSTANTS.B2_API_PATH_PREFIX}/${B2_CONSTANTS.B2_API_VERSION}/b2_delete_file_version`,
       {
         method: "POST",
         headers: {
@@ -208,8 +303,28 @@ export class BackblazeClient {
     );
 
     if (!response.ok) {
-      const error: B2Error = await response.json();
-      throw new Error(`Failed to delete file: ${error.message}`);
+      let errorMessage = `HTTP ${response.status} ${response.statusText}`;
+      try {
+        const errorBody = await response.text();
+        console.error("[B2 Client] Delete file failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          fileName,
+          fileId,
+          body: errorBody,
+        });
+
+        try {
+          const errorJson = JSON.parse(errorBody);
+          errorMessage = errorJson.message || errorJson.code || errorMessage;
+        } catch {
+          errorMessage = errorBody || errorMessage;
+        }
+      } catch (parseError) {
+        console.error("[B2 Client] Failed to parse error response:", parseError);
+      }
+
+      throw new Error(`Failed to delete file: ${errorMessage}`);
     }
 
     return response.json();

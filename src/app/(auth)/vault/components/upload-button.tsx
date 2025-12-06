@@ -1,8 +1,9 @@
 "use client";
 
-import { useAction, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { Loader2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -22,7 +23,6 @@ export function UploadButton({ householdId, categories, className }: UploadButto
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const generateUploadUrl = useAction(api.vaultActions.generateUploadUrl);
   const createDocument = useMutation(api.vault.create);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,7 +30,7 @@ export function UploadButton({ householdId, categories, className }: UploadButto
     if (file) {
       // Check file size (max 100MB)
       if (file.size > 100 * 1024 * 1024) {
-        alert("File size must be less than 100MB");
+        toast.error("File size must be less than 100MB");
         return;
       }
       setSelectedFile(file);
@@ -51,46 +51,60 @@ export function UploadButton({ householdId, categories, className }: UploadButto
     setUploadProgress(0);
 
     try {
-      // Step 1: Generate B2 upload URL
-      const { uploadUrl, authorizationToken, b2FileName, bucketName } = await generateUploadUrl({
-        householdId,
-        fileName: selectedFile.name,
-        fileType: selectedFile.type,
-        fileSize: selectedFile.size,
-      });
-      setUploadProgress(25);
-
-      // Step 2: Upload file directly to Backblaze B2
-      const result = await fetch(uploadUrl, {
+      // Step 1: Get presigned upload URL from Next.js API route
+      const uploadUrlResponse = await fetch("/api/vault/upload-url", {
         method: "POST",
         headers: {
-          Authorization: authorizationToken,
-          "Content-Type": selectedFile.type,
-          "X-Bz-File-Name": encodeURIComponent(b2FileName),
-          "X-Bz-Content-Sha1": "do_not_verify", // Skip SHA1 verification for simplicity
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          householdId,
+          fileName: selectedFile.name,
+          fileType: selectedFile.type || "application/octet-stream",
+          fileSize: selectedFile.size,
+        }),
+      });
+
+      if (!uploadUrlResponse.ok) {
+        const error = await uploadUrlResponse.json();
+        throw new Error(error.error || "Failed to generate upload URL");
+      }
+
+      const { uploadUrl, b2FileName } = await uploadUrlResponse.json();
+      setUploadProgress(25);
+
+      // Step 2: Upload file directly to B2 using S3-compatible presigned URL
+      // With presigned URLs, we use PUT method and only need Content-Type header
+      // No Authorization header needed - credentials are embedded in the URL
+      const uploadResult = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": selectedFile.type || "application/octet-stream",
         },
         body: selectedFile,
       });
 
-      if (!result.ok) {
-        throw new Error("Failed to upload file to B2");
+      if (!uploadResult.ok) {
+        const errorText = await uploadResult.text();
+        console.error("S3 upload failed:", uploadResult.status, errorText);
+        throw new Error(`Failed to upload file: ${uploadResult.status}`);
       }
 
-      const b2Response = await result.json();
-      // B2 response: { fileId, fileName, contentSha1, contentLength, ... }
       setUploadProgress(75);
 
       // Step 3: Create document metadata in Convex
+      // With S3 API, the file key is the identifier (no separate fileId)
+      // Note: bucketName is stored server-side for security, not exposed to client
       await createDocument({
         householdId,
         name: metadata.name,
         description: metadata.description,
-        b2FileId: b2Response.fileId,
-        b2FileName: b2Response.fileName,
-        b2BucketName: bucketName,
-        fileSize: b2Response.contentLength,
-        fileType: selectedFile.type,
-        fileHash: b2Response.contentSha1,
+        b2FileId: b2FileName, // Use the key as the file ID for S3
+        b2FileName: b2FileName,
+        b2BucketName: process.env.NEXT_PUBLIC_B2_BUCKET_NAME || "pathible-vault",
+        fileSize: selectedFile.size,
+        fileType: selectedFile.type || "application/octet-stream",
+        fileHash: "", // S3 presigned uploads don't return hash in response
         categories: metadata.categories,
         accessLevel: metadata.accessLevel,
         sharedWithUsers: metadata.sharedWithUsers || [],
@@ -109,7 +123,9 @@ export function UploadButton({ householdId, categories, className }: UploadButto
       }
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Failed to upload document. Please try again.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload document. Please try again.",
+      );
     } finally {
       setIsUploading(false);
     }

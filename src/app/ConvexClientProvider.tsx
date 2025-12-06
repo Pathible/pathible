@@ -10,10 +10,7 @@ if (!convexUrl) {
   throw new Error("NEXT_PUBLIC_CONVEX_URL environment variable is not set");
 }
 
-const convex = new ConvexReactClient(convexUrl, {
-  // Optionally pause queries until the user is authenticated
-  expectAuth: true,
-});
+const convex = new ConvexReactClient(convexUrl);
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
   return (

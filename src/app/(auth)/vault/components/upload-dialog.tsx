@@ -2,6 +2,7 @@
 
 import { FileText, X } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,7 +57,7 @@ export function UploadDialog({
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      alert("Please enter a document name");
+      toast.error("Please enter a document name");
       return;
     }
 

@@ -29,6 +29,18 @@ export const get = query({
       avatarUrl: v.optional(v.string()),
       phone: v.optional(v.string()),
       dateOfBirth: v.optional(v.number()),
+      // Onboarding tracking
+      onboardingStatus: v.optional(
+        v.union(
+          v.literal("not_started"),
+          v.literal("profile_complete"),
+          v.literal("household_complete"),
+          v.literal("preferences_complete"),
+          v.literal("complete"),
+        ),
+      ),
+      onboardingStep: v.optional(v.number()),
+      onboardingCompletedAt: v.optional(v.number()),
       updatedAt: v.number(),
     }),
     v.null(),

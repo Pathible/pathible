@@ -2,7 +2,11 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
-import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./auth";
+import {
+  requireAuth,
+  requireHouseholdAccess,
+  requireHouseholdAdmin,
+} from "./auth";
 
 /**
  * Heritage Vault - Secure Document Storage System
@@ -23,7 +27,7 @@ import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./au
 const accessLevelValidator = v.union(
   v.literal("household"),
   v.literal("admins"),
-  v.literal("custom"),
+  v.literal("custom")
 );
 
 const documentReturnValidator = v.object({
@@ -66,7 +70,7 @@ const categoryReturnValidator = v.object({
 function checkDocumentAccess(
   document: Doc<"vaultDocuments">,
   profileId: Id<"profiles">,
-  membershipRole: string,
+  membershipRole: string
 ): boolean {
   // Check access level
   switch (document.accessLevel) {
@@ -80,7 +84,10 @@ function checkDocumentAccess(
 
     case "custom":
       // Check if user is in the shared list or is the uploader
-      return document.uploadedBy === profileId || document.sharedWithUsers.includes(profileId);
+      return (
+        document.uploadedBy === profileId ||
+        document.sharedWithUsers.includes(profileId)
+      );
 
     default:
       return false;
@@ -90,7 +97,10 @@ function checkDocumentAccess(
 /**
  * Get uploader name for a document
  */
-async function getUploaderName(ctx: QueryCtx, uploaderId: Id<"profiles">): Promise<string> {
+async function getUploaderName(
+  ctx: QueryCtx,
+  uploaderId: Id<"profiles">
+): Promise<string> {
   const uploader = await ctx.db.get(uploaderId);
   if (!uploader) return "Unknown";
   return `${uploader.firstName} ${uploader.lastName}`;
@@ -123,14 +133,16 @@ export const list = query({
 
     // Filter by access permissions
     const accessibleDocs = documents.filter((doc) =>
-      checkDocumentAccess(doc, profile._id, membership.role),
+      checkDocumentAccess(doc, profile._id, membership.role)
     );
 
     // Apply category filter
     let filteredDocs = accessibleDocs;
     if (args.category) {
       const category = args.category;
-      filteredDocs = filteredDocs.filter((doc) => doc.categories.includes(category));
+      filteredDocs = filteredDocs.filter((doc) =>
+        doc.categories.includes(category)
+      );
     }
 
     // Apply search filter
@@ -138,7 +150,8 @@ export const list = query({
       const query = args.searchQuery.toLowerCase();
       filteredDocs = filteredDocs.filter(
         (doc) =>
-          doc.name.toLowerCase().includes(query) || doc.description?.toLowerCase().includes(query),
+          doc.name.toLowerCase().includes(query) ||
+          doc.description?.toLowerCase().includes(query)
       );
     }
 
@@ -148,7 +161,7 @@ export const list = query({
       filteredDocs.map(async (doc) => ({
         ...doc,
         uploaderName: await getUploaderName(ctx, doc.uploadedBy),
-      })),
+      }))
     );
 
     return docsWithDetails;
@@ -173,10 +186,16 @@ export const get = query({
     const { profile } = await requireAuth(ctx);
 
     // Check document-level access
-    const hasAccess = checkDocumentAccess(document, profile._id, membership.role);
+    const hasAccess = checkDocumentAccess(
+      document,
+      profile._id,
+      membership.role
+    );
 
     if (!hasAccess) {
-      throw new Error("Access denied: You do not have permission to view this document");
+      throw new Error(
+        "Access denied: You do not have permission to view this document"
+      );
     }
 
     // Note: Download URL is generated via vaultActions.generateDownloadUrl for security
@@ -216,7 +235,9 @@ export const listCategories = query({
     // Count documents per category
     const categoriesWithCounts = categories.map((category) => ({
       ...category,
-      documentCount: documents.filter((doc) => doc.categories.includes(category.name)).length,
+      documentCount: documents.filter((doc) =>
+        doc.categories.includes(category.name)
+      ).length,
     }));
 
     return categoriesWithCounts;
@@ -247,7 +268,7 @@ export const getStats = query({
 
     // Filter by access
     const accessibleDocs = documents.filter((doc) =>
-      checkDocumentAccess(doc, profile._id, membership.role),
+      checkDocumentAccess(doc, profile._id, membership.role)
     );
 
     const categories = await ctx.db
@@ -257,7 +278,9 @@ export const getStats = query({
 
     // Count recent uploads (last 30 days)
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const recentDocs = accessibleDocs.filter((doc) => doc._creationTime >= thirtyDaysAgo);
+    const recentDocs = accessibleDocs.filter(
+      (doc) => doc._creationTime >= thirtyDaysAgo
+    );
 
     return {
       totalDocuments: accessibleDocs.length,
@@ -323,12 +346,14 @@ export const create = mutation({
         const membership = await ctx.db
           .query("householdMemberships")
           .withIndex("by_household_and_user", (q) =>
-            q.eq("householdId", args.householdId).eq("userId", userId),
+            q.eq("householdId", args.householdId).eq("userId", userId)
           )
           .unique();
 
         if (!membership || membership.status !== "active") {
-          throw new Error("Cannot share with users who are not household members");
+          throw new Error(
+            "Cannot share with users who are not household members"
+          );
         }
       }
     }
@@ -390,11 +415,14 @@ export const update = mutation({
     const { profile } = await requireAuth(ctx);
 
     // Only admins or the uploader can edit
-    const isAdmin = membership.role === "owner" || membership.role === "steward";
+    const isAdmin =
+      membership.role === "owner" || membership.role === "steward";
     const isUploader = document.uploadedBy === profile._id;
 
     if (!isAdmin && !isUploader) {
-      throw new Error("Access denied: You do not have permission to edit this document");
+      throw new Error(
+        "Access denied: You do not have permission to edit this document"
+      );
     }
 
     // Build update object
@@ -434,12 +462,14 @@ export const update = mutation({
           const membership = await ctx.db
             .query("householdMemberships")
             .withIndex("by_household_and_user", (q) =>
-              q.eq("householdId", document.householdId).eq("userId", userId),
+              q.eq("householdId", document.householdId).eq("userId", userId)
             )
             .unique();
 
           if (!membership || membership.status !== "active") {
-            throw new Error("Cannot share with users who are not household members");
+            throw new Error(
+              "Cannot share with users who are not household members"
+            );
           }
         }
       }
@@ -483,11 +513,14 @@ export const remove = mutation({
     const { profile } = await requireAuth(ctx);
 
     // Only admins or the uploader can delete
-    const isAdmin = membership.role === "owner" || membership.role === "steward";
+    const isAdmin =
+      membership.role === "owner" || membership.role === "steward";
     const isUploader = document.uploadedBy === profile._id;
 
     if (!isAdmin && !isUploader) {
-      throw new Error("Access denied: You do not have permission to delete this document");
+      throw new Error(
+        "Access denied: You do not have permission to delete this document"
+      );
     }
 
     // Note: B2 file deletion must be handled separately via vaultActions.deleteFile
@@ -550,7 +583,7 @@ export const createCategory = mutation({
       .collect();
 
     const duplicate = existing.find(
-      (cat) => cat.name.toLowerCase() === args.name.trim().toLowerCase(),
+      (cat) => cat.name.toLowerCase() === args.name.trim().toLowerCase()
     );
 
     if (duplicate) {
@@ -611,12 +644,15 @@ export const updateCategory = mutation({
       // Check for duplicates
       const existing = await ctx.db
         .query("vaultCategories")
-        .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
+        .withIndex("by_household", (q) =>
+          q.eq("householdId", category.householdId)
+        )
         .collect();
 
       const duplicate = existing.find(
         (cat) =>
-          cat._id !== args.categoryId && cat.name.toLowerCase() === args.name?.trim().toLowerCase(),
+          cat._id !== args.categoryId &&
+          cat.name.toLowerCase() === args.name?.trim().toLowerCase()
       );
 
       if (duplicate) {
@@ -626,7 +662,9 @@ export const updateCategory = mutation({
       // Update all documents using the old category name
       const documents = await ctx.db
         .query("vaultDocuments")
-        .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
+        .withIndex("by_household", (q) =>
+          q.eq("householdId", category.householdId)
+        )
         .collect();
 
       const oldName = category.name;
@@ -634,7 +672,9 @@ export const updateCategory = mutation({
 
       for (const doc of documents) {
         if (doc.categories.includes(oldName)) {
-          const updatedCategories = doc.categories.map((cat) => (cat === oldName ? newName : cat));
+          const updatedCategories = doc.categories.map((cat) =>
+            cat === oldName ? newName : cat
+          );
           await ctx.db.patch(doc._id, { categories: updatedCategories });
         }
       }
@@ -686,12 +726,16 @@ export const deleteCategory = mutation({
     // Remove category from all documents
     const documents = await ctx.db
       .query("vaultDocuments")
-      .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
+      .withIndex("by_household", (q) =>
+        q.eq("householdId", category.householdId)
+      )
       .collect();
 
     for (const doc of documents) {
       if (doc.categories.includes(category.name)) {
-        const updatedCategories = doc.categories.filter((cat) => cat !== category.name);
+        const updatedCategories = doc.categories.filter(
+          (cat) => cat !== category.name
+        );
         await ctx.db.patch(doc._id, { categories: updatedCategories });
       }
     }
@@ -709,5 +753,78 @@ export const deleteCategory = mutation({
     });
 
     return null;
+  },
+});
+
+/**
+ * Default categories for new households
+ */
+const DEFAULT_CATEGORIES = [
+  {
+    name: "Legal Documents",
+    description: "Wills, trusts, power of attorney, and legal agreements",
+  },
+  {
+    name: "Financial Records",
+    description: "Bank statements, investments, and tax documents",
+  },
+  {
+    name: "Medical Records",
+    description: "Health records, prescriptions, and medical history",
+  },
+  {
+    name: "Insurance Policies",
+    description: "Life, health, home, and auto insurance documents",
+  },
+  {
+    name: "Property Deeds",
+    description: "Real estate titles, deeds, and property documents",
+  },
+  {
+    name: "Personal Documents",
+    description: "Birth certificates, passports, and IDs",
+  },
+  {
+    name: "Family Photos",
+    description: "Important family photographs and memories",
+  },
+  { name: "Other", description: "Miscellaneous documents" },
+];
+
+/**
+ * Initialize default categories for a household
+ * Creates standard categories if none exist
+ */
+export const initializeDefaultCategories = mutation({
+  args: {
+    householdId: v.id("households"),
+  },
+  returns: v.number(), // Returns count of categories created
+  handler: async (ctx, args) => {
+    await requireHouseholdAccess(ctx, args.householdId);
+
+    // Check if categories already exist
+    const existing = await ctx.db
+      .query("vaultCategories")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+
+    if (existing.length > 0) {
+      // Categories already exist, don't overwrite
+      return 0;
+    }
+
+    // Create default categories
+    let created = 0;
+    for (const category of DEFAULT_CATEGORIES) {
+      await ctx.db.insert("vaultCategories", {
+        householdId: args.householdId,
+        name: category.name,
+        description: category.description,
+      });
+      created++;
+    }
+
+    return created;
   },
 });
