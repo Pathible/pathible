@@ -117,16 +117,9 @@ export class BackblazeS3Client {
   async getPresignedUploadUrl(
     key: string,
     contentType: string,
-    options: PresignedUrlOptions = {},
+    options: PresignedUrlOptions = {}
   ): Promise<PresignedUploadResult> {
     const expiresIn = options.expiresIn || 3600; // Default: 1 hour
-
-    console.log("[B2 S3 Client] Generating presigned upload URL:", {
-      bucket: this.bucketName,
-      key,
-      contentType,
-      expiresIn,
-    });
 
     try {
       // Create PutObject command
@@ -138,12 +131,6 @@ export class BackblazeS3Client {
 
       // Generate presigned URL
       const uploadUrl = await getSignedUrl(this.s3Client, command, {
-        expiresIn,
-      });
-
-      console.log("[B2 S3 Client] Presigned upload URL generated successfully", {
-        key,
-        urlLength: uploadUrl.length,
         expiresIn,
       });
 
@@ -160,7 +147,7 @@ export class BackblazeS3Client {
       throw new Error(
         `Failed to generate presigned upload URL: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -189,15 +176,9 @@ export class BackblazeS3Client {
    */
   async getPresignedDownloadUrl(
     key: string,
-    options: PresignedUrlOptions = {},
+    options: PresignedUrlOptions = {}
   ): Promise<PresignedDownloadResult> {
     const expiresIn = options.expiresIn || 3600; // Default: 1 hour
-
-    console.log("[B2 S3 Client] Generating presigned download URL:", {
-      bucket: this.bucketName,
-      key,
-      expiresIn,
-    });
 
     try {
       // Create GetObject command
@@ -211,25 +192,22 @@ export class BackblazeS3Client {
         expiresIn,
       });
 
-      console.log("[B2 S3 Client] Presigned download URL generated successfully", {
-        key,
-        urlLength: downloadUrl.length,
-        expiresIn,
-      });
-
       return {
         downloadUrl,
         expiresIn,
       };
     } catch (error) {
-      console.error("[B2 S3 Client] Failed to generate presigned download URL:", {
-        key,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      console.error(
+        "[B2 S3 Client] Failed to generate presigned download URL:",
+        {
+          key,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
       throw new Error(
         `Failed to generate presigned download URL: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -247,11 +225,6 @@ export class BackblazeS3Client {
    * await client.deleteObject("household_123/old-document.pdf");
    */
   async deleteObject(key: string): Promise<void> {
-    console.log("[B2 S3 Client] Deleting object:", {
-      bucket: this.bucketName,
-      key,
-    });
-
     try {
       // Create DeleteObject command
       const command = new DeleteObjectCommand({
@@ -261,15 +234,15 @@ export class BackblazeS3Client {
 
       // Execute delete operation
       await this.s3Client.send(command);
-
-      console.log("[B2 S3 Client] Object deleted successfully", { key });
     } catch (error) {
       console.error("[B2 S3 Client] Failed to delete object:", {
         key,
         error: error instanceof Error ? error.message : String(error),
       });
       throw new Error(
-        `Failed to delete object: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to delete object: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
     }
   }
@@ -290,7 +263,11 @@ export class BackblazeS3Client {
       console.log("[B2 S3 Client] Testing connection...");
 
       // Try to generate a presigned URL for a test key
-      await this.getPresignedUploadUrl("connection-test/test.txt", "text/plain", { expiresIn: 60 });
+      await this.getPresignedUploadUrl(
+        "connection-test/test.txt",
+        "text/plain",
+        { expiresIn: 60 }
+      );
 
       console.log("[B2 S3 Client] Connection test successful");
       return true;

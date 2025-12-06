@@ -11,7 +11,13 @@ import {
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 // Icon mapping for server-to-client serialization
 const iconMap: Record<string, LucideIcon> = {
@@ -46,7 +52,7 @@ export function DashboardStatCard({
       className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary/50"
       onClick={() => router.push(href)}
     >
-      <CardHeader className="pb-3">
+      <CardHeader>
         <div className="flex items-center justify-between">
           <Icon className="h-8 w-8 text-primary" />
           <ArrowRight className="h-5 w-5 text-muted-foreground" />

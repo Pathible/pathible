@@ -23,7 +23,10 @@ export default function SignOutPage() {
               router.push("/login");
             },
             onError: (ctx) => {
-              console.error("[Sign Out] Error signing out:", ctx.error);
+              console.error(
+                "[Sign Out] Error signing out:",
+                JSON.stringify(ctx.error, null, 2)
+              );
               setStatus("error");
             },
           },
