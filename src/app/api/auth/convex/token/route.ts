@@ -26,9 +26,6 @@ export async function GET() {
     return NextResponse.json({ token: sessionToken.value }, { status: 200 });
   } catch (error) {
     console.error("[Auth API] Failed to get token:", error);
-    return NextResponse.json(
-      { error: "Failed to retrieve token" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to retrieve token" }, { status: 500 });
   }
 }
