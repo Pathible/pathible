@@ -1,11 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import {
-  requireAuth,
-  requireHouseholdAccess,
-  requireHouseholdAdmin,
-} from "./auth";
+import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./auth";
 
 /**
  * Household management functions
@@ -38,13 +34,13 @@ export const get = query({
         subscriptionTier: v.union(
           v.literal("foundations"),
           v.literal("heritage"),
-          v.literal("legacy")
+          v.literal("legacy"),
         ),
         subscriptionStatus: v.union(
           v.literal("active"),
           v.literal("inactive"),
           v.literal("cancelled"),
-          v.literal("past_due")
+          v.literal("past_due"),
         ),
         updatedAt: v.number(),
         // Include the user's role in this household
@@ -52,12 +48,12 @@ export const get = query({
           v.literal("owner"),
           v.literal("steward"),
           v.literal("viewer"),
-          v.literal("executor")
+          v.literal("executor"),
         ),
         memberCount: v.number(),
-      })
+      }),
     ),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx) => {
     // Handle auth race condition: return null if auth token not yet synchronized
@@ -90,7 +86,7 @@ export const get = query({
         const allMemberships = await ctx.db
           .query("householdMemberships")
           .withIndex("by_household_and_status", (q) =>
-            q.eq("householdId", membership.householdId).eq("status", "active")
+            q.eq("householdId", membership.householdId).eq("status", "active"),
           )
           .collect();
 
@@ -99,7 +95,7 @@ export const get = query({
           userRole: membership.role,
           memberCount: allMemberships.length,
         };
-      })
+      }),
     );
 
     // Filter out any null values and return with proper typing
@@ -131,13 +127,13 @@ export const list = query({
         subscriptionTier: v.union(
           v.literal("foundations"),
           v.literal("heritage"),
-          v.literal("legacy")
+          v.literal("legacy"),
         ),
         subscriptionStatus: v.union(
           v.literal("active"),
           v.literal("inactive"),
           v.literal("cancelled"),
-          v.literal("past_due")
+          v.literal("past_due"),
         ),
         updatedAt: v.number(),
         // Include the user's role in this household
@@ -145,12 +141,12 @@ export const list = query({
           v.literal("owner"),
           v.literal("steward"),
           v.literal("viewer"),
-          v.literal("executor")
+          v.literal("executor"),
         ),
         memberCount: v.number(),
-      })
+      }),
     ),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx) => {
     // Handle auth race condition: return null if auth token not yet synchronized
@@ -182,7 +178,7 @@ export const list = query({
         const allMemberships = await ctx.db
           .query("householdMemberships")
           .withIndex("by_household_and_status", (q) =>
-            q.eq("householdId", membership.householdId).eq("status", "active")
+            q.eq("householdId", membership.householdId).eq("status", "active"),
           )
           .collect();
 
@@ -191,7 +187,7 @@ export const list = query({
           userRole: membership.role,
           memberCount: allMemberships.length,
         };
-      })
+      }),
     );
 
     // Filter out any null values and return with proper typing
@@ -223,16 +219,12 @@ export const listMembers = query({
         v.literal("owner"),
         v.literal("steward"),
         v.literal("viewer"),
-        v.literal("executor")
+        v.literal("executor"),
       ),
-      status: v.union(
-        v.literal("active"),
-        v.literal("pending"),
-        v.literal("inactive")
-      ),
+      status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
       invitedBy: v.optional(v.id("profiles")),
       joinedAt: v.optional(v.number()),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
@@ -263,14 +255,12 @@ export const listMembers = query({
           invitedBy: membership.invitedBy,
           joinedAt: membership.joinedAt,
         };
-      })
+      }),
     );
 
     // Filter out null values and sort by role (owners first, then stewards, etc.)
     type MemberWithProfile = NonNullable<(typeof members)[number]>;
-    const validMembers = members.filter(
-      (m): m is MemberWithProfile => m !== null
-    );
+    const validMembers = members.filter((m): m is MemberWithProfile => m !== null);
     const roleOrder = { owner: 0, steward: 1, executor: 2, viewer: 3 };
     return validMembers.sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
   },
@@ -295,20 +285,16 @@ export const listInvitations = query({
         lastName: v.string(),
       }),
       relationship: v.optional(v.string()),
-      role: v.union(
-        v.literal("steward"),
-        v.literal("viewer"),
-        v.literal("executor")
-      ),
+      role: v.union(v.literal("steward"), v.literal("viewer"), v.literal("executor")),
       status: v.union(
         v.literal("pending"),
         v.literal("accepted"),
         v.literal("declined"),
         v.literal("expired"),
-        v.literal("failed")
+        v.literal("failed"),
       ),
       expiresAt: v.number(),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     await requireHouseholdAdmin(ctx, args.householdId);
@@ -338,15 +324,11 @@ export const listInvitations = query({
           status: invitation.status,
           expiresAt: invitation.expiresAt,
         };
-      })
+      }),
     );
 
-    type InvitationWithDetails = NonNullable<
-      (typeof invitationsWithDetails)[number]
-    >;
-    return invitationsWithDetails.filter(
-      (i): i is InvitationWithDetails => i !== null
-    );
+    type InvitationWithDetails = NonNullable<(typeof invitationsWithDetails)[number]>;
+    return invitationsWithDetails.filter((i): i is InvitationWithDetails => i !== null);
   },
 });
 
@@ -490,11 +472,7 @@ export const inviteMember = mutation({
     householdId: v.id("households"),
     email: v.string(),
     relationship: v.optional(v.string()),
-    role: v.union(
-      v.literal("steward"),
-      v.literal("viewer"),
-      v.literal("executor")
-    ),
+    role: v.union(v.literal("steward"), v.literal("viewer"), v.literal("executor")),
     secureToken: v.string(), // Pre-generated secure token from action
   },
   returns: v.id("householdInvitations"),
@@ -520,8 +498,8 @@ export const inviteMember = mutation({
         q.and(
           q.eq(q.field("householdId"), args.householdId),
           q.eq(q.field("status"), "pending"),
-          q.gt(q.field("expiresAt"), Date.now())
-        )
+          q.gt(q.field("expiresAt"), Date.now()),
+        ),
       )
       .unique();
 
@@ -603,7 +581,7 @@ export const acceptInvitation = mutation({
     const existingMembership = await ctx.db
       .query("householdMemberships")
       .withIndex("by_household_and_user", (q) =>
-        q.eq("householdId", invitation.householdId).eq("userId", profile._id)
+        q.eq("householdId", invitation.householdId).eq("userId", profile._id),
       )
       .unique();
 
@@ -686,8 +664,7 @@ export const removeMember = mutation({
     }
 
     // Check permissions: must be admin/owner or removing yourself
-    const isAdmin =
-      membership.role === "owner" || membership.role === "steward";
+    const isAdmin = membership.role === "owner" || membership.role === "steward";
     const isSelf = targetMembership.userId === profile._id;
 
     if (!isAdmin && !isSelf) {
@@ -702,13 +679,11 @@ export const removeMember = mutation({
         .collect();
 
       const ownerCount = allMemberships.filter(
-        (m) => m.role === "owner" && m.status === "active"
+        (m) => m.role === "owner" && m.status === "active",
       ).length;
 
       if (ownerCount <= 1) {
-        throw new Error(
-          "Cannot remove the last owner. Transfer ownership first."
-        );
+        throw new Error("Cannot remove the last owner. Transfer ownership first.");
       }
     }
 
@@ -750,7 +725,7 @@ export const updateMemberRole = mutation({
       v.literal("owner"),
       v.literal("steward"),
       v.literal("viewer"),
-      v.literal("executor")
+      v.literal("executor"),
     ),
   },
   returns: v.null(),
@@ -785,13 +760,11 @@ export const updateMemberRole = mutation({
         .collect();
 
       const ownerCount = allMemberships.filter(
-        (m) => m.role === "owner" && m.status === "active"
+        (m) => m.role === "owner" && m.status === "active",
       ).length;
 
       if (ownerCount <= 1) {
-        throw new Error(
-          "Cannot change role: You are the last owner. Assign another owner first."
-        );
+        throw new Error("Cannot change role: You are the last owner. Assign another owner first.");
       }
     }
 

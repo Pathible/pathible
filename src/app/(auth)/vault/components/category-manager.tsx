@@ -48,9 +48,7 @@ export function CategoryManager({
   onOpenChange,
 }: CategoryManagerProps) {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [deletingCategory, setDeletingCategory] = useState<Category | null>(
-    null
-  );
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editName, setEditName] = useState("");
@@ -74,9 +72,7 @@ export function CategoryManager({
       toast.success("Category created successfully");
     } catch (error) {
       console.error("Failed to create category:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create category"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to create category");
     }
   };
 
@@ -93,9 +89,7 @@ export function CategoryManager({
       toast.success("Category updated successfully");
     } catch (error) {
       console.error("Failed to update category:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update category"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to update category");
     }
   };
 
@@ -108,9 +102,7 @@ export function CategoryManager({
       toast.success("Category deleted successfully");
     } catch (error) {
       console.error("Failed to delete category:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete category"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to delete category");
     }
   };
 
@@ -133,9 +125,7 @@ export function CategoryManager({
               <Settings className="h-5 w-5 text-primary" />
               Manage Categories
             </DialogTitle>
-            <DialogDescription>
-              Add, edit, or remove document categories
-            </DialogDescription>
+            <DialogDescription>Add, edit, or remove document categories</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
@@ -173,8 +163,7 @@ export function CategoryManager({
                 <div className="border border-dashed rounded-lg p-8 flex flex-col items-center justify-center">
                   <FolderOpen className="h-12 w-12 text-muted-foreground mb-3" />
                   <p className="text-sm text-muted-foreground text-center">
-                    No categories yet. Create your first category to organize
-                    documents.
+                    No categories yet. Create your first category to organize documents.
                   </p>
                 </div>
               ) : (
@@ -193,18 +182,10 @@ export function CategoryManager({
                             autoFocus
                           />
                           <div className="flex gap-2 justify-end">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={cancelEdit}
-                            >
+                            <Button variant="outline" size="sm" onClick={cancelEdit}>
                               Cancel
                             </Button>
-                            <Button
-                              size="sm"
-                              onClick={handleEdit}
-                              disabled={!editName.trim()}
-                            >
+                            <Button size="sm" onClick={handleEdit} disabled={!editName.trim()}>
                               Save
                             </Button>
                           </div>
@@ -264,10 +245,7 @@ export function CategoryManager({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-white"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white">
               Delete Category
             </AlertDialogAction>
           </AlertDialogFooter>

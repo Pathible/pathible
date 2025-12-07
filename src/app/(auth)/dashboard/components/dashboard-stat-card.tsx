@@ -11,13 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Icon mapping for server-to-client serialization
 const iconMap: Record<string, LucideIcon> = {

@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -78,7 +77,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>version 1.0.0</SidebarFooter>
     </Sidebar>
   );
 }

@@ -29,6 +29,11 @@ export const get = query({
       avatarUrl: v.optional(v.string()),
       phone: v.optional(v.string()),
       dateOfBirth: v.optional(v.number()),
+      // Address fields
+      address: v.optional(v.string()),
+      city: v.optional(v.string()),
+      state: v.optional(v.string()),
+      zipCode: v.optional(v.string()),
       // Onboarding tracking
       onboardingStatus: v.optional(
         v.union(
@@ -42,11 +47,14 @@ export const get = query({
       onboardingStep: v.optional(v.number()),
       onboardingCompletedAt: v.optional(v.number()),
       updatedAt: v.number(),
+      // Soft-delete
+      deletedAt: v.optional(v.number()),
     }),
     v.null(),
   ),
   handler: async (ctx) => {
     try {
+      // requireAuth() already rejects soft-deleted profiles
       const { profile } = await requireAuth(ctx);
       return profile;
     } catch {
@@ -74,7 +82,8 @@ export const getById = query({
   ),
   handler: async (ctx, args) => {
     const profile = await ctx.db.get(args.profileId);
-    if (!profile) return null;
+    // Return null for non-existent or soft-deleted profiles
+    if (!profile || profile.deletedAt) return null;
 
     // Return only public information
     return {
@@ -238,8 +247,85 @@ export const update = mutation({
 });
 
 /**
- * Delete the current user's profile
- * WARNING: This will cascade delete all user data
+ * Update contact information (phone and address)
+ * Returns the updated profile ID
+ */
+export const updateContactInfo = mutation({
+  args: {
+    phone: v.optional(v.string()),
+    address: v.optional(v.string()),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    zipCode: v.optional(v.string()),
+  },
+  returns: v.id("profiles"),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+
+    // Build update object with only provided fields
+    const updates: {
+      updatedAt: number;
+      phone?: string;
+      address?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+    } = {
+      updatedAt: Date.now(),
+    };
+
+    // Validate and add phone if provided
+    if (args.phone !== undefined) {
+      if (args.phone && args.phone.length > 20) {
+        throw new Error("Phone number is too long");
+      }
+      updates.phone = args.phone;
+    }
+
+    // Validate and add address fields if provided
+    if (args.address !== undefined) {
+      if (args.address && args.address.length > 200) {
+        throw new Error("Address is too long");
+      }
+      updates.address = args.address;
+    }
+
+    if (args.city !== undefined) {
+      if (args.city && args.city.length > 100) {
+        throw new Error("City name is too long");
+      }
+      updates.city = args.city;
+    }
+
+    if (args.state !== undefined) {
+      // Allow empty string to clear state, but validate non-empty values
+      // Must be exactly 2 letters (A-Z)
+      if (args.state && !/^[A-Za-z]{2}$/.test(args.state)) {
+        throw new Error("State must be a 2-letter code (e.g., CA, NY)");
+      }
+      updates.state = args.state ? args.state.toUpperCase() : args.state;
+    }
+
+    if (args.zipCode !== undefined) {
+      // Allow empty string to clear zipCode, but validate non-empty values
+      // US ZIP format: 5 digits or 5+4 with optional dash
+      if (args.zipCode && !/^\d{5}(-?\d{4})?$/.test(args.zipCode)) {
+        throw new Error("ZIP code must be 5 digits (e.g., 12345) or 9 digits (e.g., 12345-6789)");
+      }
+      updates.zipCode = args.zipCode;
+    }
+
+    // Update the profile
+    await ctx.db.patch(profile._id, updates);
+
+    return profile._id;
+  },
+});
+
+/**
+ * Soft-delete the current user's profile
+ * Sets deletedAt timestamp instead of permanently deleting
+ * Data is retained for a grace period before permanent deletion
  * Returns null on success
  */
 export const deleteProfile = mutation({
@@ -247,6 +333,11 @@ export const deleteProfile = mutation({
   returns: v.null(),
   handler: async (ctx) => {
     const { profile } = await requireAuth(ctx);
+
+    // Check if already soft-deleted
+    if (profile.deletedAt) {
+      throw new Error("Profile is already deleted");
+    }
 
     // Check if user is the primary contact for any households
     const householdsAsPrimary = await ctx.db
@@ -260,7 +351,7 @@ export const deleteProfile = mutation({
       );
     }
 
-    // Get all household memberships to clean up
+    // Get all household memberships to check ownership
     const memberships = await ctx.db
       .query("householdMemberships")
       .withIndex("by_user", (q) => q.eq("userId", profile._id))
@@ -290,39 +381,18 @@ export const deleteProfile = mutation({
       }
     }
 
-    // Delete all memberships
+    // Soft-delete: Set deletedAt timestamp instead of hard delete
+    await ctx.db.patch(profile._id, {
+      deletedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    // Mark memberships as inactive (soft removal from households)
     for (const membership of memberships) {
-      await ctx.db.delete(membership._id);
+      await ctx.db.patch(membership._id, {
+        status: "inactive",
+      });
     }
-
-    // Delete all invitations sent by this user
-    const invitations = await ctx.db.query("householdInvitations").collect();
-    for (const invitation of invitations) {
-      if (invitation.invitedBy === profile._id) {
-        await ctx.db.delete(invitation._id);
-      }
-    }
-
-    // Delete all activity log entries
-    const activities = await ctx.db
-      .query("activityLog")
-      .withIndex("by_user", (q) => q.eq("userId", profile._id))
-      .collect();
-    for (const activity of activities) {
-      await ctx.db.delete(activity._id);
-    }
-
-    // Delete all notifications
-    const notifications = await ctx.db
-      .query("notifications")
-      .withIndex("by_user", (q) => q.eq("userId", profile._id))
-      .collect();
-    for (const notification of notifications) {
-      await ctx.db.delete(notification._id);
-    }
-
-    // Finally, delete the profile
-    await ctx.db.delete(profile._id);
 
     return null;
   },

@@ -51,9 +51,7 @@ export function SearchAndFilter({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              Filter by category:
-            </span>
+            <span className="text-sm text-muted-foreground">Filter by category:</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge
@@ -71,26 +69,18 @@ export function SearchAndFilter({
             {categories.map((category) => (
               <Badge
                 key={category.name}
-                variant={
-                  selectedCategory === category.name ? "default" : "outline"
-                }
+                variant={selectedCategory === category.name ? "default" : "outline"}
                 className={`cursor-pointer transition-all ${
                   selectedCategory === category.name
                     ? "bg-primary text-white hover:bg-primary/90"
                     : "hover:bg-secondary/50"
                 }`}
                 onClick={() =>
-                  onCategoryChange(
-                    selectedCategory === category.name
-                      ? undefined
-                      : category.name
-                  )
+                  onCategoryChange(selectedCategory === category.name ? undefined : category.name)
                 }
               >
                 {category.name}
-                <span className="ml-1 opacity-70">
-                  ({category.documentCount})
-                </span>
+                <span className="ml-1 opacity-70">({category.documentCount})</span>
               </Badge>
             ))}
           </div>
