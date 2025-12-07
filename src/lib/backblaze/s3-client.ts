@@ -117,7 +117,7 @@ export class BackblazeS3Client {
   async getPresignedUploadUrl(
     key: string,
     contentType: string,
-    options: PresignedUrlOptions = {}
+    options: PresignedUrlOptions = {},
   ): Promise<PresignedUploadResult> {
     const expiresIn = options.expiresIn || 3600; // Default: 1 hour
 
@@ -147,7 +147,7 @@ export class BackblazeS3Client {
       throw new Error(
         `Failed to generate presigned upload URL: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     }
   }
@@ -176,7 +176,7 @@ export class BackblazeS3Client {
    */
   async getPresignedDownloadUrl(
     key: string,
-    options: PresignedUrlOptions = {}
+    options: PresignedUrlOptions = {},
   ): Promise<PresignedDownloadResult> {
     const expiresIn = options.expiresIn || 3600; // Default: 1 hour
 
@@ -197,17 +197,14 @@ export class BackblazeS3Client {
         expiresIn,
       };
     } catch (error) {
-      console.error(
-        "[B2 S3 Client] Failed to generate presigned download URL:",
-        {
-          key,
-          error: error instanceof Error ? error.message : String(error),
-        }
-      );
+      console.error("[B2 S3 Client] Failed to generate presigned download URL:", {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw new Error(
         `Failed to generate presigned download URL: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     }
   }
@@ -240,9 +237,7 @@ export class BackblazeS3Client {
         error: error instanceof Error ? error.message : String(error),
       });
       throw new Error(
-        `Failed to delete object: ${
-          error instanceof Error ? error.message : String(error)
-        }`
+        `Failed to delete object: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -263,11 +258,7 @@ export class BackblazeS3Client {
       console.log("[B2 S3 Client] Testing connection...");
 
       // Try to generate a presigned URL for a test key
-      await this.getPresignedUploadUrl(
-        "connection-test/test.txt",
-        "text/plain",
-        { expiresIn: 60 }
-      );
+      await this.getPresignedUploadUrl("connection-test/test.txt", "text/plain", { expiresIn: 60 });
 
       console.log("[B2 S3 Client] Connection test successful");
       return true;

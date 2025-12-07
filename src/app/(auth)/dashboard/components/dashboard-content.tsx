@@ -1,15 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import {
-  ArrowRight,
-  FileText,
-  Heart,
-  Loader2,
-  Shield,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { ArrowRight, FileText, Heart, Loader2, Shield, Sparkles, Users } from "lucide-react";
 import Link from "next/link";
 import { DashboardStatCard } from "@/app/(auth)/dashboard/components/dashboard-stat-card";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,22 +9,18 @@ import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 
 export function DashboardContent() {
-  const { data: session, isPending: isSessionPending } =
-    authClient.useSession();
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
 
   // Get user's households
   const households = useQuery(
     api.households.list,
-    !isSessionPending && session?.user ? {} : "skip"
+    !isSessionPending && session?.user ? {} : "skip",
   );
 
   const householdId = households?.[0]?._id;
 
   // Get vault stats
-  const vaultStats = useQuery(
-    api.vault.getStats,
-    householdId ? { householdId } : "skip"
-  );
+  const vaultStats = useQuery(api.vault.getStats, householdId ? { householdId } : "skip");
 
   // Daily devotional/quote
   const dailyQuote = {
@@ -102,16 +90,11 @@ export function DashboardContent() {
       {/* Greeting */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Welcome back, {userName}.</h1>
-        <p className="text-muted-foreground text-lg">
-          Here&apos;s your legacy journey at a glance
-        </p>
+        <p className="text-muted-foreground text-lg">Here&apos;s your legacy journey at a glance</p>
       </div>
 
       {/* Progress Cards */}
-      <div
-        className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
-        data-testid="dashboard-stats"
-      >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" data-testid="dashboard-stats">
         <DashboardStatCard
           href="/vault"
           icon="shield"
@@ -150,9 +133,7 @@ export function DashboardContent() {
                   <h3 className="text-xl font-semibold">Next Step</h3>
                   <ArrowRight className="h-5 w-5 text-primary" />
                 </div>
-                <p className="text-lg font-medium text-foreground mb-1">
-                  {nextStep.title}
-                </p>
+                <p className="text-lg font-medium text-foreground mb-1">{nextStep.title}</p>
                 <p className="text-muted-foreground">{nextStep.description}</p>
               </div>
             </div>
@@ -172,9 +153,7 @@ export function DashboardContent() {
               <blockquote className="text-lg italic text-foreground mb-2">
                 &quot;{dailyQuote.text}&quot;
               </blockquote>
-              <p className="text-sm font-medium text-primary mb-3">
-                — {dailyQuote.reference}
-              </p>
+              <p className="text-sm font-medium text-primary mb-3">— {dailyQuote.reference}</p>
               <p className="text-muted-foreground">{dailyQuote.reflection}</p>
             </div>
           </div>

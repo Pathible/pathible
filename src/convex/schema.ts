@@ -25,6 +25,11 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
     phone: v.optional(v.string()),
     dateOfBirth: v.optional(v.number()), // Unix timestamp
+    // Address fields for contact information
+    address: v.optional(v.string()), // Street address
+    city: v.optional(v.string()),
+    state: v.optional(v.string()), // 2-letter state code (e.g., "CA")
+    zipCode: v.optional(v.string()), // ZIP/Postal code
     // Onboarding tracking
     onboardingStatus: v.optional(
       v.union(
@@ -38,7 +43,11 @@ export default defineSchema({
     onboardingStep: v.optional(v.number()), // 1-4, current step
     onboardingCompletedAt: v.optional(v.number()), // Unix timestamp
     updatedAt: v.number(), // Unix timestamp
-  }).index("by_userId", ["userId"]),
+    // Soft-delete support
+    deletedAt: v.optional(v.number()), // Unix timestamp when profile was soft-deleted
+  })
+    .index("by_userId", ["userId"])
+    .index("by_deletedAt", ["deletedAt"]),
 
   /**
    * User roles - for admin access control

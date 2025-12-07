@@ -19,9 +19,7 @@ import { internalQuery, query } from "./_generated/server";
  * for authentication and authorization in Convex functions.
  */
 
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 /**
  * Create the Better Auth instance with Convex adapter
@@ -30,9 +28,7 @@ const resend = process.env.RESEND_API_KEY
 // expects GenericCtx but we need to accept various Convex context types
 export const createAuth = (ctx: unknown) =>
   betterAuth({
-    database: authComponent.adapter(
-      ctx as Parameters<typeof authComponent.adapter>[0]
-    ),
+    database: authComponent.adapter(ctx as Parameters<typeof authComponent.adapter>[0]),
     // CRITICAL: baseURL is required for Convex JWT token validation
     // This must point to your Convex site URL
     baseURL: process.env.CONVEX_SITE_URL,
@@ -59,8 +55,7 @@ export const createAuth = (ctx: unknown) =>
         allowedAttempts: 3, // Maximum 3 verification attempts per OTP
         storeOTP: "encrypted", // Encrypt OTPs in database for security
         async sendVerificationOTP({ email, otp, type }) {
-          const emailFrom =
-            process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
+          const emailFrom = process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
           const emailFromName = process.env.EMAIL_FROM_NAME || "Pathible";
 
           // Get the appropriate email template based on type
@@ -68,8 +63,8 @@ export const createAuth = (ctx: unknown) =>
             type === "sign-in"
               ? getSignInOTPEmail(otp)
               : type === "email-verification"
-              ? getEmailVerificationOTPEmail(otp)
-              : getPasswordResetOTPEmail(otp);
+                ? getEmailVerificationOTPEmail(otp)
+                : getPasswordResetOTPEmail(otp);
 
           if (resend) {
             try {
@@ -120,6 +115,11 @@ export interface AuthenticatedContext {
     avatarUrl?: string;
     phone?: string;
     dateOfBirth?: number;
+    // Address fields
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
     updatedAt: number;
     onboardingStatus?:
       | "not_started"
@@ -129,6 +129,8 @@ export interface AuthenticatedContext {
       | "complete";
     onboardingStep?: number;
     onboardingCompletedAt?: number;
+    // Soft-delete
+    deletedAt?: number;
   };
 }
 
@@ -146,13 +148,11 @@ export interface AuthenticatedContext {
  *   }
  * });
  */
-export async function requireAuth(
-  ctx: QueryCtx | MutationCtx
-): Promise<AuthenticatedContext> {
+export async function requireAuth(ctx: QueryCtx | MutationCtx): Promise<AuthenticatedContext> {
   // Get the authenticated user from Better Auth
   // Note: Better Auth's context type doesn't perfectly match Convex's ctx, so we cast carefully
   const user = await authComponent.getAuthUser(
-    ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0]
+    ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
   );
   if (!user) {
     throw new Error("Not authenticated");
@@ -169,6 +169,11 @@ export async function requireAuth(
 
   if (!profile) {
     throw new Error("Profile not found");
+  }
+
+  // Reject soft-deleted profiles
+  if (profile.deletedAt) {
+    throw new Error("Account has been deleted");
   }
 
   return {
@@ -224,7 +229,7 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx): Promise<void> {
  */
 export async function requireHouseholdAccess(
   ctx: QueryCtx | MutationCtx,
-  householdId: Id<"households">
+  householdId: Id<"households">,
 ): Promise<Doc<"householdMemberships">> {
   const { profile } = await requireAuth(ctx);
 
@@ -232,7 +237,7 @@ export async function requireHouseholdAccess(
   const membership = await ctx.db
     .query("householdMemberships")
     .withIndex("by_household_and_user", (q) =>
-      q.eq("householdId", householdId).eq("userId", profile._id)
+      q.eq("householdId", householdId).eq("userId", profile._id),
     )
     .unique();
 
@@ -259,7 +264,7 @@ export async function requireHouseholdAccess(
  */
 export async function requireHouseholdAdmin(
   ctx: QueryCtx | MutationCtx,
-  householdId: Id<"households">
+  householdId: Id<"households">,
 ): Promise<void> {
   const membership = await requireHouseholdAccess(ctx, householdId);
 
@@ -276,11 +281,11 @@ export async function requireHouseholdAdmin(
  * Use this helper in other Convex functions when you need to check auth without throwing.
  */
 async function getCurrentUserHelper(
-  ctx: QueryCtx | MutationCtx
+  ctx: QueryCtx | MutationCtx,
 ): Promise<{ user: { _id: string; email: string } } | null> {
   // Note: Better Auth's context type doesn't perfectly match Convex's ctx, so we cast carefully
   const user = await authComponent.safeGetAuthUser(
-    ctx as unknown as Parameters<typeof authComponent.safeGetAuthUser>[0]
+    ctx as unknown as Parameters<typeof authComponent.safeGetAuthUser>[0],
   );
 
   if (!user) {
@@ -312,7 +317,7 @@ export const getCurrentUser = query({
         email: v.string(),
       }),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx) => {
     return await getCurrentUserHelper(ctx);
@@ -340,21 +345,26 @@ export const getCurrentUserWithProfile = query({
         avatarUrl: v.optional(v.string()),
         phone: v.optional(v.string()),
         dateOfBirth: v.optional(v.number()),
+        address: v.optional(v.string()),
+        city: v.optional(v.string()),
+        state: v.optional(v.string()),
+        zipCode: v.optional(v.string()),
         onboardingStatus: v.optional(
           v.union(
             v.literal("not_started"),
             v.literal("profile_complete"),
             v.literal("household_complete"),
             v.literal("preferences_complete"),
-            v.literal("complete")
-          )
+            v.literal("complete"),
+          ),
         ),
         onboardingStep: v.optional(v.number()),
         onboardingCompletedAt: v.optional(v.number()),
         updatedAt: v.number(),
+        deletedAt: v.optional(v.number()),
       }),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx) => {
     try {
@@ -386,6 +396,10 @@ export const requireAuthInternal = internalQuery({
       avatarUrl: v.optional(v.string()),
       phone: v.optional(v.string()),
       dateOfBirth: v.optional(v.number()),
+      address: v.optional(v.string()),
+      city: v.optional(v.string()),
+      state: v.optional(v.string()),
+      zipCode: v.optional(v.string()),
       updatedAt: v.number(),
       onboardingStatus: v.optional(
         v.union(
@@ -393,11 +407,12 @@ export const requireAuthInternal = internalQuery({
           v.literal("profile_complete"),
           v.literal("household_complete"),
           v.literal("preferences_complete"),
-          v.literal("complete")
-        )
+          v.literal("complete"),
+        ),
       ),
       onboardingStep: v.optional(v.number()),
       onboardingCompletedAt: v.optional(v.number()),
+      deletedAt: v.optional(v.number()),
     }),
   }),
   handler: async (ctx) => {
@@ -422,13 +437,9 @@ export const requireHouseholdAccessInternal = internalQuery({
       v.literal("owner"),
       v.literal("steward"),
       v.literal("viewer"),
-      v.literal("executor")
+      v.literal("executor"),
     ),
-    status: v.union(
-      v.literal("active"),
-      v.literal("pending"),
-      v.literal("inactive")
-    ),
+    status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
     invitedBy: v.optional(v.id("profiles")),
     joinedAt: v.optional(v.number()),
   }),
@@ -459,15 +470,11 @@ export const getDocumentInternal = internalQuery({
       fileSize: v.number(),
       fileType: v.string(),
       categories: v.array(v.string()),
-      accessLevel: v.union(
-        v.literal("household"),
-        v.literal("admins"),
-        v.literal("custom")
-      ),
+      accessLevel: v.union(v.literal("household"), v.literal("admins"), v.literal("custom")),
       sharedWithUsers: v.array(v.id("profiles")),
       updatedAt: v.number(),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.documentId);
