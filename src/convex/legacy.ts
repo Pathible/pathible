@@ -96,6 +96,12 @@ export const getKeyContacts = query({
     await requireAuth(ctx);
     await requireHouseholdAccess(ctx, args.householdId);
 
+    // Verify the legacy plan belongs to this household
+    const plan = await ctx.db.get(args.legacyPlanId);
+    if (!plan || plan.householdId !== args.householdId) {
+      throw new Error("Access denied: Legacy plan not found in this household");
+    }
+
     // Get key contacts for this legacy plan
     const contacts = await ctx.db
       .query("keyContacts")
@@ -241,48 +247,58 @@ export const updateSection = mutation({
     }
 
     // Get or create the legacy plan
-    let plan = await ctx.db
+    const plan = await ctx.db
       .query("legacyPlans")
       .withIndex("by_household_and_user", (q) =>
         q.eq("householdId", args.householdId).eq("userId", profile._id),
       )
       .unique();
 
+    // Helper to calculate completion percentage
+    const sections = ["trustedContacts", "guardians", "memorial", "finalMessage"] as const;
+    const calculateCompletion = (
+      planData: Record<string, string | undefined>,
+      newSection: string,
+      newContent: string,
+    ) => {
+      const updatedData = { ...planData, [newSection]: newContent };
+      const filledSections = sections.filter((s) => updatedData[s]?.trim());
+      return Math.round((filledSections.length / sections.length) * 100);
+    };
+
     if (!plan) {
-      // Create new plan if it doesn't exist
+      // Create new plan with section and completion in one atomic insert
+      const completionPercentage = calculateCompletion({}, args.section, args.content);
       const planId = await ctx.db.insert("legacyPlans", {
         householdId: args.householdId,
         userId: profile._id,
         [args.section]: args.content,
-        isComplete: false,
-        completionPercentage: 0,
+        isComplete: completionPercentage === 100,
+        completionPercentage,
         updatedAt: Date.now(),
       });
 
-      plan = await ctx.db.get(planId);
-      if (!plan) throw new Error("Failed to create legacy plan");
-    } else {
-      // Update existing plan
-      await ctx.db.patch(plan._id, {
-        [args.section]: args.content,
-        updatedAt: Date.now(),
-      });
-
-      // Refresh plan data
-      plan = await ctx.db.get(plan._id);
-      if (!plan) throw new Error("Failed to update legacy plan");
+      return planId;
     }
 
-    // Calculate completion percentage
-    const sections = ["trustedContacts", "guardians", "memorial", "finalMessage"] as const;
-    const filledSections = sections.filter((s) => plan[s] && plan[s].trim().length > 0);
-    const completionPercentage = Math.round((filledSections.length / sections.length) * 100);
-    const isComplete = completionPercentage === 100;
+    // Calculate completion with the new content
+    const completionPercentage = calculateCompletion(
+      {
+        trustedContacts: plan.trustedContacts,
+        guardians: plan.guardians,
+        memorial: plan.memorial,
+        finalMessage: plan.finalMessage,
+      },
+      args.section,
+      args.content,
+    );
 
-    // Update completion status
+    // Atomic update: section content + completion in single patch
     await ctx.db.patch(plan._id, {
+      [args.section]: args.content,
       completionPercentage,
-      isComplete,
+      isComplete: completionPercentage === 100,
+      updatedAt: Date.now(),
     });
 
     return plan._id;
@@ -398,13 +414,14 @@ export const addKeyContact = mutation({
   },
   returns: v.id("keyContacts"),
   handler: async (ctx, args) => {
-    // Verify household access
+    // Verify authentication and household access
+    const { profile } = await requireAuth(ctx);
     await requireHouseholdAccess(ctx, args.householdId);
 
     // Verify the legacy plan exists and belongs to this household
     const plan = await ctx.db.get(args.legacyPlanId);
     if (!plan || plan.householdId !== args.householdId) {
-      throw new Error("Legacy plan not found");
+      throw new Error("Access denied: Legacy plan not found in this household");
     }
 
     // Validate inputs
@@ -437,6 +454,16 @@ export const addKeyContact = mutation({
       updatedAt: Date.now(),
     });
 
+    // Log activity
+    await ctx.db.insert("activityLog", {
+      householdId: args.householdId,
+      userId: profile._id,
+      actionType: "plan_updated",
+      entityType: "plan",
+      entityId: args.legacyPlanId,
+      description: `Added key contact: ${args.name.trim()}`,
+    });
+
     return contactId;
   },
 });
@@ -457,13 +484,14 @@ export const updateKeyContact = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Verify household access
+    // Verify authentication and household access
+    const { profile } = await requireAuth(ctx);
     await requireHouseholdAccess(ctx, args.householdId);
 
     // Get the contact
     const contact = await ctx.db.get(args.contactId);
     if (!contact || contact.householdId !== args.householdId) {
-      throw new Error("Contact not found");
+      throw new Error("Access denied: Contact not found in this household");
     }
 
     // Build update object
@@ -517,6 +545,16 @@ export const updateKeyContact = mutation({
       updatedAt: Date.now(),
     });
 
+    // Log activity
+    await ctx.db.insert("activityLog", {
+      householdId: args.householdId,
+      userId: profile._id,
+      actionType: "plan_updated",
+      entityType: "plan",
+      entityId: contact.legacyPlanId,
+      description: `Updated key contact: ${contact.name}`,
+    });
+
     return null;
   },
 });
@@ -531,21 +569,36 @@ export const deleteKeyContact = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Verify household access
+    // Verify authentication and household access
+    const { profile } = await requireAuth(ctx);
     await requireHouseholdAccess(ctx, args.householdId);
 
     // Get the contact
     const contact = await ctx.db.get(args.contactId);
     if (!contact || contact.householdId !== args.householdId) {
-      throw new Error("Contact not found");
+      throw new Error("Access denied: Contact not found in this household");
     }
+
+    // Store contact name before deletion for activity log
+    const contactName = contact.name;
+    const legacyPlanId = contact.legacyPlanId;
 
     // Delete the contact
     await ctx.db.delete(args.contactId);
 
     // Update the legacy plan's updated timestamp
-    await ctx.db.patch(contact.legacyPlanId, {
+    await ctx.db.patch(legacyPlanId, {
       updatedAt: Date.now(),
+    });
+
+    // Log activity
+    await ctx.db.insert("activityLog", {
+      householdId: args.householdId,
+      userId: profile._id,
+      actionType: "plan_updated",
+      entityType: "plan",
+      entityId: legacyPlanId,
+      description: `Deleted key contact: ${contactName}`,
     });
 
     return null;
