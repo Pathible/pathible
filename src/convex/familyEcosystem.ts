@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import { requireAuth, requireHouseholdAccess } from "./auth";
+import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./auth";
 
 /**
  * Family Ecosystem - Family Unit & Member Management
@@ -418,7 +418,8 @@ export const updateFamilyUnit = mutation({
       throw new Error("Family unit not found");
     }
 
-    await requireHouseholdAccess(ctx, familyUnit.householdId);
+    // Require admin role (owner or steward) for updates
+    await requireHouseholdAdmin(ctx, familyUnit.householdId);
     const { profile } = await requireAuth(ctx);
 
     // Build update object
@@ -485,7 +486,8 @@ export const deleteFamilyUnit = mutation({
       throw new Error("Family unit not found");
     }
 
-    await requireHouseholdAccess(ctx, familyUnit.householdId);
+    // Require admin role (owner or steward) for deletion
+    await requireHouseholdAdmin(ctx, familyUnit.householdId);
     const { profile } = await requireAuth(ctx);
 
     // Get all members of this family unit
@@ -645,7 +647,8 @@ export const updateFamilyMember = mutation({
       throw new Error("Family member not found");
     }
 
-    await requireHouseholdAccess(ctx, member.householdId);
+    // Require admin role (owner or steward) for updates
+    await requireHouseholdAdmin(ctx, member.householdId);
     const { profile } = await requireAuth(ctx);
 
     // Build update object
@@ -754,7 +757,8 @@ export const removeFamilyMember = mutation({
       throw new Error("Family member not found");
     }
 
-    await requireHouseholdAccess(ctx, member.householdId);
+    // Require admin role (owner or steward) for removal
+    await requireHouseholdAdmin(ctx, member.householdId);
     const { profile } = await requireAuth(ctx);
 
     // Delete the family member
@@ -797,11 +801,12 @@ export const ensureCurrentUserInPrimaryFamily = mutation({
     await requireHouseholdAccess(ctx, args.householdId);
     const { user, profile } = await requireAuth(ctx);
 
-    // Get or create the primary family unit
+    // Get or create the primary family unit using compound index
     let primaryUnit = await ctx.db
       .query("familyUnits")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .filter((q) => q.eq(q.field("isPrimary"), true))
+      .withIndex("by_household_and_isPrimary", (q) =>
+        q.eq("householdId", args.householdId).eq("isPrimary", true),
+      )
       .first();
 
     let wasCreated = false;
@@ -826,11 +831,12 @@ export const ensureCurrentUserInPrimaryFamily = mutation({
       wasCreated = true;
     }
 
-    // Check if current user is already a member
+    // Check if current user is already a member using compound index
     const existingMember = await ctx.db
       .query("familyMembers")
-      .withIndex("by_profileId", (q) => q.eq("profileId", profile._id))
-      .filter((q) => q.eq(q.field("familyUnitId"), primaryUnit._id))
+      .withIndex("by_familyUnit_and_profileId", (q) =>
+        q.eq("familyUnitId", primaryUnit._id).eq("profileId", profile._id),
+      )
       .first();
 
     if (existingMember) {
@@ -903,11 +909,12 @@ export const getPrimaryFamilyUnit = query({
       return null;
     }
 
-    // Get the primary family unit
+    // Get the primary family unit using compound index
     const primaryUnit = await ctx.db
       .query("familyUnits")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .filter((q) => q.eq(q.field("isPrimary"), true))
+      .withIndex("by_household_and_isPrimary", (q) =>
+        q.eq("householdId", args.householdId).eq("isPrimary", true),
+      )
       .first();
 
     return primaryUnit;
@@ -954,11 +961,12 @@ export const inviteToPrimaryFamily = mutation({
       throw new Error("Invalid email address");
     }
 
-    // Get or create the primary family unit
+    // Get or create the primary family unit using compound index
     let primaryUnit = await ctx.db
       .query("familyUnits")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .filter((q) => q.eq(q.field("isPrimary"), true))
+      .withIndex("by_household_and_isPrimary", (q) =>
+        q.eq("householdId", args.householdId).eq("isPrimary", true),
+      )
       .first();
 
     if (!primaryUnit) {

@@ -172,7 +172,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_household", ["householdId"])
-    .index("by_household_and_orderIndex", ["householdId", "orderIndex"]),
+    .index("by_household_and_orderIndex", ["householdId", "orderIndex"])
+    .index("by_household_and_isPrimary", ["householdId", "isPrimary"]),
 
   /**
    * Family members - members of family units (may or may not be registered users)
@@ -222,7 +223,8 @@ export default defineSchema({
     .index("by_familyUnit", ["familyUnitId"])
     .index("by_household", ["householdId"])
     .index("by_profileId", ["profileId"])
-    .index("by_familyUnit_and_status", ["familyUnitId", "status"]),
+    .index("by_familyUnit_and_status", ["familyUnitId", "status"])
+    .index("by_familyUnit_and_profileId", ["familyUnitId", "profileId"]),
 
   // ============================================================================
   // SUBSCRIPTIONS & BILLING

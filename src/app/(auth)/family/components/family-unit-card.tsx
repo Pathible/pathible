@@ -48,9 +48,7 @@ export function FamilyUnitCard({ unit, onClick }: FamilyUnitCardProps) {
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1 min-w-0">
               <h3 className="font-semibold text-lg">{unit.name}</h3>
-              {getSubtitle() && (
-                <p className="text-sm text-muted-foreground">{getSubtitle()}</p>
-              )}
+              {getSubtitle() && <p className="text-sm text-muted-foreground">{getSubtitle()}</p>}
             </div>
             {unit.isPrimary && (
               <Badge className="bg-green-600 hover:bg-green-700 ml-2 shrink-0">Primary</Badge>
