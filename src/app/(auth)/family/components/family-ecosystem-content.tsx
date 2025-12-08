@@ -445,7 +445,9 @@ export function FamilyEcosystemContent() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Family Member</DialogTitle>
-            <DialogDescription>Add a new member to your primary family unit.</DialogDescription>
+            <DialogDescription>
+              Add a new member to your primary family unit.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleInviteMember} className="space-y-4">
             <div className="space-y-2">
