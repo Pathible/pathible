@@ -155,6 +155,76 @@ export default defineSchema({
     .index("by_household_and_status", ["householdId", "status"]),
 
   // ============================================================================
+  // FAMILY ECOSYSTEM
+  // ============================================================================
+
+  /**
+   * Family units - sub-groups within a household (e.g., "The Johnson Family")
+   */
+  familyUnits: defineTable({
+    householdId: v.id("households"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    relationshipToHousehold: v.optional(v.string()),
+    isPrimary: v.boolean(),
+    orderIndex: v.number(),
+    createdBy: v.id("profiles"),
+    updatedAt: v.number(),
+  })
+    .index("by_household", ["householdId"])
+    .index("by_household_and_orderIndex", ["householdId", "orderIndex"]),
+
+  /**
+   * Family members - members of family units (may or may not be registered users)
+   */
+  familyMembers: defineTable({
+    familyUnitId: v.id("familyUnits"),
+    householdId: v.id("households"),
+    profileId: v.optional(v.id("profiles")),
+    firstName: v.string(),
+    lastName: v.string(),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    dateOfBirth: v.optional(v.number()),
+    gender: v.optional(
+      v.union(
+        v.literal("male"),
+        v.literal("female"),
+        v.literal("non_binary"),
+        v.literal("prefer_not_to_say"),
+        v.literal("other"),
+      ),
+    ),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    relationshipType: v.union(
+      v.literal("parent"),
+      v.literal("child"),
+      v.literal("spouse"),
+      v.literal("partner"),
+      v.literal("sibling"),
+      v.literal("grandparent"),
+      v.literal("grandchild"),
+      v.literal("aunt_uncle"),
+      v.literal("niece_nephew"),
+      v.literal("cousin"),
+      v.literal("in_law"),
+      v.literal("other"),
+    ),
+    roles: v.array(v.string()),
+    status: v.union(v.literal("active"), v.literal("pending_invite"), v.literal("inactive")),
+    orderIndex: v.number(),
+    notes: v.optional(v.string()),
+    createdBy: v.id("profiles"),
+    updatedAt: v.number(),
+  })
+    .index("by_familyUnit", ["familyUnitId"])
+    .index("by_household", ["householdId"])
+    .index("by_profileId", ["profileId"])
+    .index("by_familyUnit_and_status", ["familyUnitId", "status"]),
+
+  // ============================================================================
   // SUBSCRIPTIONS & BILLING
   // ============================================================================
 
