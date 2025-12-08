@@ -16,6 +16,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
@@ -46,17 +53,30 @@ export function FamilyEcosystemContent() {
 
   // Mutations
   const createFamilyUnit = useMutation(api.familyEcosystem.createFamilyUnit);
+  const inviteToPrimaryFamily = useMutation(api.familyEcosystem.inviteToPrimaryFamily);
+  const ensureCurrentUserInPrimaryFamily = useMutation(
+    api.familyEcosystem.ensureCurrentUserInPrimaryFamily,
+  );
 
   // Dialog states
   const [showAddFamilyDialog, setShowAddFamilyDialog] = useState(false);
   const [showInviteMemberDialog, setShowInviteMemberDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form states
+  // Form states - Add Family
   const [familyName, setFamilyName] = useState("");
   const [familyDescription, setFamilyDescription] = useState("");
   const [familyRelationship, setFamilyRelationship] = useState("");
+
+  // Form states - Invite Member
+  const [inviteFirstName, setInviteFirstName] = useState("");
+  const [inviteLastName, setInviteLastName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [invitePhone, setInvitePhone] = useState("");
+  const [inviteRelationship, setInviteRelationship] = useState<string>("other");
+
+  // Track if we've ensured current user is in primary family
+  const [hasEnsuredUser, setHasEnsuredUser] = useState(false);
 
   // Unified retry logic for auth race conditions
   useEffect(() => {
@@ -72,6 +92,20 @@ export function FamilyEcosystemContent() {
       return () => clearTimeout(timer);
     }
   }, [isSessionPending, session?.user, households, familyUnits, retryCount]);
+
+  // Ensure current user is in the primary family when page loads
+  useEffect(() => {
+    if (householdId && !hasEnsuredUser && session?.user) {
+      ensureCurrentUserInPrimaryFamily({ householdId })
+        .then(() => {
+          setHasEnsuredUser(true);
+        })
+        .catch((error) => {
+          console.error("Failed to ensure user in primary family:", error);
+          setHasEnsuredUser(true); // Don't retry on error
+        });
+    }
+  }, [householdId, hasEnsuredUser, session?.user, ensureCurrentUserInPrimaryFamily]);
 
   // Determine if we're still in the auth loading phase
   const isAuthLoading = isSessionPending || (!session?.user && retryCount < maxRetries);
@@ -108,16 +142,44 @@ export function FamilyEcosystemContent() {
 
     setIsSubmitting(true);
     try {
-      // TODO: Implement household member invitation
-      toast.info("Member invitation feature coming soon");
+      await inviteToPrimaryFamily({
+        householdId,
+        firstName: inviteFirstName,
+        lastName: inviteLastName,
+        email: inviteEmail,
+        phone: invitePhone || undefined,
+        relationshipType: inviteRelationship as
+          | "parent"
+          | "child"
+          | "spouse"
+          | "partner"
+          | "sibling"
+          | "grandparent"
+          | "grandchild"
+          | "aunt_uncle"
+          | "niece_nephew"
+          | "cousin"
+          | "in_law"
+          | "other",
+      });
+
+      toast.success(`${inviteFirstName} has been added to your family`);
       setShowInviteMemberDialog(false);
-      setInviteEmail("");
+      resetInviteForm();
     } catch (error) {
       console.error("Failed to invite member:", error);
-      toast.error("Failed to send invitation");
+      toast.error(error instanceof Error ? error.message : "Failed to add family member");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const resetInviteForm = () => {
+    setInviteFirstName("");
+    setInviteLastName("");
+    setInviteEmail("");
+    setInvitePhone("");
+    setInviteRelationship("other");
   };
 
   // Loading state
@@ -383,14 +445,32 @@ export function FamilyEcosystemContent() {
 
       {/* Invite Member Dialog */}
       <Dialog open={showInviteMemberDialog} onOpenChange={setShowInviteMemberDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Invite Member</DialogTitle>
+            <DialogTitle>Add Family Member</DialogTitle>
             <DialogDescription>
-              Send an invitation to an existing member&apos;s email address.
+              Add a new member to your primary family unit.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleInviteMember} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="inviteFirstName">Full Name *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  id="inviteFirstName"
+                  placeholder="First name"
+                  value={inviteFirstName}
+                  onChange={(e) => setInviteFirstName(e.target.value)}
+                  required
+                />
+                <Input
+                  placeholder="Last name"
+                  value={inviteLastName}
+                  onChange={(e) => setInviteLastName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="inviteEmail">Email Address *</Label>
               <Input
@@ -402,17 +482,52 @@ export function FamilyEcosystemContent() {
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="invitePhone">Phone</Label>
+              <Input
+                id="invitePhone"
+                type="tel"
+                placeholder="(555) 123-4567"
+                value={invitePhone}
+                onChange={(e) => setInvitePhone(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="inviteRelationship">Relationship *</Label>
+              <Select value={inviteRelationship} onValueChange={setInviteRelationship}>
+                <SelectTrigger id="inviteRelationship">
+                  <SelectValue placeholder="Select relationship" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="spouse">Spouse</SelectItem>
+                  <SelectItem value="partner">Partner</SelectItem>
+                  <SelectItem value="parent">Parent</SelectItem>
+                  <SelectItem value="child">Child</SelectItem>
+                  <SelectItem value="sibling">Sibling</SelectItem>
+                  <SelectItem value="grandparent">Grandparent</SelectItem>
+                  <SelectItem value="grandchild">Grandchild</SelectItem>
+                  <SelectItem value="aunt_uncle">Aunt/Uncle</SelectItem>
+                  <SelectItem value="niece_nephew">Niece/Nephew</SelectItem>
+                  <SelectItem value="cousin">Cousin</SelectItem>
+                  <SelectItem value="in_law">In-Law</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowInviteMemberDialog(false)}
+                onClick={() => {
+                  setShowInviteMemberDialog(false);
+                  resetInviteForm();
+                }}
                 disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Sending..." : "Send Invitation"}
+                {isSubmitting ? "Adding..." : "Add Member"}
               </Button>
             </div>
           </form>

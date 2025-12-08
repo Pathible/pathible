@@ -773,3 +773,260 @@ export const removeFamilyMember = mutation({
     return null;
   },
 });
+
+// ============================================================================
+// MUTATIONS - ENSURE CURRENT USER IN PRIMARY FAMILY
+// ============================================================================
+
+/**
+ * Ensure the current user is a member of the primary family unit
+ * Creates the primary family unit if it doesn't exist
+ * Adds the current user as a member if not already present
+ * This should be called when a user visits the Family Ecosystem page
+ */
+export const ensureCurrentUserInPrimaryFamily = mutation({
+  args: {
+    householdId: v.id("households"),
+  },
+  returns: v.object({
+    familyUnitId: v.id("familyUnits"),
+    memberId: v.union(v.id("familyMembers"), v.null()),
+    wasCreated: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    await requireHouseholdAccess(ctx, args.householdId);
+    const { user, profile } = await requireAuth(ctx);
+
+    // Get or create the primary family unit
+    let primaryUnit = await ctx.db
+      .query("familyUnits")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .filter((q) => q.eq(q.field("isPrimary"), true))
+      .first();
+
+    let wasCreated = false;
+
+    if (!primaryUnit) {
+      // Create primary family unit
+      const familyUnitId = await ctx.db.insert("familyUnits", {
+        householdId: args.householdId,
+        name: "Your Family",
+        description: "Your immediate family",
+        relationshipToHousehold: "Primary",
+        isPrimary: true,
+        orderIndex: 0,
+        createdBy: profile._id,
+        updatedAt: Date.now(),
+      });
+
+      primaryUnit = await ctx.db.get(familyUnitId);
+      if (!primaryUnit) {
+        throw new Error("Failed to create primary family unit");
+      }
+      wasCreated = true;
+    }
+
+    // Check if current user is already a member
+    const existingMember = await ctx.db
+      .query("familyMembers")
+      .withIndex("by_profileId", (q) => q.eq("profileId", profile._id))
+      .filter((q) => q.eq(q.field("familyUnitId"), primaryUnit._id))
+      .first();
+
+    if (existingMember) {
+      // User already exists in primary family
+      return {
+        familyUnitId: primaryUnit._id,
+        memberId: null,
+        wasCreated: false,
+      };
+    }
+
+    // Get current max orderIndex
+    const existingMembers = await ctx.db
+      .query("familyMembers")
+      .withIndex("by_familyUnit", (q) => q.eq("familyUnitId", primaryUnit._id))
+      .collect();
+
+    const maxOrderIndex = existingMembers.reduce(
+      (max, member) => Math.max(max, member.orderIndex),
+      -1,
+    );
+
+    // Add current user as a member
+    const memberId = await ctx.db.insert("familyMembers", {
+      familyUnitId: primaryUnit._id,
+      householdId: args.householdId,
+      profileId: profile._id,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      email: user.email,
+      phone: profile.phone,
+      avatarUrl: profile.avatarUrl,
+      dateOfBirth: profile.dateOfBirth,
+      city: profile.city,
+      state: profile.state,
+      relationshipType: "parent", // Default - user can update later
+      roles: ["Family Admin"],
+      status: "active",
+      orderIndex: maxOrderIndex + 1,
+      createdBy: profile._id,
+      updatedAt: Date.now(),
+    });
+
+    return {
+      familyUnitId: primaryUnit._id,
+      memberId,
+      wasCreated,
+    };
+  },
+});
+
+// ============================================================================
+// QUERIES - PRIMARY FAMILY UNIT
+// ============================================================================
+
+/**
+ * Get the primary family unit for a household
+ * Returns null if not found or user not authenticated
+ */
+export const getPrimaryFamilyUnit = query({
+  args: {
+    householdId: v.id("households"),
+  },
+  returns: v.union(familyUnitReturnValidator, v.null()),
+  handler: async (ctx, args) => {
+    // Handle auth race conditions gracefully
+    try {
+      await requireHouseholdAccess(ctx, args.householdId);
+    } catch {
+      return null;
+    }
+
+    // Get the primary family unit
+    const primaryUnit = await ctx.db
+      .query("familyUnits")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .filter((q) => q.eq(q.field("isPrimary"), true))
+      .first();
+
+    return primaryUnit;
+  },
+});
+
+// ============================================================================
+// MUTATIONS - INVITE TO PRIMARY FAMILY
+// ============================================================================
+
+/**
+ * Invite a member to the primary family unit
+ * This is the main entry point for inviting family members from the Family Ecosystem
+ */
+export const inviteToPrimaryFamily = mutation({
+  args: {
+    householdId: v.id("households"),
+    firstName: v.string(),
+    lastName: v.string(),
+    email: v.string(),
+    phone: v.optional(v.string()),
+    relationshipType: relationshipTypeValidator,
+    gender: v.optional(genderValidator),
+  },
+  returns: v.id("familyMembers"),
+  handler: async (ctx, args) => {
+    await requireHouseholdAccess(ctx, args.householdId);
+    const { profile } = await requireAuth(ctx);
+
+    // Validate inputs
+    if (!args.firstName.trim()) {
+      throw new Error("First name is required");
+    }
+    if (!args.lastName.trim()) {
+      throw new Error("Last name is required");
+    }
+    if (!args.email.trim()) {
+      throw new Error("Email is required");
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(args.email)) {
+      throw new Error("Invalid email address");
+    }
+
+    // Get or create the primary family unit
+    let primaryUnit = await ctx.db
+      .query("familyUnits")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .filter((q) => q.eq(q.field("isPrimary"), true))
+      .first();
+
+    if (!primaryUnit) {
+      // Create primary family unit if it doesn't exist (for legacy households)
+      const familyUnitId = await ctx.db.insert("familyUnits", {
+        householdId: args.householdId,
+        name: "Your Family",
+        description: "Your immediate family",
+        relationshipToHousehold: "Primary",
+        isPrimary: true,
+        orderIndex: 0,
+        createdBy: profile._id,
+        updatedAt: Date.now(),
+      });
+
+      primaryUnit = await ctx.db.get(familyUnitId);
+      if (!primaryUnit) {
+        throw new Error("Failed to create primary family unit");
+      }
+    }
+
+    // Check if member with this email already exists in this family unit
+    const existingMembers = await ctx.db
+      .query("familyMembers")
+      .withIndex("by_familyUnit", (q) => q.eq("familyUnitId", primaryUnit._id))
+      .collect();
+
+    const existingMember = existingMembers.find(
+      (m) => m.email?.toLowerCase() === args.email.toLowerCase(),
+    );
+
+    if (existingMember) {
+      throw new Error("A member with this email already exists in your family");
+    }
+
+    // Get current max orderIndex
+    const maxOrderIndex = existingMembers.reduce(
+      (max, member) => Math.max(max, member.orderIndex),
+      -1,
+    );
+
+    // Create the family member as active (direct add, not email invitation)
+    const memberId = await ctx.db.insert("familyMembers", {
+      familyUnitId: primaryUnit._id,
+      householdId: args.householdId,
+      firstName: args.firstName.trim(),
+      lastName: args.lastName.trim(),
+      email: args.email.toLowerCase().trim(),
+      phone: args.phone?.trim(),
+      gender: args.gender,
+      relationshipType: args.relationshipType,
+      roles: [],
+      status: "active",
+      orderIndex: maxOrderIndex + 1,
+      createdBy: profile._id,
+      updatedAt: Date.now(),
+    });
+
+    // Log activity
+    await ctx.db.insert("activityLog", {
+      householdId: args.householdId,
+      userId: profile._id,
+      actionType: "member_invited",
+      entityType: "other",
+      entityId: memberId,
+      description: `Invited ${args.firstName} ${args.lastName} to primary family`,
+    });
+
+    return memberId;
+  },
+});
