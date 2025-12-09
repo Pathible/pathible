@@ -163,7 +163,7 @@ export const createFirstHousehold = mutation({
   },
   returns: v.id("households"),
   handler: async (ctx, args) => {
-    const { profile } = await requireAuth(ctx);
+    const { user, profile } = await requireAuth(ctx);
 
     // Validate
     if (!args.name.trim()) {
@@ -200,6 +200,40 @@ export const createFirstHousehold = mutation({
       role: "owner",
       status: "active",
       joinedAt: Date.now(),
+    });
+
+    // Create primary family unit for this household
+    // This represents the user's immediate family in the Family Ecosystem
+    const familyUnitId = await ctx.db.insert("familyUnits", {
+      householdId,
+      name: "Your Family",
+      description: "Your immediate family",
+      relationshipToHousehold: "Primary",
+      isPrimary: true,
+      orderIndex: 0,
+      createdBy: profile._id,
+      updatedAt: Date.now(),
+    });
+
+    // Add the user as the first member of the primary family unit
+    await ctx.db.insert("familyMembers", {
+      familyUnitId,
+      householdId,
+      profileId: profile._id,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      email: user.email,
+      phone: profile.phone,
+      avatarUrl: profile.avatarUrl,
+      dateOfBirth: profile.dateOfBirth,
+      city: profile.city,
+      state: profile.state,
+      relationshipType: "parent", // Default - user can update later
+      roles: ["Family Admin"],
+      status: "active",
+      orderIndex: 0,
+      createdBy: profile._id,
+      updatedAt: Date.now(),
     });
 
     // Update profile onboarding status
