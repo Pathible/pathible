@@ -316,10 +316,12 @@ export const setPreferences = mutation({
       });
     }
 
-    // Update profile onboarding status
+    // Update profile onboarding status - mark as complete
+    // Step 3 is now the final step, subscription selection comes next
     await ctx.db.patch(profile._id, {
-      onboardingStatus: "preferences_complete",
-      onboardingStep: 4,
+      onboardingStatus: "complete",
+      onboardingStep: 3,
+      onboardingCompletedAt: Date.now(),
       updatedAt: Date.now(),
     });
 

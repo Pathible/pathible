@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -21,12 +21,14 @@ import { api } from "@/convex/_generated/api";
  * 1. Profile completion
  * 2. First household creation
  * 3. Goals and preferences
- * 4. Family member invitations (optional)
+ *
+ * After completing all steps, users are redirected to select a subscription plan.
+ * Family invitations can be done later from the dashboard.
  */
 export default function OnboardingPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 3; // Reduced from 4 - invitations moved to dashboard
 
   // Step 1: Profile
   const [firstName, setFirstName] = useState("");
@@ -48,18 +50,12 @@ export default function OnboardingPage() {
     | "end_of_life_planning";
   const [selectedGoals, setSelectedGoals] = useState<Goal[]>([]);
 
-  // Step 4: Invitations
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRelationship, setInviteRelationship] = useState("");
-
   const [isLoading, setIsLoading] = useState(false);
 
   // Mutations
   const updateProfileMutation = useMutation(api.onboarding.updateProfile);
   const createHouseholdMutation = useMutation(api.onboarding.createFirstHousehold);
   const setPreferencesMutation = useMutation(api.onboarding.setPreferences);
-  const sendInvitationsMutation = useMutation(api.onboarding.sendInvitations);
-  const skipInvitationsMutation = useMutation(api.onboarding.skipInvitations);
 
   const goalOptions: Array<{ id: Goal; label: string }> = [
     { id: "document_organization", label: "Organize important documents" },
@@ -122,15 +118,16 @@ export default function OnboardingPage() {
           return;
         }
 
-        // Set preferences
+        // Set preferences - this also marks onboarding as complete
         await setPreferencesMutation({
           goals: selectedGoals,
           emailNotifications: true,
           interestedFeatures: [],
         });
 
-        toast.success("Preferences saved!");
-        setCurrentStep(4);
+        toast.success("Onboarding complete! Now let's select your plan.");
+        // Redirect to subscription selection instead of step 4
+        setTimeout(() => router.push("/select-plan"), 500);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -143,48 +140,6 @@ export default function OnboardingPage() {
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleSkipInvitations = async () => {
-    setIsLoading(true);
-    try {
-      await skipInvitationsMutation({});
-      toast.success("Welcome to Pathible!");
-      setTimeout(() => router.push("/dashboard"), 500);
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Something went wrong");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSendInvitation = async () => {
-    if (!inviteEmail.trim()) {
-      toast.error("Please enter an email address");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await sendInvitationsMutation({
-        invitations: [
-          {
-            email: inviteEmail,
-            relationship: inviteRelationship || undefined,
-            role: "steward",
-          },
-        ],
-      });
-
-      toast.success("Invitation sent! Welcome to Pathible!");
-      setTimeout(() => router.push("/dashboard"), 500);
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to send invitation");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -219,13 +174,11 @@ export default function OnboardingPage() {
               {currentStep === 1 && "Complete Your Profile"}
               {currentStep === 2 && "Create Your First Household"}
               {currentStep === 3 && "What brings you to Pathible?"}
-              {currentStep === 4 && "Invite Your First Family Member"}
             </CardTitle>
             <CardDescription>
               {currentStep === 1 && "Let's start with some basic information about you"}
               {currentStep === 2 && "Every family needs a home base"}
               {currentStep === 3 && "Help us personalize your experience"}
-              {currentStep === 4 && "Family is better together (you can skip this step)"}
             </CardDescription>
           </CardHeader>
 
@@ -329,36 +282,6 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* Step 4: Invitations */}
-            {currentStep === 4 && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="inviteEmail">Email Address</Label>
-                  <Input
-                    id="inviteEmail"
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="family@example.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="inviteRelationship">Relationship (Optional)</Label>
-                  <Input
-                    id="inviteRelationship"
-                    value={inviteRelationship}
-                    onChange={(e) => setInviteRelationship(e.target.value)}
-                    placeholder="e.g., Spouse, Child, Parent"
-                  />
-                </div>
-
-                <p className="text-sm text-muted-foreground">
-                  You can always invite more family members later from your dashboard
-                </p>
-              </>
-            )}
-
             {/* Navigation Buttons */}
             <div className="flex justify-between pt-4">
               <Button
@@ -370,28 +293,10 @@ export default function OnboardingPage() {
                 Back
               </Button>
 
-              {currentStep < totalSteps ? (
-                <Button onClick={handleNext} disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Next"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleSkipInvitations} disabled={isLoading}>
-                    Skip for now
-                  </Button>
-                  <Button onClick={handleSendInvitation} disabled={isLoading}>
-                    {isLoading ? (
-                      "Sending..."
-                    ) : (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        Send Invite & Continue
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
+              <Button onClick={handleNext} disabled={isLoading}>
+                {isLoading ? "Saving..." : currentStep === totalSteps ? "Complete Setup" : "Next"}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
