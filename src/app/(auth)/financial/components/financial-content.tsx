@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { AlertCircle, Lightbulb, TrendingUp, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -7,7 +8,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
 import { AccountManager } from "./account-manager";
 import { FinancialStats } from "./financial-stats";
 import { InsuranceManager } from "./insurance-manager";
@@ -19,19 +19,15 @@ export function FinancialContent() {
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 10;
 
-  // Check Better Auth session status
-  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  // Check Clerk session status
+  const { user, isLoaded: isUserLoaded } = useUser();
 
   // Get user's households
-  const households = useQuery(
-    api.households.list,
-    !isSessionPending && session?.user ? {} : "skip",
-  );
+  const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
 
   // Unified retry logic for auth race conditions
   useEffect(() => {
-    const needsRetry =
-      !isSessionPending && retryCount < maxRetries && (!session?.user || households === null);
+    const needsRetry = isUserLoaded && retryCount < maxRetries && (!user || households === null);
 
     if (needsRetry) {
       const timer = setTimeout(() => {
@@ -39,10 +35,10 @@ export function FinancialContent() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isSessionPending, session?.user, households, retryCount]);
+  }, [isUserLoaded, user, households, retryCount]);
 
   // Determine if we're still in the auth loading phase
-  const isAuthLoading = isSessionPending || (!session?.user && retryCount < maxRetries);
+  const isAuthLoading = !isUserLoaded || (!user && retryCount < maxRetries);
 
   // Use the first household
   const householdId = households?.[0]?._id;
@@ -136,7 +132,7 @@ export function FinancialContent() {
   }
 
   // Not authenticated
-  if (!session?.user) {
+  if (!user) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">

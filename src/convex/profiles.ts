@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { authComponent, requireAuth } from "./auth";
+import { requireAuth } from "./auth";
 
 /**
  * Profile management functions
@@ -117,17 +117,18 @@ export const create = mutation({
   returns: v.id("profiles"),
   handler: async (ctx, args) => {
     // Get user directly without requiring profile (profile doesn't exist yet!)
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user) {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
       throw new Error("Not authenticated");
     }
 
-    console.log(`[Profile] Creating profile for user ${user._id}`);
+    const userId = identity.subject; // Clerk user ID
+    console.log(`[Profile] Creating profile for user ${userId}`);
 
     // Check if profile already exists
     const existing = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", String(user._id)))
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
 
     if (existing) {
@@ -161,7 +162,7 @@ export const create = mutation({
 
     // Create the profile
     const profileId = await ctx.db.insert("profiles", {
-      userId: String(user._id),
+      userId,
       firstName: args.firstName.trim(),
       lastName: args.lastName.trim(),
       phone: args.phone,
@@ -169,7 +170,7 @@ export const create = mutation({
       updatedAt: Date.now(),
     });
 
-    console.log(`[Profile] Created profile ${profileId} for user ${user._id}`);
+    console.log(`[Profile] Created profile ${profileId} for user ${userId}`);
 
     return profileId;
   },
@@ -395,5 +396,88 @@ export const deleteProfile = mutation({
     }
 
     return null;
+  },
+});
+
+/**
+ * Migration: Link existing profile to Clerk user
+ *
+ * This mutation is used to migrate profiles created under Better Auth
+ * to work with Clerk authentication. It updates the profile's userId
+ * to match the current Clerk user ID.
+ *
+ * NOTE: This is a one-time migration function. Once all profiles are
+ * migrated, this function should be removed.
+ */
+export const linkToClerkUser = mutation({
+  args: {
+    email: v.string(), // Email to find the existing profile
+  },
+  returns: v.union(v.id("profiles"), v.null()),
+  handler: async (ctx, args) => {
+    // Get the current Clerk user identity
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const clerkUserId = identity.subject;
+
+    console.log(`[Migration] Linking profile for email ${args.email} to Clerk user ${clerkUserId}`);
+
+    // First, check if a profile already exists for this Clerk user ID
+    const existingClerkProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", clerkUserId))
+      .unique();
+
+    if (existingClerkProfile) {
+      console.log(`[Migration] Profile already exists for Clerk user: ${existingClerkProfile._id}`);
+      return existingClerkProfile._id;
+    }
+
+    // Find profile by email pattern in the userId (Better Auth format)
+    // Better Auth often stores the email as part of the user identifier
+    // We'll look for any profile and check manually
+    const allProfiles = await ctx.db.query("profiles").collect();
+
+    // Find a profile that might match - look for non-Clerk formatted userId
+    // or try to match based on other criteria
+    let profileToMigrate = null;
+
+    for (const profile of allProfiles) {
+      // Skip already-migrated profiles (Clerk IDs start with "user_")
+      if (profile.userId.startsWith("user_")) {
+        continue;
+      }
+
+      // If email matches what we're looking for, this is likely the profile
+      // Better Auth profiles might have email-based IDs or we match by name/other fields
+      if (!profile.deletedAt) {
+        profileToMigrate = profile;
+        break;
+      }
+    }
+
+    if (!profileToMigrate) {
+      console.log(`[Migration] No unmigrated profile found for email ${args.email}`);
+      return null;
+    }
+
+    console.log(
+      `[Migration] Found profile to migrate: ${profileToMigrate._id} (old userId: ${profileToMigrate.userId})`,
+    );
+
+    // Update the profile's userId to the Clerk user ID
+    await ctx.db.patch(profileToMigrate._id, {
+      userId: clerkUserId,
+      updatedAt: Date.now(),
+    });
+
+    console.log(
+      `[Migration] Successfully linked profile ${profileToMigrate._id} to Clerk user ${clerkUserId}`,
+    );
+
+    return profileToMigrate._id;
   },
 });

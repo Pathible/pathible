@@ -1,5 +1,6 @@
 "use client";
 
+import { useClerk } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -22,7 +23,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
 
 interface DangerZoneCardProps {
   profileName: string;
@@ -30,6 +30,7 @@ interface DangerZoneCardProps {
 
 export function DangerZoneCard({ profileName }: DangerZoneCardProps) {
   const router = useRouter();
+  const { signOut } = useClerk();
   const deleteProfile = useMutation(api.profiles.deleteProfile);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -47,14 +48,14 @@ export function DangerZoneCard({ profileName }: DangerZoneCardProps) {
       await deleteProfile({});
 
       // Sign out the user
-      await authClient.signOut();
+      await signOut({ redirectUrl: "/sign-in" });
 
       toast.success("Account deleted", {
         description: "Your account has been permanently deleted.",
       });
 
-      // Redirect to login page
-      router.push("/login");
+      // Redirect to sign-in page
+      router.push("/sign-in");
     } catch (error) {
       toast.error("Failed to delete account", {
         description: error instanceof Error ? error.message : "Please try again or contact support",

@@ -1,8 +1,8 @@
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
-import { Loader2, Mail, Save } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
 
 interface PersonalInformationCardProps {
   profile: {
@@ -28,9 +27,6 @@ interface FormData {
 
 export function PersonalInformationCard({ profile, email }: PersonalInformationCardProps) {
   const updateProfile = useMutation(api.profiles.update);
-  const [newEmail, setNewEmail] = useState("");
-  const [isChangingEmail, setIsChangingEmail] = useState(false);
-  const [showEmailForm, setShowEmailForm] = useState(false);
 
   const {
     register,
@@ -57,42 +53,11 @@ export function PersonalInformationCard({ profile, email }: PersonalInformationC
     }
   };
 
-  const handleChangeEmail = async () => {
-    if (!newEmail || newEmail === email) {
-      toast.error("Please enter a different email address");
-      return;
-    }
-
-    setIsChangingEmail(true);
-    try {
-      // Better Auth changeEmail sends verification to new email
-      const result = await authClient.changeEmail({
-        newEmail,
-      });
-
-      if (result.error) {
-        throw new Error(result.error.message || "Failed to change email");
-      }
-
-      toast.success("Verification email sent", {
-        description: `Check ${newEmail} for a verification link to complete the change.`,
-      });
-      setShowEmailForm(false);
-      setNewEmail("");
-    } catch (error) {
-      toast.error("Failed to change email", {
-        description: error instanceof Error ? error.message : "Please try again",
-      });
-    } finally {
-      setIsChangingEmail(false);
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
         <CardTitle>Personal Information</CardTitle>
-        <CardDescription>Update your name and email address</CardDescription>
+        <CardDescription>Update your name and manage your account</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Name Form */}
@@ -143,67 +108,20 @@ export function PersonalInformationCard({ profile, email }: PersonalInformationC
         <div className="border-t pt-4">
           <div className="space-y-2">
             <Label>Email Address</Label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <Input type="email" value={email || ""} disabled className="bg-muted flex-1" />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowEmailForm(!showEmailForm)}
-              >
-                <Mail className="mr-2 h-4 w-4" />
-                Change
-              </Button>
+              <UserButton
+                appearance={{
+                  elements: {
+                    userButtonTrigger: "focus:shadow-none",
+                  },
+                }}
+              />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Click your profile picture to manage your email, password, and security settings.
+            </p>
           </div>
-
-          {showEmailForm && (
-            <div className="mt-4 space-y-3 rounded-lg border bg-muted/30 p-4">
-              <div className="space-y-2">
-                <Label htmlFor="newEmail">New Email Address</Label>
-                <Input
-                  id="newEmail"
-                  type="email"
-                  placeholder="Enter new email address"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  disabled={isChangingEmail}
-                />
-                <p className="text-xs text-muted-foreground">
-                  A verification email will be sent to confirm the change.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleChangeEmail}
-                  disabled={isChangingEmail || !newEmail}
-                >
-                  {isChangingEmail ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    "Send Verification"
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setShowEmailForm(false);
-                    setNewEmail("");
-                  }}
-                  disabled={isChangingEmail}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

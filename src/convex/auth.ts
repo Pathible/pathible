@@ -1,109 +1,22 @@
-import { createClient } from "@convex-dev/better-auth";
-import { convex as convexPlugin } from "@convex-dev/better-auth/plugins";
-import { betterAuth } from "better-auth";
-import { emailOTP } from "better-auth/plugins";
 import { v } from "convex/values";
-import { Resend } from "resend";
-import { getEmailVerificationOTPEmail } from "../lib/email-templates/otp-email-verification";
-import { getPasswordResetOTPEmail } from "../lib/email-templates/otp-password-reset";
-import { getSignInOTPEmail } from "../lib/email-templates/otp-sign-in";
-import { components } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalQuery, query } from "./_generated/server";
 
 /**
- * Better Auth Configuration for Convex
+ * Authentication helpers for Convex with Clerk
  *
- * This file sets up Better Auth with Convex adapter and exports helper functions
- * for authentication and authorization in Convex functions.
+ * Clerk handles authentication (login, sessions, JWT tokens).
+ * Convex validates the JWT and provides user identity via ctx.auth.getUserIdentity().
+ * We look up the user's profile and enforce access control.
  */
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-
-/**
- * Create the Better Auth instance with Convex adapter
- */
-// Note: ctx type uses unknown and type assertion because Better Auth's adapter
-// expects GenericCtx but we need to accept various Convex context types
-export const createAuth = (ctx: unknown) =>
-  betterAuth({
-    database: authComponent.adapter(ctx as Parameters<typeof authComponent.adapter>[0]),
-    // CRITICAL: baseURL is required for Convex JWT token validation
-    // This must point to your Convex site URL
-    baseURL: process.env.CONVEX_SITE_URL,
-    // Add trustedOrigins to allow requests from Next.js app
-    // Note: Convex env vars are separate from Next.js .env.local
-    trustedOrigins: [
-      process.env.CONVEX_SITE_URL || "",
-      process.env.SITE_URL || "http://localhost:3000",
-      "http://localhost:3001",
-    ],
-    emailAndPassword: {
-      enabled: false, // We use email OTP instead
-    },
-    plugins: [
-      // CRITICAL: convex() plugin is required for JWT token generation
-      // and OIDC endpoint configuration. Without this, Convex cannot
-      // validate JWT tokens and ctx.auth.getUserIdentity() returns null
-      convexPlugin({
-        jwtExpirationSeconds: 60 * 15, // 15 minutes
-      }),
-      emailOTP({
-        expiresIn: 300, // 5 minutes - explicitly documented
-        otpLength: 6, // 6-digit codes
-        allowedAttempts: 3, // Maximum 3 verification attempts per OTP
-        storeOTP: "encrypted", // Encrypt OTPs in database for security
-        async sendVerificationOTP({ email, otp, type }) {
-          const emailFrom = process.env.EMAIL_FROM_ADDRESS || "noreply@pathible.com";
-          const emailFromName = process.env.EMAIL_FROM_NAME || "Pathible";
-
-          // Get the appropriate email template based on type
-          const emailTemplate =
-            type === "sign-in"
-              ? getSignInOTPEmail(otp)
-              : type === "email-verification"
-                ? getEmailVerificationOTPEmail(otp)
-                : getPasswordResetOTPEmail(otp);
-
-          if (resend) {
-            try {
-              await resend.emails.send({
-                from: `${emailFromName} <${emailFrom}>`,
-                to: email,
-                subject: emailTemplate.subject,
-                html: emailTemplate.html,
-                text: emailTemplate.text,
-              });
-              console.log(`[Auth] OTP sent to ${email}`);
-            } catch (error) {
-              console.error(`[Auth] Failed to send OTP to ${email}:`, error);
-              throw new Error("Failed to send verification code");
-            }
-          } else {
-            // Development mode - log OTP to console
-            console.log(`[Auth] OTP for ${email}: ${otp} (type: ${type})`);
-          }
-        },
-      }),
-    ],
-  });
-
-/**
- * Better Auth component instance for Convex
- */
-export const authComponent = createClient(components.betterAuth, {
-  local: {
-    schema: undefined, // Uses default schema from component
-  },
-});
 
 /**
  * Type for authenticated context with user and profile
  */
 export interface AuthenticatedContext {
   user: {
-    _id: string;
+    _id: string; // Clerk user ID
     email: string;
   };
   profile: {
@@ -115,7 +28,6 @@ export interface AuthenticatedContext {
     avatarUrl?: string;
     phone?: string;
     dateOfBirth?: number;
-    // Address fields
     address?: string;
     city?: string;
     state?: string;
@@ -129,8 +41,23 @@ export interface AuthenticatedContext {
       | "complete";
     onboardingStep?: number;
     onboardingCompletedAt?: number;
-    // Soft-delete
     deletedAt?: number;
+  };
+}
+
+/**
+ * Get the authenticated user from Clerk via Convex
+ * Returns null if not authenticated
+ */
+async function getClerkUser(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    return null;
+  }
+
+  return {
+    _id: identity.subject, // Clerk user ID
+    email: identity.email ?? "",
   };
 }
 
@@ -149,22 +76,15 @@ export interface AuthenticatedContext {
  * });
  */
 export async function requireAuth(ctx: QueryCtx | MutationCtx): Promise<AuthenticatedContext> {
-  // Get the authenticated user from Better Auth
-  // Note: Better Auth's context type doesn't perfectly match Convex's ctx, so we cast carefully
-  const user = await authComponent.getAuthUser(
-    ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
-  );
+  const user = await getClerkUser(ctx);
   if (!user) {
     throw new Error("Not authenticated");
   }
 
-  // Extract user ID safely
-  const userId = String(user._id);
-
-  // Get the user's profile
+  // Get the user's profile by Clerk user ID
   const profile = await ctx.db
     .query("profiles")
-    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .withIndex("by_userId", (q) => q.eq("userId", user._id))
     .unique();
 
   if (!profile) {
@@ -178,7 +98,7 @@ export async function requireAuth(ctx: QueryCtx | MutationCtx): Promise<Authenti
 
   return {
     user: {
-      _id: userId,
+      _id: user._id,
       email: user.email,
     },
     profile,
@@ -274,38 +194,12 @@ export async function requireHouseholdAdmin(
   }
 }
 
-/**
- * Helper: Get the current authenticated user (without requiring a profile)
- *
- * Returns null if not authenticated.
- * Use this helper in other Convex functions when you need to check auth without throwing.
- */
-async function getCurrentUserHelper(
-  ctx: QueryCtx | MutationCtx,
-): Promise<{ user: { _id: string; email: string } } | null> {
-  // Note: Better Auth's context type doesn't perfectly match Convex's ctx, so we cast carefully
-  const user = await authComponent.safeGetAuthUser(
-    ctx as unknown as Parameters<typeof authComponent.safeGetAuthUser>[0],
-  );
-
-  if (!user) {
-    return null;
-  }
-
-  return {
-    user: {
-      _id: String(user._id),
-      email: user.email,
-    },
-  };
-}
-
 // ============================================================================
 // CONVEX QUERY EXPORTS (for Next.js server-side calls)
 // ============================================================================
 
 /**
- * Query: Get current authenticated user (for Next.js getServerSession)
+ * Query: Get current authenticated user
  * Returns user info or null if not authenticated
  */
 export const getCurrentUser = query({
@@ -320,12 +214,16 @@ export const getCurrentUser = query({
     v.null(),
   ),
   handler: async (ctx) => {
-    return await getCurrentUserHelper(ctx);
+    const user = await getClerkUser(ctx);
+    if (!user) {
+      return null;
+    }
+    return { user };
   },
 });
 
 /**
- * Query: Get current user with profile (for Next.js getServerSessionWithProfile)
+ * Query: Get current user with profile
  * Returns user and profile or null if not authenticated or no profile
  */
 export const getCurrentUserWithProfile = query({

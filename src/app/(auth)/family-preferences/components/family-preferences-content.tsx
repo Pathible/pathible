@@ -1,11 +1,11 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { Loader2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
 import { FamilyInformationCard } from "./family-information-card";
 import { NotificationPreferencesCard } from "./notification-preferences-card";
 
@@ -14,19 +14,15 @@ export function FamilyPreferencesContent() {
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 10;
 
-  // Check Better Auth session status
-  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  // Check Clerk session status
+  const { user, isLoaded: isUserLoaded } = useUser();
 
   // Load household data
-  const households = useQuery(
-    api.households.list,
-    !isSessionPending && session?.user ? {} : "skip",
-  );
+  const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
 
   // Unified retry logic for auth race conditions
   useEffect(() => {
-    const needsRetry =
-      !isSessionPending && retryCount < maxRetries && (!session?.user || households === null);
+    const needsRetry = isUserLoaded && retryCount < maxRetries && (!user || households === null);
 
     if (needsRetry) {
       const timer = setTimeout(() => {
@@ -34,10 +30,10 @@ export function FamilyPreferencesContent() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isSessionPending, session?.user, households, retryCount]);
+  }, [isUserLoaded, user, households, retryCount]);
 
   // Loading state
-  const isAuthLoading = isSessionPending || (!session?.user && retryCount < maxRetries);
+  const isAuthLoading = !isUserLoaded || (!user && retryCount < maxRetries);
 
   if (isAuthLoading || households === undefined) {
     return (
@@ -48,7 +44,7 @@ export function FamilyPreferencesContent() {
   }
 
   // Not authenticated
-  if (!session?.user) {
+  if (!user) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">

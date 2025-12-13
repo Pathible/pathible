@@ -23,7 +23,7 @@
     "dependencies": {
         "@aws-sdk/client-s3": "^3.948.0",
         "@aws-sdk/s3-request-presigner": "^3.948.0",
-        "@convex-dev/better-auth": "^0.9.11",
+        "@clerk/nextjs": "^6.36.2",
         "@hookform/resolvers": "^5.2.2",
         "@radix-ui/react-alert-dialog": "^1.1.15",
         "@radix-ui/react-avatar": "^1.1.11",
@@ -38,7 +38,6 @@
         "@radix-ui/react-switch": "^1.2.6",
         "@radix-ui/react-tabs": "^1.1.13",
         "@radix-ui/react-tooltip": "^1.2.8",
-        "better-auth": "1.4.6",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "convex": "^1.31.0",

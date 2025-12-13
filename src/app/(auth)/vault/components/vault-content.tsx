@@ -1,12 +1,12 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { AlertCircle, Loader2, Settings, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
 import { CategoryManager } from "./category-manager";
 import { DocumentList } from "./document-list";
 import { SearchAndFilter } from "./search-and-filter";
@@ -21,21 +21,15 @@ export function VaultContent() {
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 10; // Max retries before giving up (5 seconds total)
 
-  // Check Better Auth session status - this is the source of truth
-  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  // Check Clerk session status
+  const { user, isLoaded: isUserLoaded } = useUser();
 
   // Get user's households - run when session is ready
-  // The backend returns null during auth race condition, which we treat as "loading"
-  const households = useQuery(
-    api.households.list,
-    !isSessionPending && session?.user ? {} : "skip",
-  );
+  const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
 
   // Unified retry logic for auth race conditions
-  // Handles both: 1) session.user not populated yet, 2) households returning null
   useEffect(() => {
-    const needsRetry =
-      !isSessionPending && retryCount < maxRetries && (!session?.user || households === null);
+    const needsRetry = isUserLoaded && retryCount < maxRetries && (!user || households === null);
 
     if (needsRetry) {
       const timer = setTimeout(() => {
@@ -43,10 +37,10 @@ export function VaultContent() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isSessionPending, session?.user, households, retryCount]);
+  }, [isUserLoaded, user, households, retryCount]);
 
   // Determine if we're still in the auth loading phase
-  const isAuthLoading = isSessionPending || (!session?.user && retryCount < maxRetries);
+  const isAuthLoading = !isUserLoaded || (!user && retryCount < maxRetries);
 
   // Use the first household (most users will only have one)
   const householdId = households?.[0]?._id;
@@ -92,8 +86,7 @@ export function VaultContent() {
   }
 
   // Not authenticated - only show after all retries exhausted
-  // This handles the race condition where session takes time to sync
-  if (!session?.user) {
+  if (!user) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">

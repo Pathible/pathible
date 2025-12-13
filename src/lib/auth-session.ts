@@ -1,27 +1,20 @@
-import { cookies } from "next/headers";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 /**
  * Get the current authenticated user session on the server
  *
- * This checks if a Better Auth session exists by looking at cookies.
- * For server-side components, we just check if they're authenticated,
- * and let client-side components handle the actual Convex queries.
- *
- * Returns a simple auth indicator, not full user data.
+ * This checks if a Clerk session exists.
+ * Returns a simple auth indicator for route protection.
  */
 export async function getServerSession() {
   try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get("better-auth.session_token");
+    const { userId } = await auth();
 
-    if (!sessionToken) {
-      console.log("[Auth] No session found");
+    if (!userId) {
       return null;
     }
 
-    // Just return a simple indicator that user is authenticated
-    // Client-side will handle fetching actual user data via Convex
-    return { authenticated: true };
+    return { authenticated: true, userId };
   } catch (error) {
     console.error("[Auth] Failed to get server session:", error);
     return null;
@@ -29,45 +22,28 @@ export async function getServerSession() {
 }
 
 /**
- * Get the current user with their profile on the server
+ * Get the current user with their Clerk profile on the server
  *
- * For server components, we can't easily call Convex with auth.
- * Instead, we'll make a simple HTTP request to our Convex backend
- * using the session cookie.
+ * Returns Clerk user data. For Convex profile data,
+ * use client-side queries with the authenticated Convex client.
  */
 export async function getServerSessionWithProfile() {
   try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get("better-auth.session_token");
+    const user = await currentUser();
 
-    if (!sessionToken) {
-      console.log("[Auth] No session found for profile check");
+    if (!user) {
       return null;
     }
 
-    // Make HTTP request to Convex to check if profile exists
-    // Using the Better Auth session cookie
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-    const response = await fetch(`${convexUrl}/api/query`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: `better-auth.session_token=${sessionToken.value}`,
+    return {
+      user: {
+        id: user.id,
+        email: user.emailAddresses[0]?.emailAddress ?? "",
+        firstName: user.firstName,
+        lastName: user.lastName,
+        imageUrl: user.imageUrl,
       },
-      body: JSON.stringify({
-        path: "auth:getCurrentUserWithProfile",
-        args: {},
-        format: "json",
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("[Auth] Convex query failed:", response.status);
-      return null;
-    }
-
-    const data = await response.json();
-    return data.value;
+    };
   } catch (error) {
     console.error("[Auth] Failed to get server session with profile:", error);
     return null;
