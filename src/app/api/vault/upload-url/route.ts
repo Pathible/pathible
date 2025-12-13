@@ -1,9 +1,8 @@
+import { auth } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
 import { NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { getToken } from "@/lib/auth-server";
-import { getServerSession } from "@/lib/auth-session";
 import { B2_CONSTANTS, generateB2FileName, validateUploadParams } from "@/lib/backblaze/config";
 import { getBackblazeS3Client } from "@/lib/backblaze/s3-client";
 
@@ -33,14 +32,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
     }
 
-    // Step 1: Verify authentication
-    const session = await getServerSession();
-    if (!session) {
+    // Step 1: Verify authentication and get JWT token for Convex queries
+    const { getToken, userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized: Authentication required" }, { status: 401 });
     }
 
-    // Get JWT token for Convex queries
-    const token = await getToken();
+    const token = await getToken({ template: "convex" });
     if (!token) {
       return NextResponse.json({ error: "Unauthorized: Token unavailable" }, { status: 401 });
     }

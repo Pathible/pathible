@@ -1,8 +1,8 @@
+import { auth } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
 import { NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { getToken } from "@/lib/auth-server";
 import { getBackblazeS3Client } from "@/lib/backblaze/s3-client";
 
 /**
@@ -32,7 +32,8 @@ export async function POST(request: Request) {
     }
 
     // Step 1: Get JWT token for authentication
-    const token = await getToken();
+    const { getToken } = await auth();
+    const token = await getToken({ template: "convex" });
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -22,7 +23,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
 
 interface DangerZoneCardProps {
   profileName: string;
@@ -30,6 +30,7 @@ interface DangerZoneCardProps {
 
 export function DangerZoneCard({ profileName }: DangerZoneCardProps) {
   const router = useRouter();
+  const { user } = useUser();
   const deleteProfile = useMutation(api.profiles.deleteProfile);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -39,23 +40,27 @@ export function DangerZoneCard({ profileName }: DangerZoneCardProps) {
   const canDelete = confirmText === expectedText;
 
   const handleDeleteAccount = async () => {
-    if (!canDelete) return;
+    if (!canDelete || !user) return;
 
     setIsDeleting(true);
 
     try {
+      // Step 1: Delete from Convex (soft-delete profile and related data)
       await deleteProfile({});
+      console.log("[AccountDeletion] Convex profile soft-deleted");
 
-      // Sign out the user
-      await authClient.signOut();
+      // Step 2: Delete from Clerk (this also signs out the user)
+      await user.delete();
+      console.log("[AccountDeletion] Clerk account deleted");
 
       toast.success("Account deleted", {
         description: "Your account has been permanently deleted.",
       });
 
-      // Redirect to login page
-      router.push("/login");
+      // Redirect to sign-in page (user is already signed out after Clerk deletion)
+      router.push("/sign-in");
     } catch (error) {
+      console.error("[AccountDeletion] Failed to delete account:", error);
       toast.error("Failed to delete account", {
         description: error instanceof Error ? error.message : "Please try again or contact support",
       });
@@ -104,6 +109,7 @@ export function DangerZoneCard({ profileName }: DangerZoneCardProps) {
                         the account for <strong>{profileName}</strong> and remove:
                       </p>
                       <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Your login credentials and authentication</li>
                         <li>Your profile and personal information</li>
                         <li>All documents in your Heritage Vault</li>
                         <li>Your membership in all households</li>

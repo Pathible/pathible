@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { authComponent, requireAdmin, requireAuth } from "./auth";
+import { requireAdmin, requireAuth } from "./auth";
 
 /**
  * Role management functions
@@ -24,14 +24,14 @@ export const checkRole = query({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     try {
-      const user = await authComponent.getAuthUser(
-        ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
-      );
-      if (!user) return false;
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) return false;
+
+      const userId = identity.subject; // Clerk user ID
 
       const userRole = await ctx.db
         .query("userRoles")
-        .withIndex("by_userId", (q) => q.eq("userId", String(user._id)))
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
         .unique();
 
       return userRole?.role === args.role;
@@ -50,14 +50,14 @@ export const getMyRole = query({
   returns: v.union(v.union(v.literal("admin"), v.literal("user")), v.null()),
   handler: async (ctx) => {
     try {
-      const user = await authComponent.getAuthUser(
-        ctx as unknown as Parameters<typeof authComponent.getAuthUser>[0],
-      );
-      if (!user) return null;
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) return null;
+
+      const userId = identity.subject; // Clerk user ID
 
       const userRole = await ctx.db
         .query("userRoles")
-        .withIndex("by_userId", (q) => q.eq("userId", String(user._id)))
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
         .unique();
 
       return userRole?.role ?? null;
@@ -70,7 +70,7 @@ export const getMyRole = query({
 /**
  * List all admins in the system
  * Admin-only function
- * Returns only role data (not user details from Better Auth)
+ * Returns only role data (not user details from Clerk)
  */
 export const listAdmins = query({
   args: {},
@@ -78,7 +78,7 @@ export const listAdmins = query({
     v.object({
       _id: v.id("userRoles"),
       _creationTime: v.number(),
-      userId: v.string(), // Better Auth user ID
+      userId: v.string(), // Clerk user ID
       role: v.literal("admin"),
     }),
   ),
@@ -105,13 +105,13 @@ export const listAdmins = query({
  */
 export const getUserRole = query({
   args: {
-    userId: v.string(), // Better Auth user ID
+    userId: v.string(), // Clerk user ID
   },
   returns: v.union(
     v.object({
       _id: v.id("userRoles"),
       _creationTime: v.number(),
-      userId: v.string(), // Better Auth user ID
+      userId: v.string(), // Clerk user ID
       role: v.union(v.literal("admin"), v.literal("user")),
     }),
     v.null(),
@@ -141,19 +141,20 @@ export const getUserRole = query({
  */
 export const assignRole = mutation({
   args: {
-    userId: v.string(), // Better Auth user ID
+    userId: v.string(), // Clerk user ID
     role: v.union(v.literal("admin"), v.literal("user")),
   },
   returns: v.id("userRoles"),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    const { user: currentUser } = await requireAuth(ctx);
+    const { user } = await requireAuth(ctx);
+    const currentUserId = user._id; // Clerk user ID
 
-    // Note: We cannot verify if the target user exists because Better Auth
+    // Note: We cannot verify if the target user exists because Clerk
     // manages its own tables. We trust that the userId is valid.
 
     // Prevent removing your own admin status
-    if (currentUser._id === args.userId && args.role !== "admin") {
+    if (currentUserId === args.userId && args.role !== "admin") {
       throw new Error("You cannot remove your own admin role");
     }
 
@@ -187,15 +188,16 @@ export const assignRole = mutation({
  */
 export const removeRole = mutation({
   args: {
-    userId: v.string(), // Better Auth user ID
+    userId: v.string(), // Clerk user ID
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    const { user: currentUser } = await requireAuth(ctx);
+    const { user } = await requireAuth(ctx);
+    const currentUserId = user._id; // Clerk user ID
 
     // Prevent removing your own role
-    if (currentUser._id === args.userId) {
+    if (currentUserId === args.userId) {
       throw new Error("You cannot remove your own role");
     }
 
@@ -223,6 +225,7 @@ export const initializeFirstAdmin = mutation({
   returns: v.id("userRoles"),
   handler: async (ctx) => {
     const { user } = await requireAuth(ctx);
+    const userId = user._id; // Clerk user ID
 
     // Check if any admins exist
     const allRoles = await ctx.db.query("userRoles").collect();
@@ -237,7 +240,7 @@ export const initializeFirstAdmin = mutation({
     // Check if this user already has a role
     const existingRole = await ctx.db
       .query("userRoles")
-      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
 
     if (existingRole) {
@@ -247,7 +250,7 @@ export const initializeFirstAdmin = mutation({
     } else {
       // Create admin role
       const roleId = await ctx.db.insert("userRoles", {
-        userId: user._id,
+        userId,
         role: "admin",
       });
       return roleId;

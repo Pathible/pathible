@@ -1,21 +1,18 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { ArrowRight, FileText, Heart, Loader2, Shield, Sparkles, Users } from "lucide-react";
 import Link from "next/link";
 import { DashboardStatCard } from "@/app/(auth)/dashboard/components/dashboard-stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
 
 export function DashboardContent() {
-  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  const { user, isLoaded: isUserLoaded } = useUser();
 
   // Get user's households
-  const households = useQuery(
-    api.households.list,
-    !isSessionPending && session?.user ? {} : "skip",
-  );
+  const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
 
   const householdId = households?.[0]?._id;
 
@@ -38,7 +35,7 @@ export function DashboardContent() {
   };
 
   // Get user's first name for greeting
-  const userName = session?.user?.name?.split(" ")[0] || "there";
+  const userName = user?.firstName || "there";
 
   // Determine next step based on progress
   const getNextStep = () => {
@@ -77,7 +74,7 @@ export function DashboardContent() {
   const NextStepIcon = nextStep.icon;
 
   // Loading state
-  if (isSessionPending || households === undefined) {
+  if (!isUserLoaded || households === undefined) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

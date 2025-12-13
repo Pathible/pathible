@@ -1,20 +1,24 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
-import { authComponent, createAuth } from "./auth";
+import { query } from "./_generated/server";
 
-export const updateUserPassword = mutation({
-  args: {
-    currentPassword: v.string(),
-    newPassword: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const { auth, headers } = await authComponent.getAuth(createAuth, ctx);
-    await auth.api.changePassword({
-      body: {
-        currentPassword: args.currentPassword,
-        newPassword: args.newPassword,
-      },
-      headers,
-    });
+/**
+ * User-related queries
+ *
+ * NOTE: Password management is now handled by Clerk directly.
+ * Users can change their password through Clerk's UserProfile component
+ * or the Clerk user portal.
+ */
+
+/**
+ * Get the current authenticated user's Clerk ID
+ * Useful for debugging or verification purposes
+ */
+export const getCurrentUserId = query({
+  args: {},
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    return identity.subject;
   },
 });
