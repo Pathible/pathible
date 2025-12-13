@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+      - 'feature/**'
+    paths:
+      - 'src/convex/**'
+      - 'convex.json'
+  pull_request:
     paths:
       - 'src/convex/**'
       - 'convex.json'
@@ -29,7 +34,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Deploy Convex functions
+      - name: Deploy to Convex (Production)
+        if: github.ref == 'refs/heads/main'
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy --prod
+
+      - name: Deploy to Convex (Preview)
+        if: github.ref != 'refs/heads/main'
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: npx convex deploy
