@@ -9,6 +9,7 @@
         "generate": "convex dev --once --typecheck-components",
         "build": "npx convex codegen && next build",
         "build:vercel": "next build",
+        "build:ci": "next build",
         "start": "next start",
         "lint": "biome check --write && tsc -p src/convex && npx tsc --noEmit",
         "kill": "pkill -f 'next dev' 2>/dev/null || echo 'All clear'",
