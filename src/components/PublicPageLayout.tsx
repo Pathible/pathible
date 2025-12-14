@@ -53,9 +53,9 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
       <main className="flex-1">{children}</main>
 
       {/* Footer */}
-      <footer className="relative bg-gradient-to-b from-pathible-sand to-white border-t border-pathible-sage/10 overflow-hidden">
+      <footer className="relative bg-linear-to-b from-pathible-sand to-white border-t border-pathible-sage/10 overflow-hidden">
         {/* Subtle decorative gradient */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-gradient-to-b from-pathible-forest/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-linear-to-b from-pathible-forest/5 to-transparent rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
           {/* Main footer content */}
@@ -80,7 +80,7 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
             {/* Trust signals */}
             <div className="flex flex-col sm:flex-row gap-8 lg:gap-12">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-pathible-forest/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-pathible-forest/10 flex items-center justify-center shrink-0">
                   <Shield className="w-5 h-5 text-pathible-forest" />
                 </div>
                 <div>
@@ -92,7 +92,7 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-pathible-forest/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-pathible-forest/10 flex items-center justify-center shrink-0">
                   <Lock className="w-5 h-5 text-pathible-forest" />
                 </div>
                 <div>
@@ -104,7 +104,7 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-pathible-forest/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-pathible-forest/10 flex items-center justify-center shrink-0">
                   <Heart className="w-5 h-5 text-pathible-forest" />
                 </div>
                 <div>
@@ -123,9 +123,20 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
               <p className="text-sm text-muted-foreground">
                 © {new Date().getFullYear()} Pathible. All rights reserved.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Made with care for families everywhere.
-              </p>
+              <div className="flex items-center gap-6">
+                <Link
+                  href="/privacy"
+                  className="text-sm text-muted-foreground hover:text-pathible-forest transition-colors"
+                >
+                  Privacy Policy
+                </Link>
+                <Link
+                  href="/terms"
+                  className="text-sm text-muted-foreground hover:text-pathible-forest transition-colors"
+                >
+                  Terms of Service
+                </Link>
+              </div>
             </div>
           </div>
         </div>
