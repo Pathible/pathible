@@ -1,27 +1,34 @@
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { DashboardLayout } from "@/app/(auth)/dashboard/components/DashboardLayout";
-import { getServerSession } from "@/lib/auth-session";
+import { checkHasActivePlan } from "@/lib/subscription-plans";
 
 /**
  * Auth Layout - Wraps all authenticated routes
  *
  * Checks:
  * 1. User is authenticated (redirect to login if not)
+ * 2. User has an active subscription (redirect to select-plan if not)
  *
- * Note: Profile checking is handled client-side by individual pages.
- * This is because Better Auth + Convex doesn't have great server-side support
- * for authenticated queries in Server Components.
+ * Note: This is a backup check - middleware also enforces subscription.
+ * Profile checking is handled client-side by individual pages.
  */
 export default async function AuthLayout({ children }: { children: ReactNode }) {
-  // Check authentication - just verify session cookie exists
-  const session = await getServerSession();
+  const { userId, has } = await auth();
 
-  if (!session) {
+  // Check authentication
+  if (!userId) {
     redirect("/login");
   }
 
-  // If authenticated, render the protected content
-  // Individual pages will handle profile checks on the client side
+  // Check subscription status (backup to middleware)
+  const hasActivePlan = checkHasActivePlan(has);
+
+  if (!hasActivePlan) {
+    redirect("/select-plan");
+  }
+
+  // If authenticated and subscribed, render the protected content
   return <DashboardLayout>{children}</DashboardLayout>;
 }
