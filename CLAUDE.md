@@ -326,3 +326,31 @@ Always reference this file when working with Convex functions.
 - Update references to external docs
 - Maintain links between related rules
 - Document breaking changes
+
+## Code Review Checklist
+
+Before approving any PR or signing off on code changes, run these checks:
+
+```bash
+# 1. Lint and type check
+pnpm lint
+
+# 2. Production build (catches Next.js-specific issues)
+pnpm build
+
+# 3. Generate Convex types if schema changed
+pnpm generate
+```
+
+**Why `pnpm build` matters:**
+- `pnpm lint` only catches TypeScript and code style issues
+- `pnpm build` catches Next.js App Router issues like:
+  - `useSearchParams()` requires Suspense boundary
+  - Server/Client component boundary violations
+  - Static/dynamic rendering conflicts
+  - Missing environment variables for static generation
+
+**Common Next.js App Router gotchas:**
+- `useSearchParams()` must be wrapped in `<Suspense>` for static pages
+- `usePathname()` and `useRouter()` require `"use client"` directive
+- Dynamic imports with `ssr: false` need special handling
