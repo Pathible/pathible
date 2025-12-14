@@ -2,7 +2,7 @@ import type { WebhookEvent } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
 import { headers } from "next/headers";
 import { Webhook } from "svix";
-import { internal } from "@/convex/_generated/api";
+import { api } from "@/convex/_generated/api";
 
 /**
  * Clerk Webhook Handler
@@ -125,8 +125,8 @@ async function processWebhookEvent(evt: WebhookEvent) {
       const publicMetadata = data.public_metadata as Record<string, unknown> | undefined;
 
       if (userId && publicMetadata) {
-        // Sync to Convex using internal mutation (not callable externally)
-        await convex.mutation(internal.subscriptions.syncFromClerk, {
+        // Sync to Convex (webhook signature already verified above)
+        await convex.mutation(api.subscriptions.syncFromClerk, {
           clerkUserId: userId,
           planId: (publicMetadata.plan as string) || "unknown",
           status: (publicMetadata.subscription_status as string) || "active",

@@ -106,31 +106,22 @@ export function SubscriptionCard() {
   const subscriptionStatus = subscription?.status || "inactive";
   const statusInfo = statusVariants[subscriptionStatus] || statusVariants.inactive;
 
-  // Format dates
-  const formatDate = (timestamp: number | null | undefined) => {
-    if (!timestamp) return null;
-    return new Date(timestamp).toLocaleDateString("en-US", {
+  // Format dates - Clerk returns Date objects
+  const formatDate = (date: Date | null | undefined) => {
+    if (!date) return null;
+    return date.toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
     });
   };
 
-  const nextPaymentDate = formatDate(subscription?.currentPeriodEnd);
-  const startDate = formatDate(subscription?.createdAt);
+  // Use Clerk's subscription properties
+  const nextPaymentDate = formatDate(subscription?.nextPayment?.date);
+  const startDate = formatDate(subscription?.activeAt);
 
-  // Format amount
-  const formatAmount = (amount: number | null | undefined) => {
-    if (!amount) return null;
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount / 100); // Stripe amounts are in cents
-  };
-
-  const nextPaymentAmount = formatAmount(
-    subscription?.currentPeriodEnd ? subscription?.amount : null,
-  );
+  // Clerk provides pre-formatted amount
+  const nextPaymentAmount = subscription?.nextPayment?.amount?.amountFormatted;
 
   return (
     <Card>
