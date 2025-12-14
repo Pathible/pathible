@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { checkHasActivePlan } from "@/lib/subscription-plans";
 
@@ -20,6 +20,20 @@ import { checkHasActivePlan } from "@/lib/subscription-plans";
  * - Existing users: Access via ?change=true to upgrade/downgrade plans
  */
 export default function SelectPlanPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <SelectPlanContent />
+    </Suspense>
+  );
+}
+
+function SelectPlanContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoaded, isSignedIn, has } = useAuth();
