@@ -17,7 +17,7 @@ export const generateSecureToken = action({
   returns: v.string(),
   handler: async () => {
     // Use Node.js crypto module for cryptographically secure random tokens
-    const crypto = await import("crypto");
+    const crypto = await import("node:crypto");
     return crypto.randomBytes(32).toString("base64url");
   },
 });

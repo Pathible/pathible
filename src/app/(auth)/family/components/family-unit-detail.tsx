@@ -438,6 +438,7 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
                 <SelectContent>
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="non_binary">Non-Binary</SelectItem>
                   <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
@@ -540,6 +541,8 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
                 <SelectContent>
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="non_binary">Non-Binary</SelectItem>
+                  <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>

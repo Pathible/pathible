@@ -120,6 +120,7 @@ function HeroSection() {
           viewBox="0 0 1200 120"
           preserveAspectRatio="none"
           className="absolute bottom-0 w-full h-16 text-card/60"
+          aria-hidden="true"
         >
           <path
             d="M0,60 C200,120 400,0 600,60 C800,120 1000,0 1200,60 L1200,120 L0,120 Z"
