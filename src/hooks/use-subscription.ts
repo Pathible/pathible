@@ -1,8 +1,16 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
+import {
+  checkHasActivePlan,
+  getCurrentPlanTier,
+  PLAN_DESCRIPTIONS,
+  PLAN_LABELS,
+  PLAN_TIERS,
+  type PlanTier,
+} from "@/lib/subscription-plans";
 
-export type SubscriptionPlan = "foundations" | "heritage" | "legacy" | null;
+export type SubscriptionPlan = PlanTier | null;
 
 /**
  * Hook to check user's subscription status using Clerk Billing
@@ -34,21 +42,14 @@ export function useSubscription() {
     };
   }
 
-  // Check each plan tier
-  // Plans are hierarchical: legacy > heritage > foundations
+  // Use shared utility functions
+  const plan = getCurrentPlanTier(has);
+  const hasAnyPlan = checkHasActivePlan(has);
+
+  // Individual plan checks for convenience
   const hasFoundations = has?.({ plan: "foundations" }) ?? false;
   const hasHeritage = has?.({ plan: "heritage" }) ?? false;
   const hasLegacy = has?.({ plan: "legacy" }) ?? false;
-
-  // Determine the user's current plan (highest tier they have)
-  let plan: SubscriptionPlan = null;
-  if (hasLegacy) {
-    plan = "legacy";
-  } else if (hasHeritage) {
-    plan = "heritage";
-  } else if (hasFoundations) {
-    plan = "foundations";
-  }
 
   return {
     isLoaded: true,
@@ -56,24 +57,24 @@ export function useSubscription() {
     hasFoundations,
     hasHeritage,
     hasLegacy,
-    hasAnyPlan: hasFoundations || hasHeritage || hasLegacy,
+    hasAnyPlan,
   };
 }
 
 /**
  * Plan tier labels for display
+ * Re-exported from shared utility for backwards compatibility
  */
-export const planLabels: Record<string, string> = {
-  foundations: "Foundations",
-  heritage: "Heritage",
-  legacy: "Legacy",
-};
+export const planLabels = PLAN_LABELS;
 
 /**
  * Plan tier descriptions
+ * Re-exported from shared utility for backwards compatibility
  */
-export const planDescriptions: Record<string, string> = {
-  foundations: "Essential features for getting started",
-  heritage: "Advanced features for growing families",
-  legacy: "Premium features for comprehensive legacy planning",
-};
+export const planDescriptions = PLAN_DESCRIPTIONS;
+
+/**
+ * Available plan tiers
+ * Re-exported from shared utility
+ */
+export const planTiers = PLAN_TIERS;

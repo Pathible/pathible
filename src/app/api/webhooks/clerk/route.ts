@@ -2,7 +2,7 @@ import type { WebhookEvent } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
 import { headers } from "next/headers";
 import { Webhook } from "svix";
-import { api } from "@/convex/_generated/api";
+import { internal } from "@/convex/_generated/api";
 
 /**
  * Clerk Webhook Handler
@@ -59,24 +59,9 @@ const convex = new ConvexHttpClient(convexUrl);
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
-  // In development, warn but don't fail if no secret
+  // Always require webhook secret - no bypass for any environment
   if (!WEBHOOK_SECRET) {
-    console.warn(
-      "[Clerk Webhook] CLERK_WEBHOOK_SECRET not set. Webhook verification disabled for development.",
-    );
-
-    // In development, still process the event for testing
-    if (process.env.NODE_ENV === "development") {
-      try {
-        const payload = await req.json();
-        await processWebhookEvent(payload as WebhookEvent);
-        return new Response("OK (dev mode - no verification)", { status: 200 });
-      } catch (error) {
-        console.error("[Clerk Webhook] Error processing event:", error);
-        return new Response("Error processing webhook", { status: 500 });
-      }
-    }
-
+    console.error("[Clerk Webhook] CLERK_WEBHOOK_SECRET not configured");
     return new Response("Webhook secret not configured", { status: 500 });
   }
 
@@ -140,8 +125,8 @@ async function processWebhookEvent(evt: WebhookEvent) {
       const publicMetadata = data.public_metadata as Record<string, unknown> | undefined;
 
       if (userId && publicMetadata) {
-        // Sync to Convex
-        await convex.mutation(api.subscriptions.syncFromClerk, {
+        // Sync to Convex using internal mutation (not callable externally)
+        await convex.mutation(internal.subscriptions.syncFromClerk, {
           clerkUserId: userId,
           planId: (publicMetadata.plan as string) || "unknown",
           status: (publicMetadata.subscription_status as string) || "active",

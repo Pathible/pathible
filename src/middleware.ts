@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { checkHasActivePlan } from "@/lib/subscription-plans";
 
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
@@ -34,9 +35,7 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   // Protected routes require active subscription
-  // Check for any of our subscription plans
-  const hasActivePlan =
-    has({ plan: "foundations" }) || has({ plan: "heritage" }) || has({ plan: "legacy" });
+  const hasActivePlan = checkHasActivePlan(has);
 
   if (!hasActivePlan) {
     // Redirect to plan selection page

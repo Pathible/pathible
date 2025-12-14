@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { DashboardLayout } from "@/app/(auth)/dashboard/components/DashboardLayout";
+import { checkHasActivePlan } from "@/lib/subscription-plans";
 
 /**
  * Auth Layout - Wraps all authenticated routes
@@ -22,9 +23,7 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
   }
 
   // Check subscription status (backup to middleware)
-  // Verify user has at least one active subscription plan
-  const hasActivePlan =
-    has({ plan: "foundations" }) || has({ plan: "heritage" }) || has({ plan: "legacy" });
+  const hasActivePlan = checkHasActivePlan(has);
 
   if (!hasActivePlan) {
     redirect("/select-plan");

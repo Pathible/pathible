@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAuth } from "./auth";
 
 /**
@@ -72,12 +72,15 @@ export const getCurrentSubscription = query({
 /**
  * Sync subscription data from Clerk webhook
  *
+ * INTERNAL MUTATION - Can only be called from other Convex functions, not external clients.
+ * This prevents unauthorized subscription modifications.
+ *
  * Called by the Clerk webhook handler when subscription events occur.
  * Updates the household's subscription tier and status.
  *
  * Note: This is for data mirroring only. Access control uses Clerk's has() method.
  */
-export const syncFromClerk = mutation({
+export const syncFromClerk = internalMutation({
   args: {
     clerkUserId: v.string(),
     planId: v.string(),
