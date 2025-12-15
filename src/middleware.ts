@@ -1,3 +1,12 @@
+/**
+ * TODO: Migrate to Next.js 16 "proxy" convention
+ *
+ * The "middleware" file convention is deprecated in Next.js 16.
+ * See: https://nextjs.org/docs/messages/middleware-to-proxy
+ *
+ * Migration blocked until Clerk provides updated documentation for the
+ * new proxy convention. Monitor Clerk's Next.js 16 migration guide.
+ */
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { checkHasActivePlan } from "@/lib/subscription-plans";
 
