@@ -242,10 +242,7 @@ export default function WisdomLibraryPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                      wisdom
-                    </span>
+                    <BookOpen className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex items-center gap-2">
                     {entry.isPublished ? (
