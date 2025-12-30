@@ -23,8 +23,8 @@ export type MembershipRole = "owner" | "steward" | "viewer" | "executor";
  */
 export interface DocumentForAccessCheck {
   accessLevel: AccessLevel;
-  uploadedBy: Id<"profiles"> | string;
-  sharedWithUsers: (Id<"profiles"> | string)[];
+  uploadedBy: Id<"profiles">;
+  sharedWithUsers: Id<"profiles">[];
 }
 
 /**
@@ -48,8 +48,8 @@ export interface DocumentForAccessCheck {
  */
 export function checkDocumentAccess(
   document: DocumentForAccessCheck,
-  profileId: Id<"profiles"> | string,
-  membershipRole: string,
+  profileId: Id<"profiles">,
+  membershipRole: MembershipRole,
 ): boolean {
   switch (document.accessLevel) {
     case "household":
@@ -78,6 +78,6 @@ export function checkDocumentAccess(
  * @param role - The membership role to check
  * @returns true if the role has admin privileges
  */
-export function isAdminRole(role: string): boolean {
+export function isAdminRole(role: MembershipRole): boolean {
   return role === "owner" || role === "steward";
 }

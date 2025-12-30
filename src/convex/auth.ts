@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalQuery, query } from "./_generated/server";
+import { checkDocumentAccess } from "./vaultHelpers";
 
 /**
  * Authentication helpers for Convex with Clerk
@@ -402,26 +403,7 @@ export async function requireFeatureAccess(
 // STORAGE QUOTA HELPERS
 // ============================================================================
 
-/** Bytes per gigabyte constant */
-const BYTES_PER_GB = 1024 * 1024 * 1024;
-
-/** Sentinel value for unlimited resources */
-const UNLIMITED = Number.MAX_SAFE_INTEGER;
-
-/**
- * Format bytes as human-readable GB string
- */
-function formatBytesAsGB(bytes: number): string {
-  if (bytes === UNLIMITED) return "unlimited";
-  return (bytes / BYTES_PER_GB).toFixed(2);
-}
-
-/**
- * Format a limit value for display
- */
-function formatLimit(value: number): string {
-  return value === UNLIMITED ? "unlimited" : value.toString();
-}
+import { formatBytesAsGB, formatLimit } from "./shared/constants";
 
 /**
  * Check storage quota
@@ -822,7 +804,7 @@ export const getDocumentWithAccessInternal = internalQuery({
     }
 
     // Check document-level access
-    const hasAccess = checkDocumentAccessInternal(document, profile._id, membership.role);
+    const hasAccess = checkDocumentAccess(document, profile._id, membership.role);
     if (!hasAccess) {
       return null; // No document access - deny silently
     }
@@ -839,23 +821,3 @@ export const getDocumentWithAccessInternal = internalQuery({
     };
   },
 });
-
-/**
- * Internal helper for document access checking (used by getDocumentWithAccessInternal)
- */
-function checkDocumentAccessInternal(
-  document: Doc<"vaultDocuments">,
-  profileId: Id<"profiles">,
-  membershipRole: string,
-): boolean {
-  switch (document.accessLevel) {
-    case "household":
-      return true;
-    case "admins":
-      return membershipRole === "owner" || membershipRole === "steward";
-    case "custom":
-      return document.uploadedBy === profileId || document.sharedWithUsers.includes(profileId);
-    default:
-      return false;
-  }
-}

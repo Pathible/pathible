@@ -98,7 +98,9 @@ function ImportantNotice({
     <div className={`my-8 p-6 border rounded-2xl ${styles[variant]}`}>
       <div className="flex gap-4">
         <AlertTriangle
-          className={`w-6 h-6 flex-shrink-0 mt-0.5 ${variant === "warning" ? "text-amber-600" : "text-pathible-forest"}`}
+          className={`w-6 h-6 shrink-0 mt-0.5 ${
+            variant === "warning" ? "text-amber-600" : "text-pathible-forest"
+          }`}
         />
         <div className="font-medium">{children}</div>
       </div>

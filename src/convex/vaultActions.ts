@@ -18,7 +18,7 @@ import { B2_CONSTANTS, generateB2FileName, validateUploadParams } from "../lib/b
 import type { UploadUrlData } from "../lib/backblaze/types";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
-import { checkDocumentAccess, isAdminRole } from "./vaultHelpers";
+import { isAdminRole } from "./vaultHelpers";
 
 /**
  * Generate a signed upload URL for B2
@@ -87,6 +87,7 @@ export const generateUploadUrl = action({
  * Generate a signed download URL for a document
  * Verifies access permissions before generating URL
  *
+ * SECURITY: Uses atomic auth+access check to prevent TOCTOU race conditions
  * SECURITY: Requires active subscription for downloads
  */
 export const generateDownloadUrl = action({
@@ -99,20 +100,16 @@ export const generateDownloadUrl = action({
     expiresIn: v.number(),
   }),
   handler: async (ctx, args) => {
-    // Get document using internal query
-    const document = await ctx.runQuery(internal.auth.getDocumentInternal, {
+    // SECURITY: Atomic document fetch + auth + access check (prevents TOCTOU race)
+    const result = await ctx.runQuery(internal.auth.getDocumentWithAccessInternal, {
       documentId: args.documentId,
     });
 
-    if (!document) {
-      throw new Error("Document not found");
+    if (!result) {
+      throw new Error("Document not found or access denied");
     }
 
-    // Verify household access
-    const membership = await ctx.runQuery(internal.auth.requireHouseholdAccessInternal, {
-      householdId: document.householdId,
-    });
-    const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal);
+    const { document } = result;
 
     // SECURITY: Check subscription status (reusing storage check which validates status)
     const subscriptionCheck = await ctx.runQuery(internal.vault.checkStorageQuotaInternal, {
@@ -123,13 +120,6 @@ export const generateDownloadUrl = action({
     // Only check subscription status, not quota (downloads don't consume quota)
     if (subscriptionCheck.error?.includes("Subscription is")) {
       throw new Error(subscriptionCheck.error);
-    }
-
-    // Check document-level access
-    const hasAccess = checkDocumentAccess(document, profile._id, membership.role);
-
-    if (!hasAccess) {
-      throw new Error("Access denied: You do not have permission to view this document");
     }
 
     // Generate download URL and authorization token
@@ -148,6 +138,7 @@ export const generateDownloadUrl = action({
  * Delete a file from B2 storage
  * Called by vault.remove mutation
  *
+ * SECURITY: Uses atomic auth+access check to prevent TOCTOU race conditions
  * SECURITY: Requires active subscription for deletions
  */
 export const deleteFile = action({
@@ -156,20 +147,16 @@ export const deleteFile = action({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Get document using internal query
-    const document = await ctx.runQuery(internal.auth.getDocumentInternal, {
+    // SECURITY: Atomic document fetch + auth + access check (prevents TOCTOU race)
+    const result = await ctx.runQuery(internal.auth.getDocumentWithAccessInternal, {
       documentId: args.documentId,
     });
 
-    if (!document) {
-      throw new Error("Document not found");
+    if (!result) {
+      throw new Error("Document not found or access denied");
     }
 
-    // Verify household access and permissions
-    const membership = await ctx.runQuery(internal.auth.requireHouseholdAccessInternal, {
-      householdId: document.householdId,
-    });
-    const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal);
+    const { document, membership, profile } = result;
 
     // SECURITY: Check subscription status
     const subscriptionCheck = await ctx.runQuery(internal.vault.checkStorageQuotaInternal, {

@@ -78,6 +78,42 @@ async function getUploaderName(ctx: QueryCtx, uploaderId: Id<"profiles">): Promi
   return `${uploader.firstName} ${uploader.lastName}`;
 }
 
+/**
+ * Update category document counts
+ * Increments or decrements the documentCount counter for each category
+ *
+ * @param ctx - Mutation context
+ * @param householdId - The household ID
+ * @param categoryNames - Array of category names to update
+ * @param delta - Amount to add (positive) or subtract (negative)
+ */
+async function updateCategoryCounters(
+  ctx: {
+    db: QueryCtx["db"] & { patch: (id: Id<"vaultCategories">, updates: object) => Promise<void> };
+  },
+  householdId: Id<"households">,
+  categoryNames: string[],
+  delta: number,
+): Promise<void> {
+  if (categoryNames.length === 0) return;
+
+  // Get all categories for this household
+  const categories = await ctx.db
+    .query("vaultCategories")
+    .withIndex("by_household", (q) => q.eq("householdId", householdId))
+    .collect();
+
+  // Update counters for matching categories
+  for (const category of categories) {
+    if (categoryNames.includes(category.name)) {
+      const currentCount = category.documentCount ?? 0;
+      await ctx.db.patch(category._id, {
+        documentCount: Math.max(0, currentCount + delta),
+      });
+    }
+  }
+}
+
 // ============================================================================
 // QUERIES
 // ============================================================================
@@ -209,7 +245,7 @@ export const get = query({
 
 /**
  * List all categories for a household
- * Includes document count for each category
+ * Includes document count for each category (O(1) using pre-computed counter)
  */
 export const listCategories = query({
   args: {
@@ -224,16 +260,10 @@ export const listCategories = query({
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
       .collect();
 
-    // Get all documents to count usage
-    const documents = await ctx.db
-      .query("vaultDocuments")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .collect();
-
-    // Count documents per category
+    // Use pre-computed counter (defaults to 0 for backwards compatibility)
     const categoriesWithCounts = categories.map((category) => ({
       ...category,
-      documentCount: documents.filter((doc) => doc.categories.includes(category.name)).length,
+      documentCount: category.documentCount ?? 0,
     }));
 
     return categoriesWithCounts;
@@ -384,6 +414,11 @@ export const create = mutation({
       });
     }
 
+    // Increment category document counters
+    if (args.categories.length > 0) {
+      await updateCategoryCounters(ctx, args.householdId, args.categories, 1);
+    }
+
     // Log activity
     await ctx.db.insert("activityLog", {
       householdId: args.householdId,
@@ -456,7 +491,19 @@ export const update = mutation({
       updates.description = args.description?.trim();
     }
 
+    // Track category changes for counter updates
+    let removedCategories: string[] = [];
+    let addedCategories: string[] = [];
+
     if (args.categories !== undefined) {
+      const oldCategories = document.categories;
+      const newCategories = args.categories;
+
+      // Find categories that were removed
+      removedCategories = oldCategories.filter((c) => !newCategories.includes(c));
+      // Find categories that were added
+      addedCategories = newCategories.filter((c) => !oldCategories.includes(c));
+
       updates.categories = args.categories;
     }
 
@@ -485,6 +532,14 @@ export const update = mutation({
 
     // Update document
     await ctx.db.patch(args.documentId, updates);
+
+    // Update category counters if categories changed
+    if (removedCategories.length > 0) {
+      await updateCategoryCounters(ctx, document.householdId, removedCategories, -1);
+    }
+    if (addedCategories.length > 0) {
+      await updateCategoryCounters(ctx, document.householdId, addedCategories, 1);
+    }
 
     // Log activity
     await ctx.db.insert("activityLog", {
@@ -543,6 +598,11 @@ export const remove = mutation({
       await ctx.db.patch(document.householdId, {
         storageUsedBytes: Math.max(0, currentStorage - document.fileSize),
       });
+    }
+
+    // Decrement category document counters
+    if (document.categories.length > 0) {
+      await updateCategoryCounters(ctx, document.householdId, document.categories, -1);
     }
 
     // Delete the document record
@@ -904,23 +964,78 @@ export const recalculateStorageUsage = mutation({
   },
 });
 
+/**
+ * Recalculate category document counts for a household
+ *
+ * Use this to:
+ * 1. Initialize documentCount for existing categories (migration)
+ * 2. Fix any counter drift due to bugs or failed transactions
+ *
+ * This performs a full table scan, so use sparingly.
+ */
+export const recalculateCategoryCounts = mutation({
+  args: {
+    householdId: v.id("households"),
+  },
+  returns: v.object({
+    categoriesUpdated: v.number(),
+    results: v.array(
+      v.object({
+        name: v.string(),
+        previousCount: v.number(),
+        calculatedCount: v.number(),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    // Require admin access to recalculate
+    await requireHouseholdAdmin(ctx, args.householdId);
+
+    // Get all categories
+    const categories = await ctx.db
+      .query("vaultCategories")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+
+    // Get all documents
+    const documents = await ctx.db
+      .query("vaultDocuments")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+
+    // Count documents per category
+    const results: { name: string; previousCount: number; calculatedCount: number }[] = [];
+
+    for (const category of categories) {
+      const calculatedCount = documents.filter((doc) =>
+        doc.categories.includes(category.name),
+      ).length;
+      const previousCount = category.documentCount ?? 0;
+
+      // Update the counter
+      await ctx.db.patch(category._id, {
+        documentCount: calculatedCount,
+      });
+
+      results.push({
+        name: category.name,
+        previousCount,
+        calculatedCount,
+      });
+    }
+
+    return {
+      categoriesUpdated: categories.length,
+      results,
+    };
+  },
+});
+
 // ============================================================================
 // INTERNAL QUERIES (for use by actions)
 // ============================================================================
 
-/** Bytes per gigabyte constant */
-const BYTES_PER_GB = 1024 * 1024 * 1024;
-
-/** Sentinel value for unlimited resources */
-const UNLIMITED = Number.MAX_SAFE_INTEGER;
-
-/**
- * Format bytes as human-readable GB string
- */
-function formatBytesAsGB(bytes: number): string {
-  if (bytes === UNLIMITED) return "unlimited";
-  return (bytes / BYTES_PER_GB).toFixed(2);
-}
+import { formatBytesAsGB } from "./shared/constants";
 
 /**
  * Internal query to check storage quota for actions

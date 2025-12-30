@@ -57,8 +57,8 @@ export function VaultContent() {
         }
       : "skip",
   );
-  // Extract documents from paginated response
-  const documents = documentsResponse?.documents;
+  // Extract documents from paginated response (with type guard for safety)
+  const documents = Array.isArray(documentsResponse?.documents) ? documentsResponse.documents : [];
   const categories = useQuery(api.vault.listCategories, householdId ? { householdId } : "skip");
 
   // Initialize default categories mutation
@@ -185,7 +185,7 @@ export function VaultContent() {
 
       {/* Documents List */}
       <DocumentList
-        documents={documents || []}
+        documents={documents}
         categories={categories || []}
         householdId={householdId}
         isLoading={isLoading}

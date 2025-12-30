@@ -68,7 +68,7 @@ function ImportantNotice({ children }: { children: React.ReactNode }) {
   return (
     <div className="my-8 p-6 bg-amber-50 border border-amber-200 rounded-2xl">
       <div className="flex gap-4">
-        <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+        <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
         <div className="text-amber-900 font-medium">{children}</div>
       </div>
     </div>

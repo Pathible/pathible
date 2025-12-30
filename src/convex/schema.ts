@@ -299,6 +299,9 @@ export default defineSchema({
     householdId: v.id("households"),
     name: v.string(),
     description: v.optional(v.string()),
+    // Document count counter (updated atomically on document create/delete/update)
+    // This avoids O(n*m) full table scans when listing categories
+    documentCount: v.optional(v.number()), // Optional for backwards compatibility
   }).index("by_household", ["householdId"]),
 
   // ============================================================================
