@@ -60,7 +60,8 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
               {navItems.map((item) => {
-                const isActive = pathname === item.href;
+                // Check if current path matches or is a sub-page of this nav item
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.href}>

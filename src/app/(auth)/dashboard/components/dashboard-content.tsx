@@ -43,7 +43,7 @@ export function DashboardContent() {
       return {
         title: "Add your first Wisdom entry",
         description: "Share life lessons and values with future generations",
-        route: "/wisdom/create",
+        route: "/wisdom/create-entry",
         icon: Sparkles,
       };
     } else if (stats.vaultItemsCount < 5) {
