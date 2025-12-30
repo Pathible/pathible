@@ -36,7 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -174,29 +173,7 @@ export function PropertyManager({ properties, householdId, isLoading }: Property
           </CardAction>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="flex items-start justify-between p-4 border rounded-lg">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-5 w-40" />
-                      <Skeleton className="h-5 w-24 rounded" />
-                    </div>
-                    <Skeleton className="h-4 w-64" />
-                    <Skeleton className="h-3 w-48" />
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right space-y-1">
-                      <Skeleton className="h-3 w-24" />
-                      <Skeleton className="h-5 w-20" />
-                    </div>
-                    <Skeleton className="h-9 w-9 rounded-md" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : properties.length === 0 ? (
+          {isLoading ? null : properties.length === 0 ? (
             <div className="text-center py-12">
               <Home className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No properties yet</h3>

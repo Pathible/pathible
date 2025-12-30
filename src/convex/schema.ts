@@ -378,8 +378,8 @@ export default defineSchema({
   coreBeliefs: defineTable({
     householdId: v.id("households"),
     createdBy: v.id("profiles"),
-    title: v.string(),
-    content: v.string(), // Rich text/markdown
+    statement: v.string(),
+    reflection: v.string(), // Rich text/markdown
     category: v.union(
       v.literal("faith"),
       v.literal("family"),

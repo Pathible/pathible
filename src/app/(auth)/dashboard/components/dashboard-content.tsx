@@ -19,6 +19,10 @@ export function DashboardContent() {
   // Get vault stats
   const vaultStats = useQuery(api.vault.getStats, householdId ? { householdId } : "skip");
 
+  // Get wisdom stats (entries + core beliefs)
+  const wisdomStats = useQuery(api.wisdom.getStats, householdId ? { householdId } : "skip");
+  const coreBeliefsData = useQuery(api.coreBeliefs.list, householdId ? { householdId } : "skip");
+
   // Daily devotional/quote
   const dailyQuote = {
     text: "A good person leaves an inheritance for their children's children, but a sinner's wealth is stored up for the righteous.",
@@ -27,10 +31,13 @@ export function DashboardContent() {
       "True legacy transcends material wealth—it's about values, wisdom, and faith passed down through generations.",
   };
 
-  // Stats with real vault data
+  // Stats with real data
+  const wisdomEntriesCount = wisdomStats?.totalEntries ?? 0;
+  const coreBeliefsCount = coreBeliefsData?.beliefs?.length ?? 0;
+
   const stats = {
     vaultItemsCount: vaultStats?.totalDocuments ?? 0,
-    wisdomEntriesCount: 0, // TODO: Connect to wisdom entries query
+    wisdomEntriesCount: wisdomEntriesCount + coreBeliefsCount,
     legacyPlanCompletion: 0, // TODO: Connect to legacy plan query
   };
 

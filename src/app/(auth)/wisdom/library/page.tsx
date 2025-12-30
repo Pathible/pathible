@@ -2,7 +2,17 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, BookOpen, Loader2, Lock, Plus, Search, Trash2, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  BookMarked,
+  BookOpen,
+  Loader2,
+  Lock,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -56,7 +66,7 @@ function formatDate(timestamp: number): string {
 
 function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength).trim() + "...";
+  return `${text.slice(0, maxLength).trim()}...`;
 }
 
 export default function WisdomLibraryPage() {
@@ -138,7 +148,10 @@ export default function WisdomLibraryPage() {
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-4xl font-bold">Wisdom Library</h1>
+          <div className="flex items-center gap-2 mb-2">
+            <BookMarked className="h-8 w-8 text-primary" />
+            <h1 className="text-4xl font-bold">Wisdom Library</h1>
+          </div>
           <p className="text-muted-foreground">Your collected wisdom entries</p>
         </div>
         <Button asChild>

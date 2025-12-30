@@ -24,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/convex/_generated/api";
 import { FamilyUnitCard } from "./family-unit-card";
 
@@ -181,52 +180,7 @@ export function FamilyEcosystemContent() {
 
   // Loading state
   if (isAuthLoading) {
-    return (
-      <div className="space-y-6">
-        {/* Header Skeleton */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-12 w-12 rounded-lg" />
-              <Skeleton className="h-10 w-80" />
-            </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-10 w-40 rounded-md" />
-              <Skeleton className="h-10 w-32 rounded-md" />
-            </div>
-          </div>
-          <Skeleton className="h-6 w-96" />
-        </div>
-
-        {/* Grid Skeleton */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-6 w-48" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                    <Skeleton className="h-6 w-20 rounded-full" />
-                  </div>
-                  <div className="flex gap-2">
-                    {[1, 2, 3].map((j) => (
-                      <Skeleton key={j} className="h-10 w-10 rounded-full" />
-                    ))}
-                  </div>
-                  <div className="space-y-1">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-32" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
+    return null;
   }
 
   // Not authenticated
@@ -244,58 +198,13 @@ export function FamilyEcosystemContent() {
     );
   }
 
-  // Still loading households - show full page skeleton
+  // Still loading households
   if (
     households === undefined ||
     familyUnits === undefined ||
     ((households === null || familyUnits === null) && retryCount < maxRetries)
   ) {
-    return (
-      <div className="space-y-6">
-        {/* Header Skeleton */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-12 w-12 rounded-lg" />
-              <Skeleton className="h-10 w-80" />
-            </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-10 w-40 rounded-md" />
-              <Skeleton className="h-10 w-32 rounded-md" />
-            </div>
-          </div>
-          <Skeleton className="h-6 w-96" />
-        </div>
-
-        {/* Grid Skeleton */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-6 w-48" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                    <Skeleton className="h-6 w-20 rounded-full" />
-                  </div>
-                  <div className="flex gap-2">
-                    {[1, 2, 3].map((j) => (
-                      <Skeleton key={j} className="h-10 w-10 rounded-full" />
-                    ))}
-                  </div>
-                  <div className="space-y-1">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-32" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
+    return null;
   }
 
   // Auth sync failed

@@ -36,7 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -173,26 +172,7 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
           </CardAction>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-5 w-32" />
-                      <Skeleton className="h-5 w-16 rounded" />
-                    </div>
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Skeleton className="h-6 w-24" />
-                    <Skeleton className="h-9 w-9 rounded-md" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : accounts.length === 0 ? (
+          {isLoading ? null : accounts.length === 0 ? (
             <div className="text-center py-12">
               <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No accounts yet</h3>
