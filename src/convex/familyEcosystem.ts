@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import {
   checkFamilyMemberLimit,
@@ -9,6 +10,9 @@ import {
   requireHouseholdAccess,
   requireHouseholdAdmin,
 } from "./auth";
+import { logActivity } from "./shared/activity";
+import { incrementFamilyUnitCount } from "./shared/counters";
+import { EMAIL_REGEX } from "./shared/validators";
 
 /**
  * Family Ecosystem - Family Unit & Member Management
@@ -42,9 +46,7 @@ const relationshipTypeValidator = v.union(
 const genderValidator = v.union(
   v.literal("male"),
   v.literal("female"),
-  v.literal("non_binary"),
   v.literal("prefer_not_to_say"),
-  v.literal("other"),
 );
 
 const memberStatusValidator = v.union(
@@ -148,6 +150,242 @@ const familyMemberWithProfileReturnValidator = v.object({
   ),
 });
 
+type FamilyMemberUpdatePayload = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  relationshipType?: Doc<"familyMembers">["relationshipType"];
+  gender?: Doc<"familyMembers">["gender"];
+  dateOfBirth?: number;
+  city?: string;
+  state?: string;
+  roles?: string[];
+  notes?: string;
+};
+
+function validateFamilyMemberUpdates(
+  args: FamilyMemberUpdatePayload,
+): Partial<Doc<"familyMembers">> {
+  const updates: Partial<Doc<"familyMembers">> = {
+    updatedAt: Date.now(),
+  };
+
+  if (args.firstName !== undefined) {
+    if (!args.firstName.trim()) {
+      throw new Error("First name cannot be empty");
+    }
+    if (args.firstName.length > 100) {
+      throw new Error("First name is too long (max 100 characters)");
+    }
+    updates.firstName = args.firstName.trim();
+  }
+
+  if (args.lastName !== undefined) {
+    if (!args.lastName.trim()) {
+      throw new Error("Last name cannot be empty");
+    }
+    if (args.lastName.length > 100) {
+      throw new Error("Last name is too long (max 100 characters)");
+    }
+    updates.lastName = args.lastName.trim();
+  }
+
+  if (args.email !== undefined) {
+    if (args.email) {
+      if (!EMAIL_REGEX.test(args.email)) {
+        throw new Error("Invalid email address");
+      }
+      updates.email = args.email.toLowerCase().trim();
+    } else {
+      updates.email = undefined;
+    }
+  }
+
+  if (args.phone !== undefined) {
+    if (args.phone && args.phone.length > 20) {
+      throw new Error("Phone number is too long (max 20 characters)");
+    }
+    updates.phone = args.phone?.trim();
+  }
+
+  if (args.relationshipType !== undefined) {
+    updates.relationshipType = args.relationshipType;
+  }
+
+  if (args.gender !== undefined) {
+    updates.gender = args.gender;
+  }
+
+  if (args.dateOfBirth !== undefined) {
+    updates.dateOfBirth = args.dateOfBirth;
+  }
+
+  if (args.city !== undefined) {
+    updates.city = args.city?.trim();
+  }
+
+  if (args.state !== undefined) {
+    updates.state = args.state?.trim();
+  }
+
+  if (args.roles !== undefined) {
+    updates.roles = args.roles;
+  }
+
+  if (args.notes !== undefined) {
+    if (args.notes && args.notes.length > 1000) {
+      throw new Error("Notes are too long (max 1000 characters)");
+    }
+    updates.notes = args.notes?.trim();
+  }
+
+  return updates;
+}
+
+type CreateFamilyMemberOptions = {
+  familyUnitId: Id<"familyUnits">;
+  householdId: Id<"households">;
+  createdBy: Id<"profiles">;
+  member: {
+    profileId?: Id<"profiles">;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+    avatarUrl?: string;
+    dateOfBirth?: number;
+    gender?: Doc<"familyMembers">["gender"];
+    city?: string;
+    state?: string;
+    relationshipType: Doc<"familyMembers">["relationshipType"];
+    roles: string[];
+    status?: Doc<"familyMembers">["status"];
+    notes?: string;
+  };
+  activityDescription: string;
+  actionType?: Doc<"activityLog">["actionType"];
+};
+
+async function createFamilyMemberInternal(
+  ctx: { db: MutationCtx["db"] },
+  options: CreateFamilyMemberOptions,
+): Promise<Id<"familyMembers">> {
+  const existingMembers = await ctx.db
+    .query("familyMembers")
+    .withIndex("by_familyUnit", (q) => q.eq("familyUnitId", options.familyUnitId))
+    .collect();
+
+  const maxOrderIndex = existingMembers.reduce(
+    (max, member) => Math.max(max, member.orderIndex),
+    -1,
+  );
+
+  const memberId = await ctx.db.insert("familyMembers", {
+    familyUnitId: options.familyUnitId,
+    householdId: options.householdId,
+    profileId: options.member.profileId,
+    firstName: options.member.firstName,
+    lastName: options.member.lastName,
+    email: options.member.email,
+    phone: options.member.phone,
+    avatarUrl: options.member.avatarUrl,
+    dateOfBirth: options.member.dateOfBirth,
+    gender: options.member.gender,
+    city: options.member.city,
+    state: options.member.state,
+    relationshipType: options.member.relationshipType,
+    roles: options.member.roles,
+    status: options.member.status ?? "active",
+    orderIndex: maxOrderIndex + 1,
+    notes: options.member.notes,
+    createdBy: options.createdBy,
+    updatedAt: Date.now(),
+  });
+
+  await logActivity(ctx, {
+    householdId: options.householdId,
+    userId: options.createdBy,
+    actionType: options.actionType ?? "other",
+    entityType: "other",
+    entityId: memberId,
+    description: options.activityDescription,
+  });
+
+  return memberId;
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get or create the primary family unit for a household.
+ * Used by ensureCurrentUserInPrimaryFamily and inviteToPrimaryFamily.
+ *
+ * @param ctx - Mutation context
+ * @param householdId - The household ID
+ * @param createdBy - Profile ID of the user creating the unit (if creation needed)
+ * @returns The primary family unit and whether it was newly created
+ */
+async function getOrCreatePrimaryFamilyUnit(
+  ctx: { db: MutationCtx["db"] },
+  householdId: Id<"households">,
+  createdBy: Id<"profiles">,
+): Promise<{ primaryUnit: Doc<"familyUnits">; wasCreated: boolean }> {
+  // Try to find existing primary unit using compound index
+  const existingUnit = await ctx.db
+    .query("familyUnits")
+    .withIndex("by_household_and_isPrimary", (q) =>
+      q.eq("householdId", householdId).eq("isPrimary", true),
+    )
+    .first();
+
+  if (existingUnit) {
+    return { primaryUnit: existingUnit, wasCreated: false };
+  }
+
+  // Create primary family unit
+  const familyUnitId = await ctx.db.insert("familyUnits", {
+    householdId,
+    name: "Your Family",
+    description: "Your immediate family",
+    relationshipToHousehold: "Primary",
+    isPrimary: true,
+    orderIndex: 0,
+    createdBy,
+    updatedAt: Date.now(),
+  });
+
+  await incrementFamilyUnitCount(ctx.db, householdId, 1);
+
+  const newUnit = await ctx.db.get(familyUnitId);
+  if (!newUnit) {
+    throw new Error("Failed to create primary family unit");
+  }
+
+  return { primaryUnit: newUnit, wasCreated: true };
+}
+
+/**
+ * Get the next order index for a family unit's members.
+ *
+ * @param ctx - Query/mutation context
+ * @param familyUnitId - The family unit ID
+ * @returns The next available order index
+ */
+async function getNextMemberOrderIndex(
+  ctx: { db: MutationCtx["db"] },
+  familyUnitId: Id<"familyUnits">,
+): Promise<number> {
+  const existingMembers = await ctx.db
+    .query("familyMembers")
+    .withIndex("by_familyUnit", (q) => q.eq("familyUnitId", familyUnitId))
+    .collect();
+
+  return existingMembers.reduce((max, member) => Math.max(max, member.orderIndex), -1) + 1;
+}
+
 // ============================================================================
 // QUERIES
 // ============================================================================
@@ -180,8 +418,9 @@ export const listFamilyUnits = query({
     // Fetch ALL active members for ALL family units in one query (avoids N+1)
     const allMembers = await ctx.db
       .query("familyMembers")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .filter((q) => q.eq(q.field("status"), "active"))
+      .withIndex("by_household_and_status", (q) =>
+        q.eq("householdId", args.householdId).eq("status", "active"),
+      )
       .collect();
 
     // Group members by familyUnitId in memory
@@ -402,8 +641,9 @@ export const createFamilyUnit = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await incrementFamilyUnitCount(ctx.db, args.householdId, 1);
+
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
@@ -479,8 +719,7 @@ export const updateFamilyUnit = mutation({
     // Update the family unit
     await ctx.db.patch(args.familyUnitId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: familyUnit.householdId,
       userId: profile._id,
       actionType: "other",
@@ -528,8 +767,9 @@ export const deleteFamilyUnit = mutation({
     // Delete the family unit
     await ctx.db.delete(args.familyUnitId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await incrementFamilyUnitCount(ctx.db, familyUnit.householdId, -1);
+
+    await logActivity(ctx, {
       householdId: familyUnit.householdId,
       userId: profile._id,
       actionType: "other",
@@ -600,11 +840,8 @@ export const addFamilyMember = mutation({
     }
 
     // Validate email if provided
-    if (args.email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(args.email)) {
-        throw new Error("Invalid email address");
-      }
+    if (args.email && !EMAIL_REGEX.test(args.email)) {
+      throw new Error("Invalid email address");
     }
 
     // Validate phone if provided
@@ -612,45 +849,23 @@ export const addFamilyMember = mutation({
       throw new Error("Phone number is too long (max 20 characters)");
     }
 
-    // Get current max orderIndex for this family unit
-    const existingMembers = await ctx.db
-      .query("familyMembers")
-      .withIndex("by_familyUnit", (q) => q.eq("familyUnitId", args.familyUnitId))
-      .collect();
-
-    const maxOrderIndex = existingMembers.reduce(
-      (max, member) => Math.max(max, member.orderIndex),
-      -1,
-    );
-
-    // Create the family member
-    const memberId = await ctx.db.insert("familyMembers", {
+    const memberId = await createFamilyMemberInternal(ctx, {
       familyUnitId: args.familyUnitId,
       householdId: familyUnit.householdId,
-      firstName: args.firstName.trim(),
-      lastName: args.lastName.trim(),
-      email: args.email?.toLowerCase().trim(),
-      phone: args.phone?.trim(),
-      relationshipType: args.relationshipType,
-      gender: args.gender,
-      dateOfBirth: args.dateOfBirth,
-      city: args.city?.trim(),
-      state: args.state?.trim(),
-      roles: args.roles || [],
-      status: "active",
-      orderIndex: maxOrderIndex + 1,
       createdBy: profile._id,
-      updatedAt: Date.now(),
-    });
-
-    // Log activity
-    await ctx.db.insert("activityLog", {
-      householdId: familyUnit.householdId,
-      userId: profile._id,
-      actionType: "other",
-      entityType: "other",
-      entityId: memberId,
-      description: `Added family member: ${args.firstName} ${args.lastName}`,
+      member: {
+        firstName: args.firstName.trim(),
+        lastName: args.lastName.trim(),
+        email: args.email?.toLowerCase().trim(),
+        phone: args.phone?.trim(),
+        relationshipType: args.relationshipType,
+        gender: args.gender,
+        dateOfBirth: args.dateOfBirth,
+        city: args.city?.trim(),
+        state: args.state?.trim(),
+        roles: args.roles || [],
+      },
+      activityDescription: `Added family member: ${args.firstName} ${args.lastName}`,
     });
 
     return memberId;
@@ -691,92 +906,20 @@ export const updateFamilyMember = mutation({
     // SECURITY: Require active subscription
     await requireActiveSubscription(ctx, member.householdId);
 
-    // Build update object
-    const updates: Partial<Doc<"familyMembers">> = {
-      updatedAt: Date.now(),
-    };
-
-    if (args.firstName !== undefined) {
-      if (!args.firstName.trim()) {
-        throw new Error("First name cannot be empty");
-      }
-      if (args.firstName.length > 100) {
-        throw new Error("First name is too long (max 100 characters)");
-      }
-      updates.firstName = args.firstName.trim();
-    }
-
-    if (args.lastName !== undefined) {
-      if (!args.lastName.trim()) {
-        throw new Error("Last name cannot be empty");
-      }
-      if (args.lastName.length > 100) {
-        throw new Error("Last name is too long (max 100 characters)");
-      }
-      updates.lastName = args.lastName.trim();
-    }
-
-    if (args.email !== undefined) {
-      if (args.email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(args.email)) {
-          throw new Error("Invalid email address");
-        }
-        updates.email = args.email.toLowerCase().trim();
-      } else {
-        updates.email = undefined;
-      }
-    }
-
-    if (args.phone !== undefined) {
-      if (args.phone && args.phone.length > 20) {
-        throw new Error("Phone number is too long (max 20 characters)");
-      }
-      updates.phone = args.phone?.trim();
-    }
-
-    if (args.relationshipType !== undefined) {
-      updates.relationshipType = args.relationshipType;
-    }
-
-    if (args.gender !== undefined) {
-      updates.gender = args.gender;
-    }
-
-    if (args.dateOfBirth !== undefined) {
-      updates.dateOfBirth = args.dateOfBirth;
-    }
-
-    if (args.city !== undefined) {
-      updates.city = args.city?.trim();
-    }
-
-    if (args.state !== undefined) {
-      updates.state = args.state?.trim();
-    }
-
-    if (args.roles !== undefined) {
-      updates.roles = args.roles;
-    }
-
-    if (args.notes !== undefined) {
-      if (args.notes && args.notes.length > 1000) {
-        throw new Error("Notes are too long (max 1000 characters)");
-      }
-      updates.notes = args.notes?.trim();
-    }
+    const updates = validateFamilyMemberUpdates(args);
 
     // Update the family member
     await ctx.db.patch(args.memberId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: member.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
       entityId: args.memberId,
-      description: `Updated family member: ${updates.firstName || member.firstName} ${updates.lastName || member.lastName}`,
+      description: `Updated family member: ${updates.firstName || member.firstName} ${
+        updates.lastName || member.lastName
+      }`,
     });
 
     return args.memberId;
@@ -809,8 +952,7 @@ export const removeFamilyMember = mutation({
     // Delete the family member
     await ctx.db.delete(args.memberId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: member.householdId,
       userId: profile._id,
       actionType: "other",
@@ -851,35 +993,12 @@ export const ensureCurrentUserInPrimaryFamily = mutation({
     // SECURITY: Require active subscription
     await requireActiveSubscription(ctx, args.householdId);
 
-    // Get or create the primary family unit using compound index
-    let primaryUnit = await ctx.db
-      .query("familyUnits")
-      .withIndex("by_household_and_isPrimary", (q) =>
-        q.eq("householdId", args.householdId).eq("isPrimary", true),
-      )
-      .first();
-
-    let wasCreated = false;
-
-    if (!primaryUnit) {
-      // Create primary family unit
-      const familyUnitId = await ctx.db.insert("familyUnits", {
-        householdId: args.householdId,
-        name: "Your Family",
-        description: "Your immediate family",
-        relationshipToHousehold: "Primary",
-        isPrimary: true,
-        orderIndex: 0,
-        createdBy: profile._id,
-        updatedAt: Date.now(),
-      });
-
-      primaryUnit = await ctx.db.get(familyUnitId);
-      if (!primaryUnit) {
-        throw new Error("Failed to create primary family unit");
-      }
-      wasCreated = true;
-    }
+    // Get or create the primary family unit using helper
+    const { primaryUnit, wasCreated } = await getOrCreatePrimaryFamilyUnit(
+      ctx,
+      args.householdId,
+      profile._id,
+    );
 
     // Check if current user is already a member using compound index
     const existingMember = await ctx.db
@@ -898,16 +1017,8 @@ export const ensureCurrentUserInPrimaryFamily = mutation({
       };
     }
 
-    // Get current max orderIndex
-    const existingMembers = await ctx.db
-      .query("familyMembers")
-      .withIndex("by_familyUnit", (q) => q.eq("familyUnitId", primaryUnit._id))
-      .collect();
-
-    const maxOrderIndex = existingMembers.reduce(
-      (max, member) => Math.max(max, member.orderIndex),
-      -1,
-    );
+    // Get next order index using helper
+    const orderIndex = await getNextMemberOrderIndex(ctx, primaryUnit._id);
 
     // Add current user as a member
     const memberId = await ctx.db.insert("familyMembers", {
@@ -925,7 +1036,7 @@ export const ensureCurrentUserInPrimaryFamily = mutation({
       relationshipType: "parent", // Default - user can update later
       roles: ["Family Admin"],
       status: "active",
-      orderIndex: maxOrderIndex + 1,
+      orderIndex,
       createdBy: profile._id,
       updatedAt: Date.now(),
     });
@@ -1015,37 +1126,12 @@ export const inviteToPrimaryFamily = mutation({
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(args.email)) {
+    if (!EMAIL_REGEX.test(args.email)) {
       throw new Error("Invalid email address");
     }
 
-    // Get or create the primary family unit using compound index
-    let primaryUnit = await ctx.db
-      .query("familyUnits")
-      .withIndex("by_household_and_isPrimary", (q) =>
-        q.eq("householdId", args.householdId).eq("isPrimary", true),
-      )
-      .first();
-
-    if (!primaryUnit) {
-      // Create primary family unit if it doesn't exist (for legacy households)
-      const familyUnitId = await ctx.db.insert("familyUnits", {
-        householdId: args.householdId,
-        name: "Your Family",
-        description: "Your immediate family",
-        relationshipToHousehold: "Primary",
-        isPrimary: true,
-        orderIndex: 0,
-        createdBy: profile._id,
-        updatedAt: Date.now(),
-      });
-
-      primaryUnit = await ctx.db.get(familyUnitId);
-      if (!primaryUnit) {
-        throw new Error("Failed to create primary family unit");
-      }
-    }
+    // Get or create the primary family unit using helper
+    const { primaryUnit } = await getOrCreatePrimaryFamilyUnit(ctx, args.householdId, profile._id);
 
     // Check if member with this email already exists in this family unit
     const existingMembers = await ctx.db
@@ -1061,37 +1147,21 @@ export const inviteToPrimaryFamily = mutation({
       throw new Error("A member with this email already exists in your family");
     }
 
-    // Get current max orderIndex
-    const maxOrderIndex = existingMembers.reduce(
-      (max, member) => Math.max(max, member.orderIndex),
-      -1,
-    );
-
-    // Create the family member as active (direct add, not email invitation)
-    const memberId = await ctx.db.insert("familyMembers", {
+    const memberId = await createFamilyMemberInternal(ctx, {
       familyUnitId: primaryUnit._id,
       householdId: args.householdId,
-      firstName: args.firstName.trim(),
-      lastName: args.lastName.trim(),
-      email: args.email.toLowerCase().trim(),
-      phone: args.phone?.trim(),
-      gender: args.gender,
-      relationshipType: args.relationshipType,
-      roles: [],
-      status: "active",
-      orderIndex: maxOrderIndex + 1,
       createdBy: profile._id,
-      updatedAt: Date.now(),
-    });
-
-    // Log activity
-    await ctx.db.insert("activityLog", {
-      householdId: args.householdId,
-      userId: profile._id,
+      member: {
+        firstName: args.firstName.trim(),
+        lastName: args.lastName.trim(),
+        email: args.email.toLowerCase().trim(),
+        phone: args.phone?.trim(),
+        gender: args.gender,
+        relationshipType: args.relationshipType,
+        roles: [],
+      },
+      activityDescription: `Invited ${args.firstName} ${args.lastName} to primary family`,
       actionType: "member_invited",
-      entityType: "other",
-      entityId: memberId,
-      description: `Invited ${args.firstName} ${args.lastName} to primary family`,
     });
 
     return memberId;

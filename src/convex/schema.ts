@@ -108,6 +108,12 @@ export default defineSchema({
     // Storage usage counter (updated atomically on document create/delete)
     // This avoids O(n) full table scans when checking storage quota
     storageUsedBytes: v.optional(v.number()), // Optional for backwards compatibility with existing data
+    // Cached counters for plan enforcement (backfilled lazily for legacy data)
+    memberCount: v.optional(v.number()),
+    familyUnitCount: v.optional(v.number()),
+    // Vault document count counter (updated atomically on document create/delete)
+    // Avoids O(n) full table scans for stats queries
+    vaultDocumentCount: v.optional(v.number()),
     updatedAt: v.number(),
   }).index("by_primaryContactId", ["primaryContactId"]),
 
@@ -155,7 +161,8 @@ export default defineSchema({
     .index("by_household", ["householdId"])
     .index("by_token", ["token"])
     .index("by_email", ["email"])
-    .index("by_household_and_status", ["householdId", "status"]),
+    .index("by_household_and_status", ["householdId", "status"])
+    .index("by_household_email_status", ["householdId", "email", "status"]),
 
   // ============================================================================
   // FAMILY ECOSYSTEM
@@ -192,13 +199,7 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
     dateOfBirth: v.optional(v.number()),
     gender: v.optional(
-      v.union(
-        v.literal("male"),
-        v.literal("female"),
-        v.literal("non_binary"),
-        v.literal("prefer_not_to_say"),
-        v.literal("other"),
-      ),
+      v.union(v.literal("male"), v.literal("female"), v.literal("prefer_not_to_say")),
     ),
     city: v.optional(v.string()),
     state: v.optional(v.string()),
@@ -225,6 +226,7 @@ export default defineSchema({
   })
     .index("by_familyUnit", ["familyUnitId"])
     .index("by_household", ["householdId"])
+    .index("by_household_and_status", ["householdId", "status"])
     .index("by_profileId", ["profileId"])
     .index("by_familyUnit_and_status", ["familyUnitId", "status"])
     .index("by_familyUnit_and_profileId", ["familyUnitId", "profileId"]),
@@ -302,7 +304,9 @@ export default defineSchema({
     // Document count counter (updated atomically on document create/delete/update)
     // This avoids O(n*m) full table scans when listing categories
     documentCount: v.optional(v.number()), // Optional for backwards compatibility
-  }).index("by_household", ["householdId"]),
+  })
+    .index("by_household", ["householdId"])
+    .index("by_household_and_name", ["householdId", "name"]),
 
   // ============================================================================
   // WISDOM & EDUCATION
@@ -584,7 +588,32 @@ export default defineSchema({
     ),
     priority: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
     icon: v.optional(v.string()), // Icon identifier
-    eligibilityRules: v.any(), // JSON rules for determining when to show
+    // Eligibility rules for determining when to show the suggestion
+    eligibilityRules: v.optional(
+      v.array(
+        v.object({
+          type: v.union(
+            v.literal("subscription_tier"), // Check user's subscription tier
+            v.literal("has_documents"), // Check if user has uploaded documents
+            v.literal("onboarding_complete"), // Check onboarding status
+            v.literal("days_since_signup"), // Check days since registration
+            v.literal("feature_unused"), // Check if a feature hasn't been used
+            v.literal("custom"), // Custom rule with condition string
+          ),
+          condition: v.union(
+            v.literal("equals"),
+            v.literal("not_equals"),
+            v.literal("greater_than"),
+            v.literal("less_than"),
+            v.literal("contains"),
+            v.literal("exists"),
+          ),
+          value: v.optional(v.union(v.string(), v.number(), v.boolean())),
+          // Optional: target feature for feature_unused type
+          targetFeature: v.optional(v.string()),
+        }),
+      ),
+    ),
     isActive: v.boolean(),
     createdBy: v.string(), // Better Auth user ID (admin)
     updatedAt: v.number(),

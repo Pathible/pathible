@@ -66,9 +66,11 @@ export function checkDocumentAccess(
         document.uploadedBy === profileId || document.sharedWithUsers.some((id) => id === profileId)
       );
 
-    default:
-      // Unknown access level - fail secure
+    default: {
+      const _exhaustive: never = document.accessLevel;
+      console.error("Unknown access level", _exhaustive);
       return false;
+    }
   }
 }
 
@@ -80,4 +82,116 @@ export function checkDocumentAccess(
  */
 export function isAdminRole(role: MembershipRole): boolean {
   return role === "owner" || role === "steward";
+}
+
+// ============================================================================
+// VALIDATION HELPERS
+// ============================================================================
+
+/** Maximum length for document names */
+const MAX_NAME_LENGTH = 255;
+
+/** Maximum length for document descriptions */
+const MAX_DESCRIPTION_LENGTH = 1000;
+
+/**
+ * Validate document name
+ *
+ * @param name - The document name to validate
+ * @param isRequired - If true, empty names throw an error. If false, undefined/empty is allowed.
+ * @returns The trimmed name
+ * @throws Error if validation fails
+ */
+export function validateDocumentName(name: string | undefined, isRequired: boolean): string {
+  if (name === undefined) {
+    if (isRequired) {
+      throw new Error("Document name is required");
+    }
+    return "";
+  }
+
+  const trimmed = name.trim();
+
+  if (isRequired && !trimmed) {
+    throw new Error("Document name is required");
+  }
+
+  if (!isRequired && !trimmed) {
+    throw new Error("Document name cannot be empty");
+  }
+
+  if (trimmed.length > MAX_NAME_LENGTH) {
+    throw new Error(`Document name is too long (max ${MAX_NAME_LENGTH} characters)`);
+  }
+
+  return trimmed;
+}
+
+/**
+ * Validate document description
+ *
+ * @param description - The description to validate (can be undefined)
+ * @returns The trimmed description or undefined
+ * @throws Error if description exceeds max length
+ */
+export function validateDocumentDescription(description: string | undefined): string | undefined {
+  if (!description) {
+    return description;
+  }
+
+  if (description.length > MAX_DESCRIPTION_LENGTH) {
+    throw new Error(`Description is too long (max ${MAX_DESCRIPTION_LENGTH} characters)`);
+  }
+
+  return description.trim();
+}
+
+// ============================================================================
+// CATEGORY VALIDATION HELPERS
+// ============================================================================
+
+/** Maximum length for category names */
+const MAX_CATEGORY_NAME_LENGTH = 50;
+
+/** Maximum length for category descriptions */
+const MAX_CATEGORY_DESCRIPTION_LENGTH = 200;
+
+/**
+ * Validate category name
+ *
+ * @param name - The category name to validate
+ * @returns The trimmed name
+ * @throws Error if validation fails
+ */
+export function validateCategoryName(name: string): string {
+  const trimmed = name.trim();
+
+  if (!trimmed) {
+    throw new Error("Category name cannot be empty");
+  }
+
+  if (trimmed.length > MAX_CATEGORY_NAME_LENGTH) {
+    throw new Error(`Category name is too long (max ${MAX_CATEGORY_NAME_LENGTH} characters)`);
+  }
+
+  return trimmed;
+}
+
+/**
+ * Validate category description
+ *
+ * @param description - The description to validate (can be undefined)
+ * @returns The trimmed description or undefined
+ * @throws Error if description exceeds max length
+ */
+export function validateCategoryDescription(description: string | undefined): string | undefined {
+  if (!description) {
+    return description;
+  }
+
+  if (description.length > MAX_CATEGORY_DESCRIPTION_LENGTH) {
+    throw new Error(`Description is too long (max ${MAX_CATEGORY_DESCRIPTION_LENGTH} characters)`);
+  }
+
+  return description.trim();
 }

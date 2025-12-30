@@ -8,7 +8,10 @@ import {
   mutation,
   query,
 } from "./_generated/server";
-import { requireAuth } from "./auth";
+import { checkFamilyMemberLimit, requireActiveSubscription, requireAuth } from "./auth";
+import { logActivity } from "./shared/activity";
+import { incrementFamilyUnitCount } from "./shared/counters";
+import { EMAIL_REGEX } from "./shared/validators";
 
 /**
  * Onboarding Module
@@ -190,6 +193,9 @@ export const createFirstHousehold = mutation({
       primaryContactId: profile._id,
       subscriptionTier: "foundations", // Default tier
       subscriptionStatus: "active", // Start with free tier active
+      storageUsedBytes: 0,
+      memberCount: 0,
+      familyUnitCount: 0,
       updatedAt: Date.now(),
     });
 
@@ -214,6 +220,8 @@ export const createFirstHousehold = mutation({
       createdBy: profile._id,
       updatedAt: Date.now(),
     });
+
+    await incrementFamilyUnitCount(ctx.db, householdId, 1);
 
     // Add the user as the first member of the primary family unit
     await ctx.db.insert("familyMembers", {
@@ -243,11 +251,12 @@ export const createFirstHousehold = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId,
       userId: profile._id,
       actionType: "other",
+      entityType: "household",
+      entityId: householdId,
       description: `Created household "${args.name.trim()}"`,
     });
 
@@ -385,10 +394,19 @@ export const sendInvitations = mutation({
       throw new Error("Cannot send more than 10 invitations at once");
     }
 
+    // SECURITY: Require active subscription and check member limit
+    await requireActiveSubscription(ctx, household._id);
+    const { currentCount, maxCount } = await checkFamilyMemberLimit(ctx, household._id, false);
+    const remaining = maxCount - currentCount;
+    if (args.invitations.length > remaining) {
+      throw new Error(
+        `Cannot send ${args.invitations.length} invitation(s). Your plan allows ${maxCount} member(s) and you have ${remaining} slot(s) remaining. Upgrade for more.`,
+      );
+    }
+
     // Validate email addresses
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     for (const inv of args.invitations) {
-      if (!emailRegex.test(inv.email)) {
+      if (!EMAIL_REGEX.test(inv.email)) {
         throw new Error(`Invalid email address: ${inv.email}`);
       }
     }
@@ -399,12 +417,15 @@ export const sendInvitations = mutation({
     // Create invitations
     for (const inv of args.invitations) {
       try {
-        // Check if invitation already exists
+        // Check if invitation already exists using compound index
         const existingInvite = await ctx.db
           .query("householdInvitations")
-          .withIndex("by_household", (q) => q.eq("householdId", household._id))
-          .filter((q) => q.eq(q.field("email"), inv.email))
-          .filter((q) => q.eq(q.field("status"), "pending"))
+          .withIndex("by_household_email_status", (q) =>
+            q
+              .eq("householdId", household._id)
+              .eq("email", inv.email.toLowerCase())
+              .eq("status", "pending"),
+          )
           .first();
 
         if (existingInvite) {
@@ -446,11 +467,12 @@ export const sendInvitations = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: household._id,
       userId: profile._id,
       actionType: "member_invited",
+      entityType: "household",
+      entityId: household._id,
       description: `Invited ${sent} family member(s) to household`,
     });
 

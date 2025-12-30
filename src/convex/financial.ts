@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireActiveSubscription, requireAuth, requireHouseholdAccess } from "./auth";
+import { logActivity } from "./shared/activity";
 
 /**
  * Financial Intelligence - Financial Account & Asset Management
@@ -517,12 +518,12 @@ export const createAccount = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: accountId,
       description: `Added financial account: ${args.name}`,
     });
 
@@ -603,12 +604,12 @@ export const updateAccount = mutation({
     // Update account
     await ctx.db.patch(args.accountId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: account.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.accountId,
       description: `Updated financial account: ${updates.name || account.name}`,
     });
 
@@ -641,12 +642,12 @@ export const deleteAccount = mutation({
     // Delete the account
     await ctx.db.delete(args.accountId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: account.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.accountId,
       description: `Deleted financial account: ${account.name}`,
     });
 
@@ -709,12 +710,12 @@ export const createProperty = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: propertyId,
       description: `Added property: ${args.name}`,
     });
 
@@ -791,12 +792,12 @@ export const updateProperty = mutation({
     // Update property
     await ctx.db.patch(args.propertyId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: property.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.propertyId,
       description: `Updated property: ${updates.name || property.name}`,
     });
 
@@ -820,21 +821,20 @@ export const deleteProperty = mutation({
       throw new Error("Property not found");
     }
 
-    // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, property.householdId);
-
+    // SECURITY: Verify access first to avoid leaking subscription status
     await requireHouseholdAccess(ctx, property.householdId);
+    await requireActiveSubscription(ctx, property.householdId);
     const { profile } = await requireAuth(ctx);
 
     // Delete the property
     await ctx.db.delete(args.propertyId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: property.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.propertyId,
       description: `Deleted property: ${property.name}`,
     });
 
@@ -906,12 +906,12 @@ export const createInsurancePolicy = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: policyId,
       description: `Added ${args.type} insurance policy from ${args.provider}`,
     });
 
@@ -1001,12 +1001,12 @@ export const updateInsurancePolicy = mutation({
     // Update policy
     await ctx.db.patch(args.policyId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: policy.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.policyId,
       description: `Updated ${updates.type || policy.type} insurance policy`,
     });
 
@@ -1039,12 +1039,12 @@ export const deleteInsurancePolicy = mutation({
     // Delete the policy
     await ctx.db.delete(args.policyId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: policy.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.policyId,
       description: `Deleted ${policy.type} insurance policy from ${policy.provider}`,
     });
 
@@ -1128,12 +1128,12 @@ export const completeSuggestion = mutation({
       completedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: suggestion.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.suggestionId,
       description: "Completed a smart suggestion",
     });
 

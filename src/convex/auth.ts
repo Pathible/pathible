@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalQuery, query } from "./_generated/server";
+import { formatBytesAsGB, formatLimit } from "./shared/constants";
+import { getFamilyUnitCount, getMemberCountFromHousehold } from "./shared/counters";
 import { checkDocumentAccess } from "./vaultHelpers";
 
 /**
@@ -57,7 +59,7 @@ export const PLAN_LIMITS = {
  * Defines which subscription tier is required for each feature.
  * Used by requireFeatureAccess() for server-side enforcement.
  */
-export const FEATURE_TIERS: Record<string, SubscriptionTier> = {
+export const FEATURE_TIERS = {
   // Heritage Vault - All tiers have basic vault, higher tiers get more storage
   vault_storage_basic: "foundations",
   vault_storage_advanced: "heritage",
@@ -99,7 +101,9 @@ export const FEATURE_TIERS: Record<string, SubscriptionTier> = {
   // Early Access
   early_access_some: "heritage",
   early_access_all: "legacy",
-} as const;
+} as const satisfies Record<string, SubscriptionTier>;
+
+export type FeatureSlug = keyof typeof FEATURE_TIERS;
 
 /**
  * Type for authenticated context with user and profile
@@ -134,6 +138,34 @@ export interface AuthenticatedContext {
     deletedAt?: number;
   };
 }
+
+const profileReturnValidator = v.object({
+  _id: v.id("profiles"),
+  _creationTime: v.number(),
+  userId: v.string(),
+  firstName: v.string(),
+  lastName: v.string(),
+  avatarUrl: v.optional(v.string()),
+  phone: v.optional(v.string()),
+  dateOfBirth: v.optional(v.number()),
+  address: v.optional(v.string()),
+  city: v.optional(v.string()),
+  state: v.optional(v.string()),
+  zipCode: v.optional(v.string()),
+  onboardingStatus: v.optional(
+    v.union(
+      v.literal("not_started"),
+      v.literal("profile_complete"),
+      v.literal("household_complete"),
+      v.literal("preferences_complete"),
+      v.literal("complete"),
+    ),
+  ),
+  onboardingStep: v.optional(v.number()),
+  onboardingCompletedAt: v.optional(v.number()),
+  updatedAt: v.number(),
+  deletedAt: v.optional(v.number()),
+});
 
 /**
  * Get the authenticated user from Clerk via Convex
@@ -386,7 +418,7 @@ export async function requireSubscriptionTier(
 export async function requireFeatureAccess(
   ctx: QueryCtx | MutationCtx,
   householdId: Id<"households">,
-  featureSlug: string,
+  featureSlug: FeatureSlug,
 ): Promise<Doc<"households">> {
   const requiredTier = FEATURE_TIERS[featureSlug];
 
@@ -402,8 +434,6 @@ export async function requireFeatureAccess(
 // ============================================================================
 // STORAGE QUOTA HELPERS
 // ============================================================================
-
-import { formatBytesAsGB, formatLimit } from "./shared/constants";
 
 /**
  * Check storage quota
@@ -470,21 +500,14 @@ export async function checkFamilyMemberLimit(
   const household = await requireActiveSubscription(ctx, householdId);
   const limits = PLAN_LIMITS[household.subscriptionTier];
 
-  // Count active members (excluding owner)
-  const memberships = await ctx.db
-    .query("householdMemberships")
-    .withIndex("by_household_and_status", (q) =>
-      q.eq("householdId", householdId).eq("status", "active"),
-    )
-    .collect();
-
-  // Exclude owner from count (owner doesn't count against member limit)
-  const nonOwnerCount = memberships.filter((m) => m.role !== "owner").length;
+  const nonOwnerCount = await getMemberCountFromHousehold(ctx, household);
   const canAddMore = nonOwnerCount < limits.familyMembersMax;
 
   if (checkingForNewMember && !canAddMore) {
     throw new Error(
-      `Family member limit reached. Your ${household.subscriptionTier} plan allows ${formatLimit(limits.familyMembersMax)} member(s). Upgrade for more.`,
+      `Family member limit reached. Your ${household.subscriptionTier} plan allows ${formatLimit(
+        limits.familyMembersMax,
+      )} member(s). Upgrade for more.`,
     );
   }
 
@@ -517,18 +540,14 @@ export async function checkFamilyUnitLimit(
   const household = await requireActiveSubscription(ctx, householdId);
   const limits = PLAN_LIMITS[household.subscriptionTier];
 
-  // Count existing family units
-  const units = await ctx.db
-    .query("familyUnits")
-    .withIndex("by_household", (q) => q.eq("householdId", householdId))
-    .collect();
-
-  const currentCount = units.length;
+  const currentCount = await getFamilyUnitCount(ctx, household);
   const canAddMore = currentCount < limits.familyUnitsMax;
 
   if (checkingForNewUnit && !canAddMore) {
     throw new Error(
-      `Family unit limit reached. Your ${household.subscriptionTier} plan allows ${formatLimit(limits.familyUnitsMax)} family unit(s). Upgrade for more.`,
+      `Family unit limit reached. Your ${household.subscriptionTier} plan allows ${formatLimit(
+        limits.familyUnitsMax,
+      )} family unit(s). Upgrade for more.`,
     );
   }
 
@@ -579,33 +598,7 @@ export const getCurrentUserWithProfile = query({
         _id: v.string(),
         email: v.string(),
       }),
-      profile: v.object({
-        _id: v.id("profiles"),
-        _creationTime: v.number(),
-        userId: v.string(),
-        firstName: v.string(),
-        lastName: v.string(),
-        avatarUrl: v.optional(v.string()),
-        phone: v.optional(v.string()),
-        dateOfBirth: v.optional(v.number()),
-        address: v.optional(v.string()),
-        city: v.optional(v.string()),
-        state: v.optional(v.string()),
-        zipCode: v.optional(v.string()),
-        onboardingStatus: v.optional(
-          v.union(
-            v.literal("not_started"),
-            v.literal("profile_complete"),
-            v.literal("household_complete"),
-            v.literal("preferences_complete"),
-            v.literal("complete"),
-          ),
-        ),
-        onboardingStep: v.optional(v.number()),
-        onboardingCompletedAt: v.optional(v.number()),
-        updatedAt: v.number(),
-        deletedAt: v.optional(v.number()),
-      }),
+      profile: profileReturnValidator,
     }),
     v.null(),
   ),
@@ -630,33 +623,7 @@ export const requireAuthInternal = internalQuery({
       _id: v.string(),
       email: v.string(),
     }),
-    profile: v.object({
-      _id: v.id("profiles"),
-      _creationTime: v.number(),
-      userId: v.string(),
-      firstName: v.string(),
-      lastName: v.string(),
-      avatarUrl: v.optional(v.string()),
-      phone: v.optional(v.string()),
-      dateOfBirth: v.optional(v.number()),
-      address: v.optional(v.string()),
-      city: v.optional(v.string()),
-      state: v.optional(v.string()),
-      zipCode: v.optional(v.string()),
-      updatedAt: v.number(),
-      onboardingStatus: v.optional(
-        v.union(
-          v.literal("not_started"),
-          v.literal("profile_complete"),
-          v.literal("household_complete"),
-          v.literal("preferences_complete"),
-          v.literal("complete"),
-        ),
-      ),
-      onboardingStep: v.optional(v.number()),
-      onboardingCompletedAt: v.optional(v.number()),
-      deletedAt: v.optional(v.number()),
-    }),
+    profile: profileReturnValidator,
   }),
   handler: async (ctx) => {
     return await requireAuth(ctx);
@@ -691,45 +658,49 @@ export const requireHouseholdAccessInternal = internalQuery({
   },
 });
 
-/**
- * Internal Query: Get a document by ID (for use in actions)
- *
- * SECURITY WARNING: This query does NOT verify access permissions.
- * Callers MUST:
- * 1. Call requireHouseholdAccessInternal to verify household membership
- * 2. Check document-level access using checkDocumentAccess from vaultHelpers
- *
- * Consider using getDocumentWithAccessInternal for a safer combined approach.
- */
-export const getDocumentInternal = internalQuery({
-  args: {
-    documentId: v.id("vaultDocuments"),
-  },
-  returns: v.union(
-    v.object({
-      _id: v.id("vaultDocuments"),
-      _creationTime: v.number(),
-      householdId: v.id("households"),
-      uploadedBy: v.id("profiles"),
-      name: v.string(),
-      description: v.optional(v.string()),
-      b2FileId: v.string(),
-      b2FileName: v.string(),
-      b2BucketName: v.string(),
-      fileHash: v.optional(v.string()),
-      fileSize: v.number(),
-      fileType: v.string(),
-      categories: v.array(v.string()),
-      accessLevel: v.union(v.literal("household"), v.literal("admins"), v.literal("custom")),
-      sharedWithUsers: v.array(v.id("profiles")),
-      updatedAt: v.number(),
-    }),
-    v.null(),
-  ),
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.documentId);
-  },
-});
+// /**
+//  * Internal Query: Get a document by ID (for use in actions)
+//  *
+//  * @deprecated Use getDocumentWithAccessInternal instead for safer access control.
+//  * This function does NOT verify access permissions and may expose documents
+//  * to unauthorized access if callers forget to check permissions.
+//  *
+//  * SECURITY WARNING: This query does NOT verify access permissions.
+//  * Callers MUST:
+//  * 1. Call requireHouseholdAccessInternal to verify household membership
+//  * 2. Check document-level access using checkDocumentAccess from vaultHelpers
+//  *
+//  * Consider using getDocumentWithAccessInternal for a safer combined approach.
+//  */
+// export const getDocumentInternal = internalQuery({
+//   args: {
+//     documentId: v.id("vaultDocuments"),
+//   },
+//   returns: v.union(
+//     v.object({
+//       _id: v.id("vaultDocuments"),
+//       _creationTime: v.number(),
+//       householdId: v.id("households"),
+//       uploadedBy: v.id("profiles"),
+//       name: v.string(),
+//       description: v.optional(v.string()),
+//       b2FileId: v.string(),
+//       b2FileName: v.string(),
+//       b2BucketName: v.string(),
+//       fileHash: v.optional(v.string()),
+//       fileSize: v.number(),
+//       fileType: v.string(),
+//       categories: v.array(v.string()),
+//       accessLevel: v.union(v.literal("household"), v.literal("admins"), v.literal("custom")),
+//       sharedWithUsers: v.array(v.id("profiles")),
+//       updatedAt: v.number(),
+//     }),
+//     v.null(),
+//   ),
+//   handler: async (ctx, args) => {
+//     return await ctx.db.get(args.documentId);
+//   },
+// });
 
 /**
  * Internal Query: Get a document with access verification (PREFERRED)

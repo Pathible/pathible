@@ -10,7 +10,15 @@ import {
   requireHouseholdAccess,
   requireHouseholdAdmin,
 } from "./auth";
-import { checkDocumentAccess } from "./vaultHelpers";
+import { logActivity } from "./shared/activity";
+import { formatBytesAsGB } from "./shared/constants";
+import {
+  checkDocumentAccess,
+  validateCategoryDescription,
+  validateCategoryName,
+  validateDocumentDescription,
+  validateDocumentName,
+} from "./vaultHelpers";
 
 /**
  * Heritage Vault - Secure Document Storage System
@@ -89,7 +97,9 @@ async function getUploaderName(ctx: QueryCtx, uploaderId: Id<"profiles">): Promi
  */
 async function updateCategoryCounters(
   ctx: {
-    db: QueryCtx["db"] & { patch: (id: Id<"vaultCategories">, updates: object) => Promise<void> };
+    db: QueryCtx["db"] & {
+      patch: (id: Id<"vaultCategories">, updates: { documentCount: number }) => Promise<void>;
+    };
   },
   householdId: Id<"households">,
   categoryNames: string[],
@@ -103,15 +113,68 @@ async function updateCategoryCounters(
     .withIndex("by_household", (q) => q.eq("householdId", householdId))
     .collect();
 
-  // Update counters for matching categories
-  for (const category of categories) {
-    if (categoryNames.includes(category.name)) {
-      const currentCount = category.documentCount ?? 0;
-      await ctx.db.patch(category._id, {
-        documentCount: Math.max(0, currentCount + delta),
-      });
-    }
+  const categoryMap = new Map(categories.map((category) => [category.name, category]));
+
+  for (const name of new Set(categoryNames)) {
+    const category = categoryMap.get(name);
+    if (!category) continue;
+    const currentCount = category.documentCount ?? 0;
+    const nextCount = Math.max(0, currentCount + delta);
+    if (nextCount === currentCount) continue;
+
+    await ctx.db.patch(category._id, {
+      documentCount: nextCount,
+    });
+
+    category.documentCount = nextCount;
   }
+}
+
+/**
+ * Adjust the household storage usage counter atomically.
+ *
+ * Convex serializes mutations per document, so a read-modify-write sequence on the same household
+ * document is effectively atomic. Centralizing the logic here makes that assumption explicit.
+ */
+async function adjustStorageUsage(
+  ctx: {
+    db: QueryCtx["db"] & {
+      patch: (id: Id<"households">, updates: { storageUsedBytes: number }) => Promise<void>;
+    };
+  },
+  householdId: Id<"households">,
+  delta: number,
+): Promise<void> {
+  if (delta === 0) return;
+  const household = await ctx.db.get(householdId);
+  if (!household) return;
+  const currentStorage = household.storageUsedBytes ?? 0;
+  const nextValue = Math.max(0, currentStorage + delta);
+  await ctx.db.patch(householdId, { storageUsedBytes: nextValue });
+}
+
+/**
+ * Atomically adjust the vault document count counter on a household.
+ *
+ * @param ctx - Mutation context
+ * @param householdId - The household to update
+ * @param delta - Amount to change (positive for create, negative for delete)
+ */
+async function adjustDocumentCount(
+  ctx: {
+    db: QueryCtx["db"] & {
+      patch: (id: Id<"households">, updates: { vaultDocumentCount: number }) => Promise<void>;
+    };
+  },
+  householdId: Id<"households">,
+  delta: number,
+): Promise<void> {
+  if (delta === 0) return;
+  const household = await ctx.db.get(householdId);
+  if (!household) return;
+  const currentCount = household.vaultDocumentCount ?? 0;
+  const nextValue = Math.max(0, currentCount + delta);
+  await ctx.db.patch(householdId, { vaultDocumentCount: nextValue });
 }
 
 // ============================================================================
@@ -272,6 +335,19 @@ export const listCategories = query({
 
 /**
  * Get statistics for the vault
+ *
+ * Uses pre-computed counters where possible for O(1) performance.
+ * Falls back to calculating from documents for legacy data where counters
+ * haven't been initialized yet.
+ *
+ * - totalDocuments: Uses household.vaultDocumentCount counter (or calculates if not set)
+ * - totalSize: Uses household.storageUsedBytes counter (or calculates if not set)
+ * - totalCategories: Count from categories query
+ * - recentUploads: Requires iteration (could be optimized with by_household_and_creationTime index)
+ *
+ * Note: For users with restricted access (non-admin viewing admin-only docs),
+ * the counts reflect ALL household documents, not just accessible ones.
+ * This is intentional for displaying overall vault statistics.
  */
 export const getStats = query({
   args: {
@@ -284,33 +360,53 @@ export const getStats = query({
     recentUploads: v.number(),
   }),
   handler: async (ctx, args) => {
-    const membership = await requireHouseholdAccess(ctx, args.householdId);
-    const { profile } = await requireAuth(ctx);
+    await requireHouseholdAccess(ctx, args.householdId);
 
-    const documents = await ctx.db
-      .query("vaultDocuments")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .collect();
+    // Get household for pre-computed counters
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
 
-    // Filter by access
-    const accessibleDocs = documents.filter((doc) =>
-      checkDocumentAccess(doc, profile._id, membership.role),
-    );
-
+    // Fetch categories count
     const categories = await ctx.db
       .query("vaultCategories")
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
       .collect();
 
-    // Count recent uploads (last 30 days)
+    // Fetch documents for recent uploads calculation
+    // Also used as fallback if counters haven't been initialized
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const recentDocs = accessibleDocs.filter((doc) => doc._creationTime >= thirtyDaysAgo);
+    const allDocs = await ctx.db
+      .query("vaultDocuments")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+
+    const recentUploads = allDocs.filter((doc) => doc._creationTime >= thirtyDaysAgo).length;
+
+    // Use pre-computed counters if available, otherwise calculate from documents
+    // This handles legacy data where counters weren't initialized
+    const hasCounters =
+      household.vaultDocumentCount !== undefined && household.storageUsedBytes !== undefined;
+
+    let totalDocuments: number;
+    let totalSize: number;
+
+    if (hasCounters) {
+      // Use pre-computed counters (O(1))
+      totalDocuments = household.vaultDocumentCount ?? 0;
+      totalSize = household.storageUsedBytes ?? 0;
+    } else {
+      // Calculate from documents (fallback for legacy data)
+      totalDocuments = allDocs.length;
+      totalSize = allDocs.reduce((sum, doc) => sum + doc.fileSize, 0);
+    }
 
     return {
-      totalDocuments: accessibleDocs.length,
-      totalSize: accessibleDocs.reduce((sum, doc) => sum + doc.fileSize, 0),
+      totalDocuments,
+      totalSize,
       totalCategories: categories.length,
-      recentUploads: recentDocs.length,
+      recentUploads,
     };
   },
 });
@@ -350,18 +446,9 @@ export const create = mutation({
     // SECURITY: Verify active subscription and storage quota (defense in depth)
     await checkStorageQuota(ctx, args.householdId, args.fileSize);
 
-    // Validate inputs
-    if (!args.name.trim()) {
-      throw new Error("Document name is required");
-    }
-
-    if (args.name.length > 255) {
-      throw new Error("Document name is too long (max 255 characters)");
-    }
-
-    if (args.description && args.description.length > 1000) {
-      throw new Error("Description is too long (max 1000 characters)");
-    }
+    // Validate inputs using shared helpers
+    const validatedName = validateDocumentName(args.name, true);
+    const validatedDescription = validateDocumentDescription(args.description);
 
     // Validate B2 file ID
     if (!args.b2FileId || !args.b2FileName) {
@@ -390,8 +477,8 @@ export const create = mutation({
     const documentId = await ctx.db.insert("vaultDocuments", {
       householdId: args.householdId,
       uploadedBy: profile._id,
-      name: args.name.trim(),
-      description: args.description?.trim(),
+      name: validatedName,
+      description: validatedDescription,
       // Backblaze B2 storage references (no Convex storage)
       b2FileId: args.b2FileId,
       b2FileName: args.b2FileName,
@@ -405,22 +492,16 @@ export const create = mutation({
       updatedAt: Date.now(),
     });
 
-    // Atomically increment storage counter on household
-    const household = await ctx.db.get(args.householdId);
-    if (household) {
-      const currentStorage = household.storageUsedBytes ?? 0;
-      await ctx.db.patch(args.householdId, {
-        storageUsedBytes: currentStorage + args.fileSize,
-      });
-    }
+    // Atomically increment counters on household
+    await adjustStorageUsage(ctx, args.householdId, args.fileSize);
+    await adjustDocumentCount(ctx, args.householdId, 1);
 
     // Increment category document counters
     if (args.categories.length > 0) {
       await updateCategoryCounters(ctx, args.householdId, args.categories, 1);
     }
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "document_uploaded",
@@ -474,21 +555,14 @@ export const update = mutation({
       updatedAt: Date.now(),
     };
 
+    // Validate and apply name update using shared helper
     if (args.name !== undefined) {
-      if (!args.name.trim()) {
-        throw new Error("Document name cannot be empty");
-      }
-      if (args.name.length > 255) {
-        throw new Error("Document name is too long (max 255 characters)");
-      }
-      updates.name = args.name.trim();
+      updates.name = validateDocumentName(args.name, false);
     }
 
+    // Validate and apply description update using shared helper
     if (args.description !== undefined) {
-      if (args.description && args.description.length > 1000) {
-        throw new Error("Description is too long (max 1000 characters)");
-      }
-      updates.description = args.description?.trim();
+      updates.description = validateDocumentDescription(args.description);
     }
 
     // Track category changes for counter updates
@@ -541,8 +615,7 @@ export const update = mutation({
       await updateCategoryCounters(ctx, document.householdId, addedCategories, 1);
     }
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: document.householdId,
       userId: profile._id,
       actionType: "other",
@@ -591,14 +664,9 @@ export const remove = mutation({
     // This mutation only deletes the database record
     // The client should call both: vault.remove() and vaultActions.deleteFile()
 
-    // Atomically decrement storage counter on household
-    const household = await ctx.db.get(document.householdId);
-    if (household) {
-      const currentStorage = household.storageUsedBytes ?? 0;
-      await ctx.db.patch(document.householdId, {
-        storageUsedBytes: Math.max(0, currentStorage - document.fileSize),
-      });
-    }
+    // Atomically decrement counters on household
+    await adjustStorageUsage(ctx, document.householdId, -document.fileSize);
+    await adjustDocumentCount(ctx, document.householdId, -1);
 
     // Decrement category document counters
     if (document.categories.length > 0) {
@@ -608,8 +676,7 @@ export const remove = mutation({
     // Delete the document record
     await ctx.db.delete(args.documentId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: document.householdId,
       userId: profile._id,
       actionType: "document_deleted",
@@ -646,27 +713,18 @@ export const createCategory = mutation({
     // SECURITY: Require active subscription
     await requireActiveSubscription(ctx, args.householdId);
 
-    // Validate inputs
-    if (!args.name.trim()) {
-      throw new Error("Category name is required");
-    }
+    // Validate inputs using shared helpers
+    const validatedName = validateCategoryName(args.name);
+    const validatedDescription = validateCategoryDescription(args.description);
 
-    if (args.name.length > 50) {
-      throw new Error("Category name is too long (max 50 characters)");
-    }
-
-    if (args.description && args.description.length > 200) {
-      throw new Error("Description is too long (max 200 characters)");
-    }
-
-    // Check if category already exists
+    // Check if category already exists (case-insensitive)
     const existing = await ctx.db
       .query("vaultCategories")
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
       .collect();
 
     const duplicate = existing.find(
-      (cat) => cat.name.toLowerCase() === args.name.trim().toLowerCase(),
+      (cat) => cat.name.toLowerCase() === validatedName.toLowerCase(),
     );
 
     if (duplicate) {
@@ -676,16 +734,16 @@ export const createCategory = mutation({
     // Create category
     const categoryId = await ctx.db.insert("vaultCategories", {
       householdId: args.householdId,
-      name: args.name.trim(),
-      description: args.description?.trim(),
+      name: validatedName,
+      description: validatedDescription,
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: categoryId,
       description: `Created category: ${args.name}`,
     });
 
@@ -698,6 +756,11 @@ export const createCategory = mutation({
  * Admins only
  *
  * SECURITY: Requires active subscription
+ *
+ * PERFORMANCE NOTE: Renaming a category requires updating all documents that use it.
+ * This is O(n) where n = documents in household. Convex doesn't support indexing on
+ * array elements, so a full scan is unavoidable without a schema change (junction table).
+ * For most households (< 1000 documents), this is acceptable.
  */
 export const updateCategory = mutation({
   args: {
@@ -722,22 +785,17 @@ export const updateCategory = mutation({
     const updates: Partial<Doc<"vaultCategories">> = {};
 
     if (args.name !== undefined) {
-      if (!args.name.trim()) {
-        throw new Error("Category name cannot be empty");
-      }
-      if (args.name.length > 50) {
-        throw new Error("Category name is too long (max 50 characters)");
-      }
+      // Validate name using shared helper
+      const newName = validateCategoryName(args.name);
 
-      // Check for duplicates
-      const existing = await ctx.db
+      // Check for duplicates (case-insensitive)
+      const existingCategories = await ctx.db
         .query("vaultCategories")
         .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
         .collect();
 
-      const duplicate = existing.find(
-        (cat) =>
-          cat._id !== args.categoryId && cat.name.toLowerCase() === args.name?.trim().toLowerCase(),
+      const duplicate = existingCategories.find(
+        (cat) => cat._id !== args.categoryId && cat.name.toLowerCase() === newName.toLowerCase(),
       );
 
       if (duplicate) {
@@ -745,40 +803,41 @@ export const updateCategory = mutation({
       }
 
       // Update all documents using the old category name
-      const documents = await ctx.db
-        .query("vaultDocuments")
-        .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
-        .collect();
-
+      // NOTE: O(n) scan - see function docs for explanation
       const oldName = category.name;
-      const newName = args.name.trim();
+      if (oldName !== newName) {
+        const documents = await ctx.db
+          .query("vaultDocuments")
+          .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
+          .collect();
 
-      for (const doc of documents) {
-        if (doc.categories.includes(oldName)) {
-          const updatedCategories = doc.categories.map((cat) => (cat === oldName ? newName : cat));
-          await ctx.db.patch(doc._id, { categories: updatedCategories });
+        for (const doc of documents) {
+          if (doc.categories.includes(oldName)) {
+            const updatedCategories = doc.categories.map((cat) =>
+              cat === oldName ? newName : cat,
+            );
+            await ctx.db.patch(doc._id, { categories: updatedCategories });
+          }
         }
       }
 
       updates.name = newName;
     }
 
+    // Validate description using shared helper
     if (args.description !== undefined) {
-      if (args.description && args.description.length > 200) {
-        throw new Error("Description is too long (max 200 characters)");
-      }
-      updates.description = args.description?.trim();
+      updates.description = validateCategoryDescription(args.description);
     }
 
     // Update category
     await ctx.db.patch(args.categoryId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: category.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.categoryId,
       description: `Updated category: ${updates.name || category.name}`,
     });
 
@@ -791,6 +850,11 @@ export const updateCategory = mutation({
  * Admins only - removes category from all documents
  *
  * SECURITY: Requires active subscription
+ *
+ * PERFORMANCE NOTE: Deleting a category requires updating all documents that use it.
+ * This is O(n) where n = documents in household. Convex doesn't support indexing on
+ * array elements, so a full scan is unavoidable without a schema change (junction table).
+ * For most households (< 1000 documents), this is acceptable.
  */
 export const deleteCategory = mutation({
   args: {
@@ -810,14 +874,16 @@ export const deleteCategory = mutation({
     await requireActiveSubscription(ctx, category.householdId);
 
     // Remove category from all documents
+    // NOTE: O(n) scan - see function docs for explanation
+    const categoryName = category.name;
     const documents = await ctx.db
       .query("vaultDocuments")
       .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
       .collect();
 
     for (const doc of documents) {
-      if (doc.categories.includes(category.name)) {
-        const updatedCategories = doc.categories.filter((cat) => cat !== category.name);
+      if (doc.categories.includes(categoryName)) {
+        const updatedCategories = doc.categories.filter((cat) => cat !== categoryName);
         await ctx.db.patch(doc._id, { categories: updatedCategories });
       }
     }
@@ -825,13 +891,13 @@ export const deleteCategory = mutation({
     // Delete category
     await ctx.db.delete(args.categoryId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: category.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
-      description: `Deleted category: ${category.name}`,
+      entityId: args.categoryId,
+      description: `Deleted category: ${categoryName}`,
     });
 
     return null;
@@ -916,10 +982,10 @@ export const initializeDefaultCategories = mutation({
 // ============================================================================
 
 /**
- * Recalculate storage usage for a household
+ * Recalculate storage usage and document count for a household
  *
  * Use this to:
- * 1. Initialize storageUsedBytes for existing households (migration)
+ * 1. Initialize storageUsedBytes/vaultDocumentCount for existing households (migration)
  * 2. Fix any counter drift due to bugs or failed transactions
  *
  * This performs a full table scan, so use sparingly.
@@ -931,6 +997,7 @@ export const recalculateStorageUsage = mutation({
   returns: v.object({
     previousBytes: v.number(),
     calculatedBytes: v.number(),
+    previousDocumentCount: v.number(),
     documentCount: v.number(),
   }),
   handler: async (ctx, args) => {
@@ -942,7 +1009,7 @@ export const recalculateStorageUsage = mutation({
       throw new Error("Household not found");
     }
 
-    // Calculate actual storage usage from documents
+    // Calculate actual storage usage and count from documents
     const documents = await ctx.db
       .query("vaultDocuments")
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
@@ -950,15 +1017,18 @@ export const recalculateStorageUsage = mutation({
 
     const calculatedBytes = documents.reduce((sum, doc) => sum + doc.fileSize, 0);
     const previousBytes = household.storageUsedBytes ?? 0;
+    const previousDocumentCount = household.vaultDocumentCount ?? 0;
 
-    // Update the counter
+    // Update both counters
     await ctx.db.patch(args.householdId, {
       storageUsedBytes: calculatedBytes,
+      vaultDocumentCount: documents.length,
     });
 
     return {
       previousBytes,
       calculatedBytes,
+      previousDocumentCount,
       documentCount: documents.length,
     };
   },
@@ -1034,8 +1104,6 @@ export const recalculateCategoryCounts = mutation({
 // ============================================================================
 // INTERNAL QUERIES (for use by actions)
 // ============================================================================
-
-import { formatBytesAsGB } from "./shared/constants";
 
 /**
  * Internal query to check storage quota for actions

@@ -26,6 +26,34 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
+type CookieStoreLike = {
+  set: (options: {
+    name: string;
+    value: string;
+    expires?: number | Date;
+    path?: string;
+  }) => Promise<void>;
+};
+
+async function persistSidebarCookie(openState: boolean) {
+  if (typeof window === "undefined") return;
+
+  if ("cookieStore" in window) {
+    const store = (window as Window & { cookieStore: CookieStoreLike }).cookieStore;
+    await store.set({
+      name: SIDEBAR_COOKIE_NAME,
+      value: String(openState),
+      expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
+      path: "/",
+    });
+    return;
+  }
+
+  const cookieValue = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+  // biome-ignore lint/suspicious/noDocumentCookie: CookieStore API not available in all browsers yet
+  document.cookie = cookieValue;
+}
+
 type SidebarContextProps = {
   state: "expanded" | "collapsed";
   open: boolean;
@@ -77,7 +105,7 @@ function SidebarProvider({
       }
 
       // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      void persistSidebarCookie(openState);
     },
     [setOpenProp, open],
   );

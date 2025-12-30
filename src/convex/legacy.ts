@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAuth, requireHouseholdAccess, requireSubscriptionTier } from "./auth";
+import { logActivity } from "./shared/activity";
+import { EMAIL_REGEX } from "./shared/validators";
 
 /**
  * Legacy Planning functions
@@ -210,8 +212,7 @@ export const create = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "plan_updated",
@@ -353,8 +354,7 @@ export const markComplete = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "plan_updated",
@@ -455,11 +455,8 @@ export const addKeyContact = mutation({
     }
 
     // Validate email format if provided
-    if (args.email?.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(args.email.trim())) {
-        throw new Error("Invalid email format");
-      }
+    if (args.email?.trim() && !EMAIL_REGEX.test(args.email.trim())) {
+      throw new Error("Invalid email format");
     }
 
     // Create the key contact
@@ -479,8 +476,7 @@ export const addKeyContact = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "plan_updated",
@@ -550,11 +546,8 @@ export const updateKeyContact = mutation({
     }
 
     if (args.email !== undefined) {
-      if (args.email.trim()) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(args.email.trim())) {
-          throw new Error("Invalid email format");
-        }
+      if (args.email.trim() && !EMAIL_REGEX.test(args.email.trim())) {
+        throw new Error("Invalid email format");
       }
       updates.email = args.email.trim() || undefined;
     }
@@ -575,8 +568,7 @@ export const updateKeyContact = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "plan_updated",
@@ -627,7 +619,7 @@ export const deleteKeyContact = mutation({
     });
 
     // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "plan_updated",

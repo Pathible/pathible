@@ -15,7 +15,7 @@ interface FamilyMember {
   dateOfBirth?: number;
   city?: string;
   state?: string;
-  gender?: "male" | "female" | "non_binary" | "prefer_not_to_say" | "other" | undefined;
+  gender?: "male" | "female" | "prefer_not_to_say" | undefined;
   relationshipType:
     | "parent"
     | "child"
