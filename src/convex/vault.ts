@@ -1,8 +1,16 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { mutation, query } from "./_generated/server";
-import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./auth";
+import { internalQuery, mutation, query } from "./_generated/server";
+import {
+  checkStorageQuota,
+  PLAN_LIMITS,
+  requireActiveSubscription,
+  requireAuth,
+  requireHouseholdAccess,
+  requireHouseholdAdmin,
+} from "./auth";
+import { checkDocumentAccess } from "./vaultHelpers";
 
 /**
  * Heritage Vault - Secure Document Storage System
@@ -61,33 +69,6 @@ const categoryReturnValidator = v.object({
 // ============================================================================
 
 /**
- * Check if a user has access to a specific document based on access level
- */
-function checkDocumentAccess(
-  document: Doc<"vaultDocuments">,
-  profileId: Id<"profiles">,
-  membershipRole: string,
-): boolean {
-  // Check access level
-  switch (document.accessLevel) {
-    case "household":
-      // All household members have access
-      return true;
-
-    case "admins":
-      // Only owners and stewards have access
-      return membershipRole === "owner" || membershipRole === "steward";
-
-    case "custom":
-      // Check if user is in the shared list or is the uploader
-      return document.uploadedBy === profileId || document.sharedWithUsers.includes(profileId);
-
-    default:
-      return false;
-  }
-}
-
-/**
  * Get uploader name for a document
  * Returns "Unknown" for non-existent or soft-deleted profiles
  */
@@ -101,29 +82,51 @@ async function getUploaderName(ctx: QueryCtx, uploaderId: Id<"profiles">): Promi
 // QUERIES
 // ============================================================================
 
+/** Default page size for document listings */
+const DEFAULT_PAGE_SIZE = 50;
+
+/** Maximum page size to prevent abuse */
+const MAX_PAGE_SIZE = 100;
+
 /**
- * List all documents in a household
+ * List documents in a household with pagination
  * Returns only documents the user has access to
+ *
+ * @param limit - Number of documents to return (default 50, max 100)
+ * @param cursor - Pagination cursor from previous response
  */
 export const list = query({
   args: {
     householdId: v.id("households"),
     category: v.optional(v.string()),
     searchQuery: v.optional(v.string()),
+    limit: v.optional(v.number()),
+    cursor: v.optional(v.string()),
   },
-  returns: v.array(documentReturnValidator),
+  returns: v.object({
+    documents: v.array(documentReturnValidator),
+    nextCursor: v.union(v.string(), v.null()),
+    hasMore: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const membership = await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
 
-    // Get all documents for this household
-    const documents = await ctx.db
+    // Clamp limit to safe bounds
+    const requestedLimit = args.limit ?? DEFAULT_PAGE_SIZE;
+    const limit = Math.min(Math.max(1, requestedLimit), MAX_PAGE_SIZE);
+
+    // Build query with pagination
+    const query = ctx.db
       .query("vaultDocuments")
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .collect();
+      .order("desc"); // Most recent first
+
+    // Apply cursor if provided (for pagination)
+    const paginatedResult = await query.paginate({ numItems: limit, cursor: args.cursor ?? null });
 
     // Filter by access permissions
-    const accessibleDocs = documents.filter((doc) =>
+    const accessibleDocs = paginatedResult.page.filter((doc) =>
       checkDocumentAccess(doc, profile._id, membership.role),
     );
 
@@ -136,23 +139,36 @@ export const list = query({
 
     // Apply search filter
     if (args.searchQuery) {
-      const query = args.searchQuery.toLowerCase();
+      const searchQuery = args.searchQuery.toLowerCase();
       filteredDocs = filteredDocs.filter(
         (doc) =>
-          doc.name.toLowerCase().includes(query) || doc.description?.toLowerCase().includes(query),
+          doc.name.toLowerCase().includes(searchQuery) ||
+          doc.description?.toLowerCase().includes(searchQuery),
       );
     }
 
-    // Build response with uploader info
-    // Note: URLs are generated on-demand via vaultActions.generateDownloadUrl for security
-    const docsWithDetails = await Promise.all(
-      filteredDocs.map(async (doc) => ({
-        ...doc,
-        uploaderName: await getUploaderName(ctx, doc.uploadedBy),
-      })),
-    );
+    // Batch fetch uploader names to avoid N+1
+    const uploaderIds = [...new Set(filteredDocs.map((doc) => doc.uploadedBy))];
+    const uploaderProfiles = await Promise.all(uploaderIds.map((id) => ctx.db.get(id)));
+    const uploaderNameMap = new Map<string, string>();
+    for (let i = 0; i < uploaderIds.length; i++) {
+      const uploader = uploaderProfiles[i];
+      const name =
+        uploader && !uploader.deletedAt ? `${uploader.firstName} ${uploader.lastName}` : "Unknown";
+      uploaderNameMap.set(uploaderIds[i], name);
+    }
 
-    return docsWithDetails;
+    // Build response with uploader info
+    const docsWithDetails = filteredDocs.map((doc) => ({
+      ...doc,
+      uploaderName: uploaderNameMap.get(doc.uploadedBy) ?? "Unknown",
+    }));
+
+    return {
+      documents: docsWithDetails,
+      nextCursor: paginatedResult.continueCursor,
+      hasMore: !paginatedResult.isDone,
+    };
   },
 });
 
@@ -276,6 +292,9 @@ export const getStats = query({
 /**
  * Create document metadata after file upload to B2
  * Call this after uploading the file directly to Backblaze B2
+ *
+ * SECURITY: Defense in depth - also validates storage quota here
+ * even though it's checked in generateUploadUrl action
  */
 export const create = mutation({
   args: {
@@ -297,6 +316,9 @@ export const create = mutation({
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Verify active subscription and storage quota (defense in depth)
+    await checkStorageQuota(ctx, args.householdId, args.fileSize);
 
     // Validate inputs
     if (!args.name.trim()) {
@@ -353,6 +375,15 @@ export const create = mutation({
       updatedAt: Date.now(),
     });
 
+    // Atomically increment storage counter on household
+    const household = await ctx.db.get(args.householdId);
+    if (household) {
+      const currentStorage = household.storageUsedBytes ?? 0;
+      await ctx.db.patch(args.householdId, {
+        storageUsedBytes: currentStorage + args.fileSize,
+      });
+    }
+
     // Log activity
     await ctx.db.insert("activityLog", {
       householdId: args.householdId,
@@ -370,6 +401,8 @@ export const create = mutation({
 /**
  * Update document metadata
  * Cannot change the file itself, only metadata
+ *
+ * SECURITY: Requires active subscription
  */
 export const update = mutation({
   args: {
@@ -389,6 +422,9 @@ export const update = mutation({
 
     const membership = await requireHouseholdAccess(ctx, document.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription for modifications
+    await requireActiveSubscription(ctx, document.householdId);
 
     // Only admins or the uploader can edit
     const isAdmin = membership.role === "owner" || membership.role === "steward";
@@ -468,6 +504,8 @@ export const update = mutation({
  * Delete a document
  * Removes metadata from Convex and file from B2
  * Note: B2 deletion happens via vaultActions.deleteFile
+ *
+ * SECURITY: Requires active subscription
  */
 export const remove = mutation({
   args: {
@@ -483,6 +521,9 @@ export const remove = mutation({
     const membership = await requireHouseholdAccess(ctx, document.householdId);
     const { profile } = await requireAuth(ctx);
 
+    // SECURITY: Require active subscription for modifications
+    await requireActiveSubscription(ctx, document.householdId);
+
     // Only admins or the uploader can delete
     const isAdmin = membership.role === "owner" || membership.role === "steward";
     const isUploader = document.uploadedBy === profile._id;
@@ -494,6 +535,15 @@ export const remove = mutation({
     // Note: B2 file deletion must be handled separately via vaultActions.deleteFile
     // This mutation only deletes the database record
     // The client should call both: vault.remove() and vaultActions.deleteFile()
+
+    // Atomically decrement storage counter on household
+    const household = await ctx.db.get(document.householdId);
+    if (household) {
+      const currentStorage = household.storageUsedBytes ?? 0;
+      await ctx.db.patch(document.householdId, {
+        storageUsedBytes: Math.max(0, currentStorage - document.fileSize),
+      });
+    }
 
     // Delete the document record
     await ctx.db.delete(args.documentId);
@@ -519,6 +569,8 @@ export const remove = mutation({
 /**
  * Create a new category
  * Anyone in the household can create categories
+ *
+ * SECURITY: Requires active subscription
  */
 export const createCategory = mutation({
   args: {
@@ -530,6 +582,9 @@ export const createCategory = mutation({
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, args.householdId);
 
     // Validate inputs
     if (!args.name.trim()) {
@@ -581,6 +636,8 @@ export const createCategory = mutation({
 /**
  * Update a category
  * Admins only
+ *
+ * SECURITY: Requires active subscription
  */
 export const updateCategory = mutation({
   args: {
@@ -597,6 +654,9 @@ export const updateCategory = mutation({
 
     await requireHouseholdAdmin(ctx, category.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, category.householdId);
 
     // Build update object
     const updates: Partial<Doc<"vaultCategories">> = {};
@@ -669,6 +729,8 @@ export const updateCategory = mutation({
 /**
  * Delete a category
  * Admins only - removes category from all documents
+ *
+ * SECURITY: Requires active subscription
  */
 export const deleteCategory = mutation({
   args: {
@@ -683,6 +745,9 @@ export const deleteCategory = mutation({
 
     await requireHouseholdAdmin(ctx, category.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, category.householdId);
 
     // Remove category from all documents
     const documents = await ctx.db
@@ -783,5 +848,151 @@ export const initializeDefaultCategories = mutation({
     }
 
     return created;
+  },
+});
+
+// ============================================================================
+// STORAGE MIGRATION & MAINTENANCE
+// ============================================================================
+
+/**
+ * Recalculate storage usage for a household
+ *
+ * Use this to:
+ * 1. Initialize storageUsedBytes for existing households (migration)
+ * 2. Fix any counter drift due to bugs or failed transactions
+ *
+ * This performs a full table scan, so use sparingly.
+ */
+export const recalculateStorageUsage = mutation({
+  args: {
+    householdId: v.id("households"),
+  },
+  returns: v.object({
+    previousBytes: v.number(),
+    calculatedBytes: v.number(),
+    documentCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    // Require admin access to recalculate storage
+    await requireHouseholdAdmin(ctx, args.householdId);
+
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
+
+    // Calculate actual storage usage from documents
+    const documents = await ctx.db
+      .query("vaultDocuments")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+
+    const calculatedBytes = documents.reduce((sum, doc) => sum + doc.fileSize, 0);
+    const previousBytes = household.storageUsedBytes ?? 0;
+
+    // Update the counter
+    await ctx.db.patch(args.householdId, {
+      storageUsedBytes: calculatedBytes,
+    });
+
+    return {
+      previousBytes,
+      calculatedBytes,
+      documentCount: documents.length,
+    };
+  },
+});
+
+// ============================================================================
+// INTERNAL QUERIES (for use by actions)
+// ============================================================================
+
+/** Bytes per gigabyte constant */
+const BYTES_PER_GB = 1024 * 1024 * 1024;
+
+/** Sentinel value for unlimited resources */
+const UNLIMITED = Number.MAX_SAFE_INTEGER;
+
+/**
+ * Format bytes as human-readable GB string
+ */
+function formatBytesAsGB(bytes: number): string {
+  if (bytes === UNLIMITED) return "unlimited";
+  return (bytes / BYTES_PER_GB).toFixed(2);
+}
+
+/**
+ * Internal query to check storage quota for actions
+ * Used by vaultActions.generateUploadUrl to verify quota before providing upload URL
+ *
+ * Uses pre-computed `storageUsedBytes` counter for O(1) performance.
+ *
+ * SECURITY NOTE: This query does NOT verify household membership.
+ * Callers MUST call requireHouseholdAccessInternal BEFORE calling this query
+ * to verify the user has access to the household.
+ *
+ * The query intentionally returns quota info without auth to support
+ * the pattern: check auth -> check quota -> proceed (used in vaultActions).
+ */
+export const checkStorageQuotaInternal = internalQuery({
+  args: {
+    householdId: v.id("households"),
+    additionalBytes: v.number(),
+  },
+  returns: v.object({
+    allowed: v.boolean(),
+    currentBytes: v.number(),
+    maxBytes: v.number(),
+    remainingBytes: v.number(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    // Get household and check subscription status
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      return {
+        allowed: false,
+        currentBytes: 0,
+        maxBytes: 0,
+        remainingBytes: 0,
+        error: "Household not found",
+      };
+    }
+
+    // Check subscription status
+    if (household.subscriptionStatus !== "active") {
+      return {
+        allowed: false,
+        currentBytes: 0,
+        maxBytes: 0,
+        remainingBytes: 0,
+        error: `Subscription is ${household.subscriptionStatus}. Please update your subscription to continue.`,
+      };
+    }
+
+    const limits = PLAN_LIMITS[household.subscriptionTier];
+
+    // Use pre-computed counter (defaults to 0 for backwards compatibility)
+    const currentBytes = household.storageUsedBytes ?? 0;
+    const remainingBytes = Math.max(0, limits.storageBytesMax - currentBytes);
+
+    // Check if additional bytes would exceed limit
+    if (currentBytes + args.additionalBytes > limits.storageBytesMax) {
+      return {
+        allowed: false,
+        currentBytes,
+        maxBytes: limits.storageBytesMax,
+        remainingBytes,
+        error: `Storage limit exceeded. Used: ${formatBytesAsGB(currentBytes)}GB of ${formatBytesAsGB(limits.storageBytesMax)}GB. Upgrade your plan for more storage.`,
+      };
+    }
+
+    return {
+      allowed: true,
+      currentBytes,
+      maxBytes: limits.storageBytesMax,
+      remainingBytes,
+    };
   },
 });

@@ -5,6 +5,11 @@
  *
  * Convex actions for file upload/download operations with B2 storage.
  * Uses "use node" directive to access Node.js APIs for B2 client.
+ *
+ * SECURITY: All operations require:
+ * 1. Active subscription (not cancelled/past_due)
+ * 2. Storage quota validation for uploads
+ * 3. Household membership verification
  */
 
 import { v } from "convex/values";
@@ -13,10 +18,16 @@ import { B2_CONSTANTS, generateB2FileName, validateUploadParams } from "../lib/b
 import type { UploadUrlData } from "../lib/backblaze/types";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
+import { checkDocumentAccess, isAdminRole } from "./vaultHelpers";
 
 /**
  * Generate a signed upload URL for B2
  * Client will use this URL to upload the file directly to B2
+ *
+ * SECURITY: Enforces storage quota limits by tier:
+ * - Foundations: 5GB max
+ * - Heritage: 25GB max
+ * - Legacy: Unlimited
  */
 export const generateUploadUrl = action({
   args: {
@@ -37,6 +48,16 @@ export const generateUploadUrl = action({
     await ctx.runQuery(internal.auth.requireHouseholdAccessInternal, {
       householdId: args.householdId,
     });
+
+    // SECURITY: Check subscription status and storage quota
+    const storageCheck = await ctx.runQuery(internal.vault.checkStorageQuotaInternal, {
+      householdId: args.householdId,
+      additionalBytes: args.fileSize,
+    });
+
+    if (!storageCheck.allowed) {
+      throw new Error(storageCheck.error || "Storage quota exceeded");
+    }
 
     // Validate upload parameters
     validateUploadParams({
@@ -65,6 +86,8 @@ export const generateUploadUrl = action({
 /**
  * Generate a signed download URL for a document
  * Verifies access permissions before generating URL
+ *
+ * SECURITY: Requires active subscription for downloads
  */
 export const generateDownloadUrl = action({
   args: {
@@ -91,6 +114,17 @@ export const generateDownloadUrl = action({
     });
     const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal);
 
+    // SECURITY: Check subscription status (reusing storage check which validates status)
+    const subscriptionCheck = await ctx.runQuery(internal.vault.checkStorageQuotaInternal, {
+      householdId: document.householdId,
+      additionalBytes: 0, // No additional storage needed for downloads
+    });
+
+    // Only check subscription status, not quota (downloads don't consume quota)
+    if (subscriptionCheck.error?.includes("Subscription is")) {
+      throw new Error(subscriptionCheck.error);
+    }
+
     // Check document-level access
     const hasAccess = checkDocumentAccess(document, profile._id, membership.role);
 
@@ -113,6 +147,8 @@ export const generateDownloadUrl = action({
 /**
  * Delete a file from B2 storage
  * Called by vault.remove mutation
+ *
+ * SECURITY: Requires active subscription for deletions
  */
 export const deleteFile = action({
   args: {
@@ -135,11 +171,20 @@ export const deleteFile = action({
     });
     const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal);
 
-    // Only admins or the uploader can delete
-    const isAdmin = membership.role === "owner" || membership.role === "steward";
-    const isUploader = document.uploadedBy === profile._id;
+    // SECURITY: Check subscription status
+    const subscriptionCheck = await ctx.runQuery(internal.vault.checkStorageQuotaInternal, {
+      householdId: document.householdId,
+      additionalBytes: 0,
+    });
 
-    if (!isAdmin && !isUploader) {
+    if (subscriptionCheck.error?.includes("Subscription is")) {
+      throw new Error(subscriptionCheck.error);
+    }
+
+    // Only admins or the uploader can delete
+    const hasDeletePermission = isAdminRole(membership.role) || document.uploadedBy === profile._id;
+
+    if (!hasDeletePermission) {
       throw new Error("Access denied: You do not have permission to delete this document");
     }
 
@@ -150,38 +195,3 @@ export const deleteFile = action({
     return null;
   },
 });
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Check if a user has access to a specific document based on access level
- * Extracted from vault.ts for reuse
- */
-function checkDocumentAccess(
-  document: {
-    accessLevel: "household" | "admins" | "custom";
-    uploadedBy: string;
-    sharedWithUsers: string[];
-  },
-  profileId: string,
-  membershipRole: string,
-): boolean {
-  switch (document.accessLevel) {
-    case "household":
-      // All household members have access
-      return true;
-
-    case "admins":
-      // Only owners and stewards have access
-      return membershipRole === "owner" || membershipRole === "steward";
-
-    case "custom":
-      // Check if user is in the shared list or is the uploader
-      return document.uploadedBy === profileId || document.sharedWithUsers.includes(profileId);
-
-    default:
-      return false;
-  }
-}

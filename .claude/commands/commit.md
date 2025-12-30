@@ -21,7 +21,6 @@ Or with options:
 1. Unless specified with `--no-verify`, automatically runs pre-commit checks:
    - `pnpm lint` to ensure code quality
    - `pnpm build` to verify the build succeeds
-   - `pnpm generate:docs` to update documentation
 2. Checks which files are staged with `git status`
 3. If 0 files are staged, automatically adds all modified and new files with `git add`
 4. Performs a `git diff` to understand what changes are being committed
@@ -31,7 +30,7 @@ Or with options:
 
 ## Best Practices for Commits
 
-- **Verify before committing**: Ensure code is linted, builds correctly, and documentation is updated
+- **Verify before committing**: Ensure code is linted and builds correctly
 - **Atomic commits**: Each commit should contain related changes that serve a single purpose
 - **Split large changes**: If changes touch multiple concerns, split them into separate commits
 - **Conventional commit format**: Use the format `<type>: <description>` where type is one of:
@@ -96,7 +95,7 @@ Or with options:
   - 🍱 `assets`: Add or update assets
   - ♿️ `feat`: Improve accessibility
   - 💡 `docs`: Add or update comments in source code
-  - 🗃️ `db`: Perform database related changes
+  - 🗃️ `db`: Perform database related changes (Convex schema)
   - 🔊 `feat`: Add or update logs
   - 🔇 `fix`: Remove logs
   - 🤡 `test`: Mock things
@@ -116,7 +115,7 @@ When analyzing the diff, consider splitting commits based on these criteria:
 
 1. **Different concerns**: Changes to unrelated parts of the codebase
 2. **Different types of changes**: Mixing features, fixes, refactoring, etc.
-3. **File patterns**: Changes to different types of files (e.g., source code vs documentation)
+3. **File patterns**: Changes to different types of files (e.g., Convex backend vs frontend components)
 4. **Logical grouping**: Changes that would be easier to understand or review separately
 5. **Size**: Very large changes that would be clearer if broken down
 
@@ -140,25 +139,24 @@ Good commit messages:
 - 📈 feat: implement analytics tracking for user engagement
 - 🔒️ fix: strengthen authentication password requirements
 - ♿️ feat: improve form accessibility for screen readers
+- 🗃️ db: add new index to Convex schema for better query performance
 
 Example of splitting commits:
 
-- First commit: ✨ feat: add new solc version type definitions
-- Second commit: 📝 docs: update documentation for new solc versions
+- First commit: ✨ feat: add new Convex query for user profiles
+- Second commit: 📝 docs: update documentation for profile queries
 - Third commit: 🔧 chore: update package.json dependencies
 - Fourth commit: 🏷️ feat: add type definitions for new API endpoints
-- Fifth commit: 🧵 feat: improve concurrency handling in worker threads
+- Fifth commit: ✅ test: add Cypress tests for profile features
 - Sixth commit: 🚨 fix: resolve linting issues in new code
-- Seventh commit: ✅ test: add unit tests for new solc version features
-- Eighth commit: 🔒️ fix: update dependencies with security vulnerabilities
 
 ## Command Options
 
-- `--no-verify`: Skip running the pre-commit checks (lint, build, generate:docs)
+- `--no-verify`: Skip running the pre-commit checks (lint, build)
 
 ## Important Notes
 
-- By default, pre-commit checks (`pnpm lint`, `pnpm build`, `pnpm generate:docs`) will run to ensure code quality
+- By default, pre-commit checks (`pnpm lint`, `pnpm build`) will run to ensure code quality
 - If these checks fail, you'll be asked if you want to proceed with the commit anyway or fix the issues first
 - If specific files are already staged, the command will only commit those files
 - If no files are staged, it will automatically stage all modified and new files

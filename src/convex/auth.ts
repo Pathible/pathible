@@ -11,6 +11,95 @@ import { internalQuery, query } from "./_generated/server";
  * We look up the user's profile and enforce access control.
  */
 
+// ============================================================================
+// SUBSCRIPTION TIERS & PLAN LIMITS
+// ============================================================================
+
+/**
+ * Subscription tier hierarchy (higher number = more features)
+ */
+export const TIER_LEVELS = {
+  foundations: 1,
+  heritage: 2,
+  legacy: 3,
+} as const;
+
+export type SubscriptionTier = keyof typeof TIER_LEVELS;
+
+/**
+ * Plan limits by tier
+ *
+ * These limits are enforced server-side in Convex mutations.
+ * Must match the limits defined in Clerk Dashboard and UI.
+ */
+export const PLAN_LIMITS = {
+  foundations: {
+    storageBytesMax: 5 * 1024 * 1024 * 1024, // 5GB
+    familyMembersMax: 1, // 1 viewer
+    familyUnitsMax: 1, // Primary family only
+  },
+  heritage: {
+    storageBytesMax: 25 * 1024 * 1024 * 1024, // 25GB
+    familyMembersMax: 3, // 3 members
+    familyUnitsMax: 3, // Up to 3 family units
+  },
+  legacy: {
+    storageBytesMax: Number.MAX_SAFE_INTEGER, // Unlimited
+    familyMembersMax: Number.MAX_SAFE_INTEGER, // Unlimited
+    familyUnitsMax: Number.MAX_SAFE_INTEGER, // Unlimited
+  },
+} as const;
+
+/**
+ * Feature-to-minimum-tier mapping
+ *
+ * Defines which subscription tier is required for each feature.
+ * Used by requireFeatureAccess() for server-side enforcement.
+ */
+export const FEATURE_TIERS: Record<string, SubscriptionTier> = {
+  // Heritage Vault - All tiers have basic vault, higher tiers get more storage
+  vault_storage_basic: "foundations",
+  vault_storage_advanced: "heritage",
+  vault_storage_unlimited: "legacy",
+  vault_photos_videos: "foundations",
+  vault_folders: "foundations",
+  vault_tags_collections: "heritage",
+  vault_voice_recordings: "heritage",
+  vault_guided_organization: "heritage",
+
+  // Financial Intelligence
+  financial_overview: "foundations",
+  financial_summaries: "heritage",
+  financial_insights_basic: "heritage",
+  financial_insights_advanced: "legacy",
+  financial_trends: "legacy",
+
+  // Family Network
+  family_members_1: "foundations",
+  family_members_3: "heritage",
+  family_members_unlimited: "legacy",
+  family_profiles: "heritage",
+  family_relationships: "legacy",
+  family_messaging: "heritage",
+
+  // Legacy Builder - Premium only
+  legacy_questionnaires: "legacy",
+  legacy_story_templates: "legacy",
+
+  // Wisdom
+  wisdom_entries: "heritage",
+  wisdom_shared_pages: "legacy",
+
+  // Support
+  support_standard: "foundations",
+  support_priority: "heritage",
+  support_concierge: "legacy",
+
+  // Early Access
+  early_access_some: "heritage",
+  early_access_all: "legacy",
+} as const;
+
 /**
  * Type for authenticated context with user and profile
  */
@@ -195,6 +284,280 @@ export async function requireHouseholdAdmin(
 }
 
 // ============================================================================
+// SUBSCRIPTION & FEATURE ACCESS ENFORCEMENT
+// ============================================================================
+
+/**
+ * Get household with subscription info
+ *
+ * Returns the household document, throwing if not found.
+ */
+export async function getHouseholdWithSubscription(
+  ctx: QueryCtx | MutationCtx,
+  householdId: Id<"households">,
+): Promise<Doc<"households">> {
+  const household = await ctx.db.get(householdId);
+  if (!household) {
+    throw new Error("Household not found");
+  }
+  return household;
+}
+
+/**
+ * Require active subscription
+ *
+ * Verifies that the household has an active subscription.
+ * Throws if subscription is inactive, cancelled, or past_due.
+ *
+ * @example
+ * export const paidFeature = mutation({
+ *   handler: async (ctx, args) => {
+ *     await requireHouseholdAccess(ctx, args.householdId);
+ *     await requireActiveSubscription(ctx, args.householdId);
+ *     // ... feature logic
+ *   }
+ * });
+ */
+export async function requireActiveSubscription(
+  ctx: QueryCtx | MutationCtx,
+  householdId: Id<"households">,
+): Promise<Doc<"households">> {
+  const household = await getHouseholdWithSubscription(ctx, householdId);
+
+  if (household.subscriptionStatus !== "active") {
+    throw new Error(
+      `Subscription is ${household.subscriptionStatus}. Please update your subscription to continue.`,
+    );
+  }
+
+  return household;
+}
+
+/**
+ * Require minimum subscription tier
+ *
+ * Verifies that the household has at least the required subscription tier.
+ * Also checks that the subscription is active.
+ *
+ * @example
+ * export const heritageFeature = mutation({
+ *   handler: async (ctx, args) => {
+ *     await requireHouseholdAccess(ctx, args.householdId);
+ *     await requireSubscriptionTier(ctx, args.householdId, "heritage");
+ *     // ... feature logic for heritage+ tiers
+ *   }
+ * });
+ */
+export async function requireSubscriptionTier(
+  ctx: QueryCtx | MutationCtx,
+  householdId: Id<"households">,
+  requiredTier: SubscriptionTier,
+): Promise<Doc<"households">> {
+  const household = await requireActiveSubscription(ctx, householdId);
+
+  const currentLevel = TIER_LEVELS[household.subscriptionTier];
+  const requiredLevel = TIER_LEVELS[requiredTier];
+
+  if (currentLevel < requiredLevel) {
+    throw new Error(
+      `This feature requires the ${requiredTier} plan or higher. Current plan: ${household.subscriptionTier}`,
+    );
+  }
+
+  return household;
+}
+
+/**
+ * Require feature access by feature slug
+ *
+ * Looks up the required tier for a feature and enforces it.
+ * Use this for feature-specific access control.
+ *
+ * @example
+ * export const tagsFeature = mutation({
+ *   handler: async (ctx, args) => {
+ *     await requireHouseholdAccess(ctx, args.householdId);
+ *     await requireFeatureAccess(ctx, args.householdId, "vault_tags_collections");
+ *     // ... tags feature logic
+ *   }
+ * });
+ */
+export async function requireFeatureAccess(
+  ctx: QueryCtx | MutationCtx,
+  householdId: Id<"households">,
+  featureSlug: string,
+): Promise<Doc<"households">> {
+  const requiredTier = FEATURE_TIERS[featureSlug];
+
+  if (!requiredTier) {
+    // Unknown feature - fail secure (deny access)
+    console.error(`[auth] Unknown feature slug: ${featureSlug}`);
+    throw new Error("Access denied: Unknown feature");
+  }
+
+  return await requireSubscriptionTier(ctx, householdId, requiredTier);
+}
+
+// ============================================================================
+// STORAGE QUOTA HELPERS
+// ============================================================================
+
+/** Bytes per gigabyte constant */
+const BYTES_PER_GB = 1024 * 1024 * 1024;
+
+/** Sentinel value for unlimited resources */
+const UNLIMITED = Number.MAX_SAFE_INTEGER;
+
+/**
+ * Format bytes as human-readable GB string
+ */
+function formatBytesAsGB(bytes: number): string {
+  if (bytes === UNLIMITED) return "unlimited";
+  return (bytes / BYTES_PER_GB).toFixed(2);
+}
+
+/**
+ * Format a limit value for display
+ */
+function formatLimit(value: number): string {
+  return value === UNLIMITED ? "unlimited" : value.toString();
+}
+
+/**
+ * Check storage quota
+ *
+ * Uses the pre-computed `storageUsedBytes` counter on the household document
+ * for O(1) performance instead of scanning all documents.
+ *
+ * @example
+ * export const uploadDocument = mutation({
+ *   handler: async (ctx, args) => {
+ *     await requireHouseholdAccess(ctx, args.householdId);
+ *     const { remainingBytes } = await checkStorageQuota(ctx, args.householdId, args.fileSize);
+ *     // ... upload logic
+ *   }
+ * });
+ */
+export async function checkStorageQuota(
+  ctx: QueryCtx | MutationCtx,
+  householdId: Id<"households">,
+  additionalBytes: number = 0,
+): Promise<{ currentBytes: number; maxBytes: number; remainingBytes: number }> {
+  const household = await requireActiveSubscription(ctx, householdId);
+  const limits = PLAN_LIMITS[household.subscriptionTier];
+
+  // Use pre-computed counter (defaults to 0 for backwards compatibility)
+  const currentBytes = household.storageUsedBytes ?? 0;
+  const remainingBytes = limits.storageBytesMax - currentBytes;
+
+  if (additionalBytes > 0 && currentBytes + additionalBytes > limits.storageBytesMax) {
+    const usedGB = formatBytesAsGB(currentBytes);
+    const maxGB = formatBytesAsGB(limits.storageBytesMax);
+    throw new Error(
+      `Storage limit exceeded. Used: ${usedGB}GB of ${maxGB}GB. Upgrade your plan for more storage.`,
+    );
+  }
+
+  return {
+    currentBytes,
+    maxBytes: limits.storageBytesMax,
+    remainingBytes: Math.max(0, remainingBytes),
+  };
+}
+
+/**
+ * Check family member limit
+ *
+ * Verifies that the household has not exceeded their family member limit.
+ * Returns the current count and limit.
+ *
+ * @example
+ * export const inviteFamilyMember = mutation({
+ *   handler: async (ctx, args) => {
+ *     await requireHouseholdAdmin(ctx, args.householdId);
+ *     await checkFamilyMemberLimit(ctx, args.householdId, true);
+ *     // ... invite logic
+ *   }
+ * });
+ */
+export async function checkFamilyMemberLimit(
+  ctx: QueryCtx | MutationCtx,
+  householdId: Id<"households">,
+  checkingForNewMember: boolean = false,
+): Promise<{ currentCount: number; maxCount: number; canAddMore: boolean }> {
+  const household = await requireActiveSubscription(ctx, householdId);
+  const limits = PLAN_LIMITS[household.subscriptionTier];
+
+  // Count active members (excluding owner)
+  const memberships = await ctx.db
+    .query("householdMemberships")
+    .withIndex("by_household_and_status", (q) =>
+      q.eq("householdId", householdId).eq("status", "active"),
+    )
+    .collect();
+
+  // Exclude owner from count (owner doesn't count against member limit)
+  const nonOwnerCount = memberships.filter((m) => m.role !== "owner").length;
+  const canAddMore = nonOwnerCount < limits.familyMembersMax;
+
+  if (checkingForNewMember && !canAddMore) {
+    throw new Error(
+      `Family member limit reached. Your ${household.subscriptionTier} plan allows ${formatLimit(limits.familyMembersMax)} member(s). Upgrade for more.`,
+    );
+  }
+
+  return {
+    currentCount: nonOwnerCount,
+    maxCount: limits.familyMembersMax,
+    canAddMore,
+  };
+}
+
+/**
+ * Check family unit limit
+ *
+ * Verifies that the household has not exceeded their family unit limit.
+ *
+ * @example
+ * export const createFamilyUnit = mutation({
+ *   handler: async (ctx, args) => {
+ *     await requireHouseholdAdmin(ctx, args.householdId);
+ *     await checkFamilyUnitLimit(ctx, args.householdId, true);
+ *     // ... create logic
+ *   }
+ * });
+ */
+export async function checkFamilyUnitLimit(
+  ctx: QueryCtx | MutationCtx,
+  householdId: Id<"households">,
+  checkingForNewUnit: boolean = false,
+): Promise<{ currentCount: number; maxCount: number; canAddMore: boolean }> {
+  const household = await requireActiveSubscription(ctx, householdId);
+  const limits = PLAN_LIMITS[household.subscriptionTier];
+
+  // Count existing family units
+  const units = await ctx.db
+    .query("familyUnits")
+    .withIndex("by_household", (q) => q.eq("householdId", householdId))
+    .collect();
+
+  const currentCount = units.length;
+  const canAddMore = currentCount < limits.familyUnitsMax;
+
+  if (checkingForNewUnit && !canAddMore) {
+    throw new Error(
+      `Family unit limit reached. Your ${household.subscriptionTier} plan allows ${formatLimit(limits.familyUnitsMax)} family unit(s). Upgrade for more.`,
+    );
+  }
+
+  return {
+    currentCount,
+    maxCount: limits.familyUnitsMax,
+    canAddMore,
+  };
+}
+
+// ============================================================================
 // CONVEX QUERY EXPORTS (for Next.js server-side calls)
 // ============================================================================
 
@@ -348,6 +711,13 @@ export const requireHouseholdAccessInternal = internalQuery({
 
 /**
  * Internal Query: Get a document by ID (for use in actions)
+ *
+ * SECURITY WARNING: This query does NOT verify access permissions.
+ * Callers MUST:
+ * 1. Call requireHouseholdAccessInternal to verify household membership
+ * 2. Check document-level access using checkDocumentAccess from vaultHelpers
+ *
+ * Consider using getDocumentWithAccessInternal for a safer combined approach.
  */
 export const getDocumentInternal = internalQuery({
   args: {
@@ -378,3 +748,114 @@ export const getDocumentInternal = internalQuery({
     return await ctx.db.get(args.documentId);
   },
 });
+
+/**
+ * Internal Query: Get a document with access verification (PREFERRED)
+ *
+ * This is the safer alternative to getDocumentInternal. It:
+ * 1. Verifies the caller is authenticated
+ * 2. Verifies household membership
+ * 3. Checks document-level access permissions
+ *
+ * Returns null if document doesn't exist or access is denied.
+ * Throws only for authentication failures.
+ */
+export const getDocumentWithAccessInternal = internalQuery({
+  args: {
+    documentId: v.id("vaultDocuments"),
+  },
+  returns: v.union(
+    v.object({
+      document: v.object({
+        _id: v.id("vaultDocuments"),
+        _creationTime: v.number(),
+        householdId: v.id("households"),
+        uploadedBy: v.id("profiles"),
+        name: v.string(),
+        description: v.optional(v.string()),
+        b2FileId: v.string(),
+        b2FileName: v.string(),
+        b2BucketName: v.string(),
+        fileHash: v.optional(v.string()),
+        fileSize: v.number(),
+        fileType: v.string(),
+        categories: v.array(v.string()),
+        accessLevel: v.union(v.literal("household"), v.literal("admins"), v.literal("custom")),
+        sharedWithUsers: v.array(v.id("profiles")),
+        updatedAt: v.number(),
+      }),
+      membership: v.object({
+        _id: v.id("householdMemberships"),
+        role: v.union(
+          v.literal("owner"),
+          v.literal("steward"),
+          v.literal("viewer"),
+          v.literal("executor"),
+        ),
+      }),
+      profile: v.object({
+        _id: v.id("profiles"),
+      }),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    // Get document first
+    const document = await ctx.db.get(args.documentId);
+    if (!document) {
+      return null;
+    }
+
+    // Verify authentication
+    const { profile } = await requireAuth(ctx);
+
+    // Verify household membership
+    const membership = await ctx.db
+      .query("householdMemberships")
+      .withIndex("by_household_and_user", (q) =>
+        q.eq("householdId", document.householdId).eq("userId", profile._id),
+      )
+      .unique();
+
+    if (!membership || membership.status !== "active") {
+      return null; // Not a member - deny access silently
+    }
+
+    // Check document-level access
+    const hasAccess = checkDocumentAccessInternal(document, profile._id, membership.role);
+    if (!hasAccess) {
+      return null; // No document access - deny silently
+    }
+
+    return {
+      document,
+      membership: {
+        _id: membership._id,
+        role: membership.role,
+      },
+      profile: {
+        _id: profile._id,
+      },
+    };
+  },
+});
+
+/**
+ * Internal helper for document access checking (used by getDocumentWithAccessInternal)
+ */
+function checkDocumentAccessInternal(
+  document: Doc<"vaultDocuments">,
+  profileId: Id<"profiles">,
+  membershipRole: string,
+): boolean {
+  switch (document.accessLevel) {
+    case "household":
+      return true;
+    case "admins":
+      return membershipRole === "owner" || membershipRole === "steward";
+    case "custom":
+      return document.uploadedBy === profileId || document.sharedWithUsers.includes(profileId);
+    default:
+      return false;
+  }
+}

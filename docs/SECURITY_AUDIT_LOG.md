@@ -86,6 +86,231 @@ This document records all security-related code reviews and audits for Pathible'
 
 ---
 
+### 2024-12-30 - Server-Side Enforcement Infrastructure (Cycle 1 Completion)
+
+**Reviewer:** Claude Opus 4.5 (security-auditor, code-reviewer agents)
+
+**Files Reviewed:**
+- `src/convex/auth.ts`
+
+**Security Checklist:**
+- [x] Created centralized subscription tier helpers
+- [x] Plan limits defined (storage quotas, family member limits)
+- [x] Feature-to-tier mappings established
+- [x] Internal queries for use in Convex actions
+
+**Changes Applied:**
+
+1. **Added `TIER_LEVELS` constant** - Establishes tier hierarchy (foundations: 1, heritage: 2, legacy: 3)
+
+2. **Added `PLAN_LIMITS` constant** - Enforces resource limits by tier:
+   - Foundations: 5GB storage, 1 family member, 1 family unit
+   - Heritage: 25GB storage, 3 family members, 3 family units
+   - Legacy: Unlimited all resources
+
+3. **Added `FEATURE_TIERS` constant** - Maps features to minimum required tiers
+
+4. **Added helper functions:**
+   - `requireActiveSubscription()` - Blocks cancelled/past_due subscriptions
+   - `requireSubscriptionTier()` - Enforces minimum tier for features
+   - `requireFeatureAccess()` - Validates feature slug access by tier
+   - `checkStorageQuota()` - Validates storage limits before uploads
+   - `checkFamilyMemberLimit()` - Enforces member count limits
+   - `checkFamilyUnitLimit()` - Enforces unit count limits
+
+5. **Added internal queries for actions:**
+   - `requireHouseholdAccessInternal` - For use in Convex actions
+   - `requireAuthInternal` - For use in Convex actions
+   - `getDocumentInternal` - For vault actions
+
+**Status:** COMPLETED
+
+---
+
+### 2024-12-30 - Heritage Vault Security (Cycle 2)
+
+**Reviewer:** Claude Opus 4.5 (security-auditor, code-reviewer agents)
+
+**Files Reviewed:**
+- `src/convex/vault.ts`
+- `src/convex/vaultActions.ts`
+
+**Risk Level:** HIGH (file uploads, sensitive documents)
+
+**Issues Found:**
+
+1. **CRITICAL:** No storage quota enforcement before uploads
+   - Users could exceed tier limits without server-side validation
+
+2. **CRITICAL:** No subscription status check on mutations
+   - Cancelled users could still upload/modify vault documents
+
+3. **MEDIUM:** No subscription check on download URL generation
+   - Past-due users could still download files
+
+**Fixes Applied:**
+
+1. **vault.ts - `create` mutation:**
+   - Added `requireActiveSubscription()` check
+   - Added `checkStorageQuota()` before document creation (defense in depth)
+
+2. **vault.ts - `update` mutation:**
+   - Added `requireActiveSubscription()` check
+
+3. **vault.ts - `remove` mutation:**
+   - Added `requireActiveSubscription()` check
+
+4. **vault.ts - `checkStorageQuotaInternal` query:**
+   - Created internal query for use in vaultActions.ts
+
+5. **vaultActions.ts - `generateUploadUrl` action:**
+   - Added storage quota check with tier-specific limits
+
+6. **vaultActions.ts - `generateDownloadUrl` action:**
+   - Added subscription status validation
+
+7. **vaultActions.ts - `deleteFile` action:**
+   - Added subscription status validation
+
+**Status:** COMPLETED - All mutations secured
+
+---
+
+### 2024-12-30 - Financial Intelligence Security (Cycle 3)
+
+**Reviewer:** Claude Opus 4.5 (security-auditor, code-reviewer agents)
+
+**Files Reviewed:**
+- `src/convex/financial.ts`
+
+**Risk Level:** HIGH (sensitive financial data)
+
+**Issues Found:**
+
+1. **CRITICAL:** No subscription check on any mutations
+   - 11 mutations had no subscription enforcement
+   - Cancelled users could modify financial records
+
+**Fixes Applied:**
+
+Added `requireActiveSubscription()` to all 11 mutations:
+
+1. `createAccount` - Bank account creation
+2. `updateAccount` - Bank account updates
+3. `deleteAccount` - Bank account deletion
+4. `createProperty` - Real estate creation
+5. `updateProperty` - Real estate updates
+6. `deleteProperty` - Real estate deletion
+7. `createInsurancePolicy` - Insurance policy creation
+8. `updateInsurancePolicy` - Insurance policy updates
+9. `deleteInsurancePolicy` - Insurance policy deletion
+10. `dismissSuggestion` - AI suggestion dismissal
+11. `completeSuggestion` - AI suggestion completion
+
+**Status:** COMPLETED - All mutations secured
+
+---
+
+### 2024-12-30 - Family Network Security (Cycle 4)
+
+**Reviewer:** Claude Opus 4.5 (security-auditor, code-reviewer agents)
+
+**Files Reviewed:**
+- `src/convex/familyEcosystem.ts`
+
+**Risk Level:** MEDIUM (member limits, household data)
+
+**Issues Found:**
+
+1. **CRITICAL:** No family member limit enforcement
+   - Users could add unlimited members regardless of tier
+
+2. **CRITICAL:** No family unit limit enforcement
+   - Users could create unlimited family units
+
+3. **HIGH:** No subscription check on mutations
+   - Cancelled users could modify family data
+
+**Fixes Applied:**
+
+1. **`createFamilyUnit` mutation:**
+   - Added `requireActiveSubscription()` check
+   - Added `checkFamilyUnitLimit()` enforcement
+
+2. **`updateFamilyUnit` mutation:**
+   - Added `requireActiveSubscription()` check
+
+3. **`deleteFamilyUnit` mutation:**
+   - Added `requireActiveSubscription()` check
+
+4. **`addFamilyMember` mutation:**
+   - Added `requireActiveSubscription()` check
+   - Added `checkFamilyMemberLimit()` enforcement
+
+5. **`updateFamilyMember` mutation:**
+   - Added `requireActiveSubscription()` check
+
+6. **`removeFamilyMember` mutation:**
+   - Added `requireActiveSubscription()` check
+
+7. **`ensureCurrentUserInPrimaryFamily` mutation:**
+   - Added `requireActiveSubscription()` check
+
+8. **`inviteToPrimaryFamily` mutation:**
+   - Added `requireActiveSubscription()` check
+   - Added `checkFamilyMemberLimit()` enforcement
+
+**Status:** COMPLETED - All mutations secured with tier limits
+
+---
+
+### 2024-12-30 - Legacy Builder Security (Cycle 5)
+
+**Reviewer:** Claude Opus 4.5 (security-auditor, code-reviewer agents)
+
+**Files Reviewed:**
+- `src/convex/legacy.ts`
+
+**Risk Level:** MEDIUM (premium tier feature)
+
+**Issues Found:**
+
+1. **CRITICAL:** No tier restriction on premium feature
+   - Legacy Builder is Legacy-tier only but had no enforcement
+   - Lower-tier users could access premium features
+
+**Fixes Applied:**
+
+Added `requireSubscriptionTier(ctx, householdId, "legacy")` to all 7 mutations:
+
+1. `create` - Legacy plan creation
+2. `updateSection` - Plan section updates
+3. `markComplete` - Plan completion
+4. `resetCompletion` - Reset completion status
+5. `addKeyContact` - Key contact creation
+6. `updateKeyContact` - Key contact updates
+7. `deleteKeyContact` - Key contact deletion
+
+**Status:** COMPLETED - All mutations require Legacy tier
+
+---
+
+### 2024-12-30 - Wisdom & Education (Cycle 6)
+
+**Reviewer:** Claude Opus 4.5
+
+**Status:** SKIPPED - Feature not yet implemented
+
+---
+
+### 2024-12-30 - Support & Early Access (Cycle 7)
+
+**Reviewer:** Claude Opus 4.5
+
+**Status:** SKIPPED - Feature not yet implemented
+
+---
+
 ## Security Principles
 
 ### 1. Defense in Depth
@@ -114,15 +339,15 @@ All access control changes must be:
 
 ## Review Schedule
 
-| Cycle | Area | Scheduled Date | Status |
+| Cycle | Area | Completed Date | Status |
 |-------|------|----------------|--------|
-| 1 | Infrastructure | 2024-12-15 | In Progress |
-| 2 | Heritage Vault | TBD | Pending |
-| 3 | Financial Intelligence | TBD | Pending |
-| 4 | Family Network | TBD | Pending |
-| 5 | Legacy Builder | TBD | Pending |
-| 6 | Wisdom | TBD | Pending |
-| 7 | Support & Early Access | TBD | Pending |
+| 1 | Infrastructure | 2024-12-30 | ✅ Completed |
+| 2 | Heritage Vault | 2024-12-30 | ✅ Completed |
+| 3 | Financial Intelligence | 2024-12-30 | ✅ Completed |
+| 4 | Family Network | 2024-12-30 | ✅ Completed |
+| 5 | Legacy Builder | 2024-12-30 | ✅ Completed |
+| 6 | Wisdom | - | ⏭️ Skipped (not implemented) |
+| 7 | Support & Early Access | - | ⏭️ Skipped (not implemented) |
 
 ---
 

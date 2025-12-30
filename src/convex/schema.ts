@@ -105,6 +105,9 @@ export default defineSchema({
       v.literal("cancelled"),
       v.literal("past_due"),
     ),
+    // Storage usage counter (updated atomically on document create/delete)
+    // This avoids O(n) full table scans when checking storage quota
+    storageUsedBytes: v.optional(v.number()), // Optional for backwards compatibility with existing data
     updatedAt: v.number(),
   }).index("by_primaryContactId", ["primaryContactId"]),
 

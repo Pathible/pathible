@@ -1,0 +1,201 @@
+# Claude Code Commands
+
+Custom slash commands for code review, remediation, and PR workflows in Pathible.
+
+## Quick Start
+
+```bash
+# Create a pull request
+/create-pr
+
+# Run a code review
+/code-review
+
+# Create a fix plan from review findings
+/fix-plan
+
+# Fix issues from the plan
+/fix-issues
+```
+
+## What Are Slash Commands?
+
+Slash commands are custom prompts that expand into detailed instructions for Claude. They're defined as markdown files in this folder and invoked by typing `/command-name` in Claude Code.
+
+## Available Commands
+
+### `/create-pr`
+
+Creates a pull request with auto-generated description.
+
+**Usage:**
+
+```bash
+/create-pr                # Create PR with auto-generated title
+/create-pr --draft        # Create as draft PR
+/create-pr --base=develop # Target different branch
+```
+
+**What it does:**
+
+1. Runs pre-commit checks (`pnpm lint`, `pnpm build`)
+2. Analyzes commits to determine PR description
+3. Creates descriptive PR with summary and test plan
+4. Pushes branch and creates PR via GitHub CLI
+
+**Requirements:**
+
+- GitHub CLI installed and authenticated (`gh auth login`)
+
+---
+
+### `/code-review`
+
+Performs comprehensive code review using specialist agents in parallel.
+
+**Usage:**
+
+```bash
+/code-review              # Review all changes
+/code-review --no-tests   # Skip test file review
+```
+
+**What it does:**
+
+1. Gets the diff between your branch and `main`
+2. Selects relevant agents based on file types changed
+3. Launches agents in parallel (security, convex, frontend, performance, code quality, types, tests)
+4. Synthesizes findings into a single report with scores and action items
+
+**Agents used:**
+
+| Agent                  | Reviews                                              |
+| ---------------------- | ---------------------------------------------------- |
+| security-reviewer      | Better Auth patterns, data exposure, Convex security |
+| convex-architect       | Schema design, query/mutation patterns, validators   |
+| frontend-architect     | Next.js App Router, Server/Client Components         |
+| performance-reviewer   | Convex queries, React rendering, optimization        |
+| refactoring-specialist | Code smells, SOLID/DRY/KISS violations               |
+| typescript-pro         | Type safety, `any` usage, null handling              |
+| test-writer-fixer      | Cypress E2E test coverage and patterns               |
+
+---
+
+### `/fix-plan`
+
+Creates a prioritized remediation plan from code review findings.
+
+**Usage:**
+
+```bash
+/fix-plan                 # Create plan locally
+/fix-plan --post-to-pr    # Create plan and post checklist to PR
+```
+
+**What it does:**
+
+1. Gathers findings from the most recent code review
+2. Creates a detailed plan file at `.claude/plans/fix-plan-[branch]-[date].md`
+3. Orders issues by priority (critical → major) and dependencies
+4. Optionally posts a summary checklist to the GitHub PR
+
+**Output includes:**
+
+- Issue details with file:line references
+- Code snippets showing problem and fix
+- Dependency graph between issues
+- Progress tracking table
+
+---
+
+### `/fix-issues`
+
+Executes fixes from the current fix plan.
+
+**Usage:**
+
+```bash
+/fix-issues              # Fix all issues in priority order
+/fix-issues #1           # Fix only issue #1
+/fix-issues #1 #3        # Fix specific issues
+/fix-issues --critical   # Fix only critical issues
+/fix-issues --major      # Fix critical and major issues
+```
+
+**What it does:**
+
+1. Reads the most recent fix plan
+2. Respects dependencies between issues
+3. Applies fixes using Edit tool
+4. Runs typecheck to verify
+5. Updates plan file with completion status
+6. Provides summary report
+
+---
+
+## Recommended Workflow
+
+```
+┌─────────────────┐
+│  Make changes   │
+└────────┬────────┘
+         ▼
+┌─────────────────┐
+│  /code-review   │  ← Review your changes
+└────────┬────────┘
+         ▼
+┌─────────────────┐
+│   /fix-plan     │  ← Create remediation plan
+└────────┬────────┘
+         ▼
+┌─────────────────┐
+│  /fix-issues    │  ← Auto-fix issues
+└────────┬────────┘
+         ▼
+┌─────────────────┐
+│  /code-review   │  ← Verify fixes
+└────────┬────────┘
+         ▼
+┌─────────────────┐
+│   /create-pr    │  ← Create PR with auto-filled template
+└─────────────────┘
+```
+
+## Prerequisites
+
+**Required:** GitHub CLI (`gh`) for PR operations.
+
+```bash
+# Install on macOS
+brew install gh
+
+# Authenticate
+gh auth login
+```
+
+## Creating New Commands
+
+To create a new command, add a markdown file to this folder:
+
+```markdown
+# Command Name
+
+Description of what this command does.
+
+## Arguments
+
+$ARGUMENTS
+
+## Instructions
+
+### Step 1: ...
+```
+
+The filename becomes the command name: `my-command.md` → `/my-command`
+
+## Tips
+
+- **Chain commands**: Run `/code-review`, then `/fix-plan --post-to-pr` for full workflow
+- **Iterate**: Use `/fix-issues #1` to fix one issue at a time
+- **Skip tests**: Use `--no-tests` when reviewing non-test changes only
+- **Team visibility**: Use `--post-to-pr` to share fix plans on PRs

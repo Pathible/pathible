@@ -1,7 +1,14 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./auth";
+import {
+  checkFamilyMemberLimit,
+  checkFamilyUnitLimit,
+  requireActiveSubscription,
+  requireAuth,
+  requireHouseholdAccess,
+  requireHouseholdAdmin,
+} from "./auth";
 
 /**
  * Family Ecosystem - Family Unit & Member Management
@@ -335,6 +342,11 @@ export const getFamilyMember = query({
 
 /**
  * Create a new family unit
+ *
+ * SECURITY: Requires active subscription and respects family unit limits by tier
+ * - Foundations: 1 family unit (primary only)
+ * - Heritage: 3 family units
+ * - Legacy: Unlimited
  */
 export const createFamilyUnit = mutation({
   args: {
@@ -348,6 +360,10 @@ export const createFamilyUnit = mutation({
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription and check family unit limit
+    await requireActiveSubscription(ctx, args.householdId);
+    await checkFamilyUnitLimit(ctx, args.householdId, true);
 
     // Validate inputs
     if (!args.name.trim()) {
@@ -402,6 +418,8 @@ export const createFamilyUnit = mutation({
 
 /**
  * Update a family unit
+ *
+ * SECURITY: Requires active subscription
  */
 export const updateFamilyUnit = mutation({
   args: {
@@ -421,6 +439,9 @@ export const updateFamilyUnit = mutation({
     // Require admin role (owner or steward) for updates
     await requireHouseholdAdmin(ctx, familyUnit.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, familyUnit.householdId);
 
     // Build update object
     const updates: Partial<Doc<"familyUnits">> = {
@@ -474,6 +495,8 @@ export const updateFamilyUnit = mutation({
 
 /**
  * Delete a family unit and all its members
+ *
+ * SECURITY: Requires active subscription
  */
 export const deleteFamilyUnit = mutation({
   args: {
@@ -489,6 +512,9 @@ export const deleteFamilyUnit = mutation({
     // Require admin role (owner or steward) for deletion
     await requireHouseholdAdmin(ctx, familyUnit.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, familyUnit.householdId);
 
     // Get all members of this family unit
     const members = await ctx.db
@@ -522,6 +548,11 @@ export const deleteFamilyUnit = mutation({
 
 /**
  * Add a family member to a family unit
+ *
+ * SECURITY: Requires active subscription and respects member limits by tier
+ * - Foundations: 1 family member (viewer only)
+ * - Heritage: 3 family members
+ * - Legacy: Unlimited
  */
 export const addFamilyMember = mutation({
   args: {
@@ -546,6 +577,10 @@ export const addFamilyMember = mutation({
 
     await requireHouseholdAccess(ctx, familyUnit.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription and check member limit
+    await requireActiveSubscription(ctx, familyUnit.householdId);
+    await checkFamilyMemberLimit(ctx, familyUnit.householdId, true);
 
     // Validate inputs
     if (!args.firstName.trim()) {
@@ -624,6 +659,8 @@ export const addFamilyMember = mutation({
 
 /**
  * Update a family member
+ *
+ * SECURITY: Requires active subscription
  */
 export const updateFamilyMember = mutation({
   args: {
@@ -650,6 +687,9 @@ export const updateFamilyMember = mutation({
     // Require admin role (owner or steward) for updates
     await requireHouseholdAdmin(ctx, member.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, member.householdId);
 
     // Build update object
     const updates: Partial<Doc<"familyMembers">> = {
@@ -745,6 +785,8 @@ export const updateFamilyMember = mutation({
 
 /**
  * Remove a family member from a family unit
+ *
+ * SECURITY: Requires active subscription
  */
 export const removeFamilyMember = mutation({
   args: {
@@ -760,6 +802,9 @@ export const removeFamilyMember = mutation({
     // Require admin role (owner or steward) for removal
     await requireHouseholdAdmin(ctx, member.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, member.householdId);
 
     // Delete the family member
     await ctx.db.delete(args.memberId);
@@ -787,6 +832,8 @@ export const removeFamilyMember = mutation({
  * Creates the primary family unit if it doesn't exist
  * Adds the current user as a member if not already present
  * This should be called when a user visits the Family Ecosystem page
+ *
+ * SECURITY: Requires active subscription
  */
 export const ensureCurrentUserInPrimaryFamily = mutation({
   args: {
@@ -800,6 +847,9 @@ export const ensureCurrentUserInPrimaryFamily = mutation({
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
     const { user, profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, args.householdId);
 
     // Get or create the primary family unit using compound index
     let primaryUnit = await ctx.db
@@ -928,6 +978,11 @@ export const getPrimaryFamilyUnit = query({
 /**
  * Invite a member to the primary family unit
  * This is the main entry point for inviting family members from the Family Ecosystem
+ *
+ * SECURITY: Requires active subscription and respects member limits by tier
+ * - Foundations: 1 family member
+ * - Heritage: 3 family members
+ * - Legacy: Unlimited
  */
 export const inviteToPrimaryFamily = mutation({
   args: {
@@ -943,6 +998,10 @@ export const inviteToPrimaryFamily = mutation({
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription and check member limit
+    await requireActiveSubscription(ctx, args.householdId);
+    await checkFamilyMemberLimit(ctx, args.householdId, true);
 
     // Validate inputs
     if (!args.firstName.trim()) {
