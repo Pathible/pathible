@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+
+# Pre-commit hook for Pathible
+# Ensures code quality before commits
+
+echo "Running pre-commit checks..."
+
+# 1. Lint check (Biome + TypeScript)
+echo "Step 1/2: Running lint..."
+pnpm lint || {
+  echo "Lint failed. Please fix errors before committing."
+  exit 1
+}
+
+# 2. Build check (Next.js + Convex)
+echo "Step 2/2: Running build..."
+pnpm build || {
+  echo "Build failed. Please fix errors before committing."
+  exit 1
+}
+
+# Note: Cypress tests are run in CI, not pre-commit
+# To run tests locally: pnpm test:e2e or pnpm test:e2e:ci
+# Feature tests: npx cypress run --spec "cypress/e2e/features/**/*.cy.ts"
+
+echo "All pre-commit checks passed!"

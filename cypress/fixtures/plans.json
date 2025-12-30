@@ -1,0 +1,168 @@
+{
+  "plans": {
+    "foundations": {
+      "name": "Foundations",
+      "price": 9.99,
+      "features": [
+        "vault_storage_basic",
+        "vault_photos_videos",
+        "vault_folders",
+        "financial_overview",
+        "family_members_1",
+        "support_standard"
+      ]
+    },
+    "heritage": {
+      "name": "Heritage",
+      "price": 24.99,
+      "features": [
+        "vault_storage_basic",
+        "vault_storage_advanced",
+        "vault_photos_videos",
+        "vault_folders",
+        "vault_tags_collections",
+        "vault_voice_recordings",
+        "vault_guided_organization",
+        "financial_overview",
+        "financial_summaries",
+        "financial_insights_basic",
+        "family_members_1",
+        "family_members_3",
+        "family_profiles",
+        "family_messaging",
+        "wisdom_entries",
+        "support_standard",
+        "support_priority",
+        "early_access_some"
+      ]
+    },
+    "legacy": {
+      "name": "Legacy",
+      "price": 49.99,
+      "features": [
+        "vault_storage_basic",
+        "vault_storage_advanced",
+        "vault_storage_unlimited",
+        "vault_photos_videos",
+        "vault_folders",
+        "vault_tags_collections",
+        "vault_voice_recordings",
+        "vault_guided_organization",
+        "financial_overview",
+        "financial_summaries",
+        "financial_insights_basic",
+        "financial_insights_advanced",
+        "financial_trends",
+        "family_members_1",
+        "family_members_3",
+        "family_members_unlimited",
+        "family_profiles",
+        "family_relationships",
+        "family_messaging",
+        "legacy_questionnaires",
+        "legacy_story_templates",
+        "wisdom_entries",
+        "wisdom_shared_pages",
+        "support_standard",
+        "support_priority",
+        "support_concierge",
+        "early_access_some",
+        "early_access_all"
+      ]
+    }
+  },
+  "featuresByArea": {
+    "heritage_vault": [
+      "vault_storage_basic",
+      "vault_storage_advanced",
+      "vault_storage_unlimited",
+      "vault_photos_videos",
+      "vault_folders",
+      "vault_tags_collections",
+      "vault_voice_recordings",
+      "vault_guided_organization"
+    ],
+    "financial": [
+      "financial_overview",
+      "financial_summaries",
+      "financial_insights_basic",
+      "financial_insights_advanced",
+      "financial_trends"
+    ],
+    "family_network": [
+      "family_members_1",
+      "family_members_3",
+      "family_members_unlimited",
+      "family_profiles",
+      "family_relationships",
+      "family_messaging"
+    ],
+    "legacy_builder": [
+      "legacy_questionnaires",
+      "legacy_story_templates"
+    ],
+    "wisdom": [
+      "wisdom_entries",
+      "wisdom_shared_pages"
+    ],
+    "support": [
+      "support_standard",
+      "support_priority",
+      "support_concierge"
+    ],
+    "access": [
+      "early_access_some",
+      "early_access_all"
+    ]
+  },
+  "featureMetadata": {
+    "vault_storage_basic": {
+      "name": "Basic Storage (5GB)",
+      "requiredPlan": "foundations"
+    },
+    "vault_storage_advanced": {
+      "name": "Advanced Storage (25GB)",
+      "requiredPlan": "heritage"
+    },
+    "vault_storage_unlimited": {
+      "name": "Unlimited Storage",
+      "requiredPlan": "legacy"
+    },
+    "vault_tags_collections": {
+      "name": "Tags & Collections",
+      "requiredPlan": "heritage"
+    },
+    "vault_voice_recordings": {
+      "name": "Voice Recordings",
+      "requiredPlan": "heritage"
+    },
+    "financial_insights_basic": {
+      "name": "Financial Insights",
+      "requiredPlan": "heritage"
+    },
+    "financial_insights_advanced": {
+      "name": "Advanced Insights",
+      "requiredPlan": "legacy"
+    },
+    "financial_trends": {
+      "name": "Trend Analysis",
+      "requiredPlan": "legacy"
+    },
+    "family_relationships": {
+      "name": "Relationship Mapping",
+      "requiredPlan": "legacy"
+    },
+    "legacy_questionnaires": {
+      "name": "Legacy Questionnaires",
+      "requiredPlan": "legacy"
+    },
+    "legacy_story_templates": {
+      "name": "Story Templates",
+      "requiredPlan": "legacy"
+    },
+    "wisdom_shared_pages": {
+      "name": "Shared Wisdom Pages",
+      "requiredPlan": "legacy"
+    }
+  }
+}

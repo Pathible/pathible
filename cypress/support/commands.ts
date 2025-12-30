@@ -56,6 +56,36 @@ declare global {
        * @example cy.verifyNotAuthenticated()
        */
       verifyNotAuthenticated(): Chainable<void>;
+
+      /**
+       * Mock a user with a specific subscription plan
+       * @example cy.mockUserWithPlan('heritage')
+       */
+      mockUserWithPlan(plan: "foundations" | "heritage" | "legacy"): Chainable<void>;
+
+      /**
+       * Assert that a feature is accessible (visible)
+       * @example cy.assertFeatureAccessible('[data-testid="vault-tags-section"]')
+       */
+      assertFeatureAccessible(selector: string): Chainable<void>;
+
+      /**
+       * Assert that a feature is blocked (shows upgrade prompt)
+       * @example cy.assertFeatureBlocked('vault_tags_collections')
+       */
+      assertFeatureBlocked(featureSlug: string): Chainable<void>;
+
+      /**
+       * Assert upgrade prompt is shown for a specific feature
+       * @example cy.assertUpgradePromptShown('vault_tags_collections')
+       */
+      assertUpgradePromptShown(featureSlug: string): Chainable<void>;
+
+      /**
+       * Login and mock a specific plan for feature testing
+       * @example cy.loginWithPlan('heritage')
+       */
+      loginWithPlan(plan: "foundations" | "heritage" | "legacy"): Chainable<void>;
     }
   }
 }
@@ -273,6 +303,144 @@ Cypress.Commands.add("verifyNotAuthenticated", () => {
   // Try to visit dashboard - should redirect to login if not authenticated
   cy.visit("/dashboard");
   cy.url({ timeout: 5000 }).should("include", "/login");
+});
+
+/**
+ * Mock a user with a specific subscription plan
+ * Intercepts Clerk's auth to return a user with the specified plan features
+ */
+Cypress.Commands.add("mockUserWithPlan", (plan: "foundations" | "heritage" | "legacy") => {
+  // Define features for each plan
+  const planFeatures: Record<string, string[]> = {
+    foundations: [
+      "vault_storage_basic",
+      "vault_photos_videos",
+      "vault_folders",
+      "financial_overview",
+      "family_members_1",
+      "support_standard",
+    ],
+    heritage: [
+      "vault_storage_basic",
+      "vault_storage_advanced",
+      "vault_photos_videos",
+      "vault_folders",
+      "vault_tags_collections",
+      "vault_voice_recordings",
+      "vault_guided_organization",
+      "financial_overview",
+      "financial_summaries",
+      "financial_insights_basic",
+      "family_members_1",
+      "family_members_3",
+      "family_profiles",
+      "family_messaging",
+      "wisdom_entries",
+      "support_standard",
+      "support_priority",
+      "early_access_some",
+    ],
+    legacy: [
+      "vault_storage_basic",
+      "vault_storage_advanced",
+      "vault_storage_unlimited",
+      "vault_photos_videos",
+      "vault_folders",
+      "vault_tags_collections",
+      "vault_voice_recordings",
+      "vault_guided_organization",
+      "financial_overview",
+      "financial_summaries",
+      "financial_insights_basic",
+      "financial_insights_advanced",
+      "financial_trends",
+      "family_members_1",
+      "family_members_3",
+      "family_members_unlimited",
+      "family_profiles",
+      "family_relationships",
+      "family_messaging",
+      "legacy_questionnaires",
+      "legacy_story_templates",
+      "wisdom_entries",
+      "wisdom_shared_pages",
+      "support_standard",
+      "support_priority",
+      "support_concierge",
+      "early_access_some",
+      "early_access_all",
+    ],
+  };
+
+  const features = planFeatures[plan] || [];
+
+  // Mock Clerk's useAuth hook response
+  cy.window().then((win) => {
+    // Store the plan and features in window for the app to access
+    (win as unknown as { __TEST_PLAN__: string }).__TEST_PLAN__ = plan;
+    (win as unknown as { __TEST_FEATURES__: string[] }).__TEST_FEATURES__ = features;
+  });
+
+  // Intercept Clerk session to include plan
+  cy.intercept("GET", "**/v1/client?*", (req) => {
+    req.continue((res) => {
+      if (res.body?.response?.sessions?.[0]) {
+        // Add plan to session metadata
+        res.body.response.sessions[0].user = {
+          ...res.body.response.sessions[0].user,
+          publicMetadata: {
+            plan,
+            features,
+          },
+        };
+      }
+    });
+  }).as("clerkSession");
+
+  cy.log(`Mocked user with ${plan} plan (${features.length} features)`);
+});
+
+/**
+ * Assert that a feature element is accessible (visible)
+ */
+Cypress.Commands.add("assertFeatureAccessible", (selector: string) => {
+  cy.get(selector, { timeout: 10000 }).should("be.visible");
+});
+
+/**
+ * Assert that a feature is blocked (upgrade prompt shown)
+ */
+Cypress.Commands.add("assertFeatureBlocked", (featureSlug: string) => {
+  cy.get(`[data-testid="upgrade-prompt"][data-feature="${featureSlug}"]`, {
+    timeout: 10000,
+  }).should("be.visible");
+});
+
+/**
+ * Assert upgrade prompt is shown for a specific feature
+ */
+Cypress.Commands.add("assertUpgradePromptShown", (featureSlug: string) => {
+  cy.get('[data-testid="upgrade-prompt"]', { timeout: 10000 })
+    .should("be.visible")
+    .and("have.attr", "data-feature", featureSlug);
+});
+
+/**
+ * Login and mock a specific plan for feature testing
+ * Combines authentication with plan mocking
+ */
+Cypress.Commands.add("loginWithPlan", (plan: "foundations" | "heritage" | "legacy") => {
+  // First mock the OTP flow
+  cy.mockOtpFlow();
+
+  // Then set up the plan mocking
+  cy.mockUserWithPlan(plan);
+
+  // Now login
+  const email = Cypress.env("RETURNING_USER_EMAIL") || "returning@test.pathible.com";
+  const otp = Cypress.env("TEST_OTP") || "123456";
+
+  cy.loginWithOtp(email, otp);
 });
 
 // Export to make TypeScript happy

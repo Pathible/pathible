@@ -1,2 +1,6 @@
 onlyBuiltDependencies:
   - cypress
+  - "@clerk/shared"
+  - esbuild
+  - sharp
+  - unrs-resolver
