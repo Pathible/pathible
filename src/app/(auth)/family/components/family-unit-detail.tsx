@@ -76,14 +76,7 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
         lastName,
         email: email || undefined,
         phone: phone || undefined,
-        gender:
-          (gender as
-            | "male"
-            | "female"
-            | "non_binary"
-            | "prefer_not_to_say"
-            | "other"
-            | undefined) || undefined,
+        gender: (gender as "male" | "female" | "prefer_not_to_say" | undefined) || undefined,
         relationshipType: relationshipType as
           | "parent"
           | "child"
@@ -122,14 +115,7 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
         lastName,
         email: email || undefined,
         phone: phone || undefined,
-        gender:
-          (gender as
-            | "male"
-            | "female"
-            | "non_binary"
-            | "prefer_not_to_say"
-            | "other"
-            | undefined) || undefined,
+        gender: (gender as "male" | "female" | "prefer_not_to_say" | undefined) || undefined,
         relationshipType: relationshipType as
           | "parent"
           | "child"
@@ -438,9 +424,7 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
                 <SelectContent>
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="non_binary">Non-Binary</SelectItem>
                   <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -541,7 +525,6 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
                 <SelectContent>
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="non_binary">Non-Binary</SelectItem>
                   <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>

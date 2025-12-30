@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Next.js 16 application using the App Router with Convex as the backend and Better Auth for authentication. The project uses TypeScript, Tailwind CSS v4, and shadcn/ui components.
+This is a Next.js 16 application using the App Router with Convex as the backend and Clerk for authentication. The project uses TypeScript, Tailwind CSS v4, and shadcn/ui components.
 
 **See [`docs/TECH_STACK.md`](docs/TECH_STACK.md) for complete dependency versions and compatibility notes.**
 
@@ -39,50 +39,29 @@ The `pnpm dev` command automatically starts both the Next.js frontend and Convex
 
 ### Authentication Flow
 
-The application uses Better Auth integrated with Convex through `@convex-dev/better-auth`:
+The application uses Clerk for authentication, integrated with Convex via `convex/react-clerk`:
 
-1. **Client-side setup** (`src/lib/auth-client.ts`): Creates the auth client with Convex and email OTP plugins
-2. **Server-side setup** (`src/lib/auth-server.ts`): Exports token retrieval for Next.js server components
-3. **Convex integration** (`src/convex/auth.ts`): Creates the Better Auth instance with Convex adapter and email OTP
-4. **HTTP routes** (`src/convex/http.ts`): Registers auth routes with Convex
-5. **Next.js API routes** (`src/app/api/auth/[...all]/route.ts`): Handles auth requests from Next.js
-6. **Provider wrapper** (`src/app/ConvexClientProvider.tsx`): Wraps the app with ConvexBetterAuthProvider
+1. **Provider wrapper** (`src/app/ConvexClientProvider.tsx`): Wraps the app with `ClerkProvider` and `ConvexProviderWithClerk`
+2. **Server-side auth** (`src/lib/auth-session.ts`): Uses `@clerk/nextjs/server` for server-side session checks
+3. **Convex integration** (`src/convex/auth.ts`): Authentication helpers that validate Clerk JWTs via `ctx.auth.getUserIdentity()`
 
-The auth configuration uses **email OTP (One-Time Password)** authentication:
+**How Clerk + Convex works**:
 
-- Users enter their email address
-- A 6-digit OTP is sent to their email via Resend
-- OTP expires after 5 minutes
-- Maximum 3 verification attempts per OTP
-- No passwords required
+- Clerk handles all authentication (login, sessions, JWT tokens)
+- Convex validates the JWT and provides user identity via `ctx.auth.getUserIdentity()`
+- We look up the user's profile in Convex and enforce access control
 
-**Email Templates**: Three styled email templates (sign-in, email verification, password reset) in `src/lib/email-templates/`.
+**Environment Variables** (required):
 
-**Security Features**:
-
-- OTPs stored encrypted in database
-- Email verification sent automatically on sign-up
-- Rate limiting with attempt counters
-- 5-minute expiration window
-
-**Development Mode**: Without `RESEND_API_KEY`, OTPs are logged to console.
-**Production Mode**: Configure Resend API key and verify your sending domain.
-
-**Environment Variables**:
-
-- `RESEND_API_KEY` - Required for production email sending
-- `EMAIL_FROM_ADDRESS` - Sender email (must be verified in Resend)
-- `EMAIL_FROM_NAME` - Sender display name (default: "Pathible")
-
-**Client-side OTP API Methods**:
-
-- `authClient.emailOtp.sendVerificationOtp({ email, type: "sign-in" })` - Request OTP to be sent to email
-- `authClient.emailOtp.verifyEmail({ email, otp })` - Verify the OTP code
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk publishable key
+- `CLERK_SECRET_KEY` - Clerk secret key
+- `CLERK_WEBHOOK_SECRET` - For Clerk webhooks (if used)
 
 **React Hooks**:
 
-- `useSession()` - Get current session state
-- Better Auth automatically handles session management
+- `useUser()` - Get current Clerk user (client-side)
+- `useAuth()` - Get Clerk auth state (client-side)
+- `useSession()` - Get Clerk session (client-side)
 
 ### Route Protection
 
@@ -109,26 +88,24 @@ Protected routes in the `(auth)` route group require authentication:
 
 **Client-Side Auth** (already configured):
 
-- `ConvexClientProvider` has `expectAuth: true` which pauses Convex queries until authenticated
-- Use `authClient` from `src/lib/auth-client.ts` for client-side authentication methods
-- Use Better Auth React hooks for session management in Client Components
+- `ConvexClientProvider` wraps the app with `ClerkProvider` and `ConvexProviderWithClerk`
+- Use Clerk React hooks (`useUser()`, `useAuth()`) for client-side authentication
 
 **Adding New Protected Routes**:
 
 1. Place route files inside `src/app/(auth)/` directory
 2. Authentication is automatically enforced by the layout
 3. Use `requireServerAuth()` in Server Components to get user data
-4. Use `useSession()` hook in Client Components to access session
+4. Use `useUser()` hook in Client Components to access current user
 
 ### Convex Backend
 
 Convex functions are located in `src/convex/`:
 
-- `convex.config.ts` - Convex app configuration with Better Auth plugin
-- `auth.config.ts` - Auth provider configuration (uses CONVEX_SITE_URL)
-- `auth.ts` - Better Auth setup with Convex adapter, email OTP, and Resend integration
-- `http.ts` - HTTP router for auth endpoints
-- `users.ts` - User-related mutations (e.g., updateUserPassword)
+- `auth.ts` - Authentication helpers that validate Clerk JWTs and enforce access control
+- `schema.ts` - Database schema definitions
+- `http.ts` - HTTP router for any custom endpoints
+- Various feature modules (vault.ts, households.ts, financial.ts, etc.)
 
 Convex generates types in `src/convex/_generated/` - do not edit these files directly.
 
@@ -138,14 +115,8 @@ Required environment variables (see `.env.local.example`):
 
 - `CONVEX_DEPLOYMENT` - Convex deployment identifier
 - `NEXT_PUBLIC_CONVEX_URL` - Public Convex URL for client
-- `NEXT_PUBLIC_CONVEX_SITE_URL` - Convex site URL (ends in .site)
-- `SITE_URL` - Your application URL (localhost in dev)
-
-Email configuration (optional in dev, required in production):
-
-- `RESEND_API_KEY` - Resend API key for email sending
-- `EMAIL_FROM_ADDRESS` - Email address to send from (e.g., noreply@pathible.com)
-- `EMAIL_FROM_NAME` - Display name for emails (e.g., Pathible)
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk publishable key
+- `CLERK_SECRET_KEY` - Clerk secret key
 
 ### UI Components
 
@@ -175,29 +146,27 @@ Tailwind CSS v4 with:
 
 ### Accessing Current User in Convex
 
-Use the `getCurrentUser` query from `src/convex/auth.ts`:
+Use `requireAuth` helper from `src/convex/auth.ts` in your mutations/queries:
 
 ```typescript
-import { getCurrentUser } from "./auth";
+import { requireAuth } from "./auth";
 
 // In your query/mutation
-const user = await ctx.runQuery(api.auth.getCurrentUser);
-```
-
-### Calling Better Auth APIs in Convex
-
-Use the `authComponent.getAuth` helper:
-
-```typescript
-import { authComponent, createAuth } from "./auth";
-
-const { auth, headers } = await authComponent.getAuth(createAuth, ctx);
-await auth.api.someAuthMethod({ body: {}, headers });
+const { user, profile } = await requireAuth(ctx);
+// user._id is the Clerk user ID
+// profile contains the Convex profile data
 ```
 
 ### Client-side Auth
 
-Use the `authClient` from `src/lib/auth-client.ts` with Better Auth React hooks.
+Use Clerk React hooks from `@clerk/nextjs`:
+
+```typescript
+import { useUser } from "@clerk/nextjs";
+
+// In a Client Component
+const { user, isLoaded } = useUser();
+```
 
 ### Server-side Auth in Pages
 
@@ -208,8 +177,8 @@ import { requireServerAuth, getServerSession } from "@/lib/auth-session";
 
 // In a Server Component that requires auth:
 export default async function MyPage() {
-  const { user, profile } = await requireServerAuth();
-  return <div>Hello {profile.firstName}</div>;
+  const { user } = await requireServerAuth();
+  return <div>Hello {user.firstName}</div>;
 }
 
 // In a Server Component that optionally uses auth:
@@ -230,7 +199,7 @@ export default async function MyPage() {
 - Validator guidelines for all Convex types
 - Schema design patterns and indexing conventions
 - Query best practices (avoid `filter`, use `withIndex`)
-- Authentication patterns with Better Auth
+- Authentication patterns with Clerk
 - Full-text search, pagination, and file storage examples
 - Real-world chat app implementation example
 

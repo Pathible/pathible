@@ -1,8 +1,24 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { mutation, query } from "./_generated/server";
-import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./auth";
+import { internalQuery, mutation, query } from "./_generated/server";
+import {
+  checkStorageQuota,
+  PLAN_LIMITS,
+  requireActiveSubscription,
+  requireAuth,
+  requireHouseholdAccess,
+  requireHouseholdAdmin,
+} from "./auth";
+import { logActivity } from "./shared/activity";
+import { formatBytesAsGB } from "./shared/constants";
+import {
+  checkDocumentAccess,
+  validateCategoryDescription,
+  validateCategoryName,
+  validateDocumentDescription,
+  validateDocumentName,
+} from "./vaultHelpers";
 
 /**
  * Heritage Vault - Secure Document Storage System
@@ -61,33 +77,6 @@ const categoryReturnValidator = v.object({
 // ============================================================================
 
 /**
- * Check if a user has access to a specific document based on access level
- */
-function checkDocumentAccess(
-  document: Doc<"vaultDocuments">,
-  profileId: Id<"profiles">,
-  membershipRole: string,
-): boolean {
-  // Check access level
-  switch (document.accessLevel) {
-    case "household":
-      // All household members have access
-      return true;
-
-    case "admins":
-      // Only owners and stewards have access
-      return membershipRole === "owner" || membershipRole === "steward";
-
-    case "custom":
-      // Check if user is in the shared list or is the uploader
-      return document.uploadedBy === profileId || document.sharedWithUsers.includes(profileId);
-
-    default:
-      return false;
-  }
-}
-
-/**
  * Get uploader name for a document
  * Returns "Unknown" for non-existent or soft-deleted profiles
  */
@@ -97,33 +86,146 @@ async function getUploaderName(ctx: QueryCtx, uploaderId: Id<"profiles">): Promi
   return `${uploader.firstName} ${uploader.lastName}`;
 }
 
+/**
+ * Update category document counts
+ * Increments or decrements the documentCount counter for each category
+ *
+ * @param ctx - Mutation context
+ * @param householdId - The household ID
+ * @param categoryNames - Array of category names to update
+ * @param delta - Amount to add (positive) or subtract (negative)
+ */
+async function updateCategoryCounters(
+  ctx: {
+    db: QueryCtx["db"] & {
+      patch: (id: Id<"vaultCategories">, updates: { documentCount: number }) => Promise<void>;
+    };
+  },
+  householdId: Id<"households">,
+  categoryNames: string[],
+  delta: number,
+): Promise<void> {
+  if (categoryNames.length === 0) return;
+
+  // Get all categories for this household
+  const categories = await ctx.db
+    .query("vaultCategories")
+    .withIndex("by_household", (q) => q.eq("householdId", householdId))
+    .collect();
+
+  const categoryMap = new Map(categories.map((category) => [category.name, category]));
+
+  for (const name of new Set(categoryNames)) {
+    const category = categoryMap.get(name);
+    if (!category) continue;
+    const currentCount = category.documentCount ?? 0;
+    const nextCount = Math.max(0, currentCount + delta);
+    if (nextCount === currentCount) continue;
+
+    await ctx.db.patch(category._id, {
+      documentCount: nextCount,
+    });
+
+    category.documentCount = nextCount;
+  }
+}
+
+/**
+ * Adjust the household storage usage counter atomically.
+ *
+ * Convex serializes mutations per document, so a read-modify-write sequence on the same household
+ * document is effectively atomic. Centralizing the logic here makes that assumption explicit.
+ */
+async function adjustStorageUsage(
+  ctx: {
+    db: QueryCtx["db"] & {
+      patch: (id: Id<"households">, updates: { storageUsedBytes: number }) => Promise<void>;
+    };
+  },
+  householdId: Id<"households">,
+  delta: number,
+): Promise<void> {
+  if (delta === 0) return;
+  const household = await ctx.db.get(householdId);
+  if (!household) return;
+  const currentStorage = household.storageUsedBytes ?? 0;
+  const nextValue = Math.max(0, currentStorage + delta);
+  await ctx.db.patch(householdId, { storageUsedBytes: nextValue });
+}
+
+/**
+ * Atomically adjust the vault document count counter on a household.
+ *
+ * @param ctx - Mutation context
+ * @param householdId - The household to update
+ * @param delta - Amount to change (positive for create, negative for delete)
+ */
+async function adjustDocumentCount(
+  ctx: {
+    db: QueryCtx["db"] & {
+      patch: (id: Id<"households">, updates: { vaultDocumentCount: number }) => Promise<void>;
+    };
+  },
+  householdId: Id<"households">,
+  delta: number,
+): Promise<void> {
+  if (delta === 0) return;
+  const household = await ctx.db.get(householdId);
+  if (!household) return;
+  const currentCount = household.vaultDocumentCount ?? 0;
+  const nextValue = Math.max(0, currentCount + delta);
+  await ctx.db.patch(householdId, { vaultDocumentCount: nextValue });
+}
+
 // ============================================================================
 // QUERIES
 // ============================================================================
 
+/** Default page size for document listings */
+const DEFAULT_PAGE_SIZE = 50;
+
+/** Maximum page size to prevent abuse */
+const MAX_PAGE_SIZE = 100;
+
 /**
- * List all documents in a household
+ * List documents in a household with pagination
  * Returns only documents the user has access to
+ *
+ * @param limit - Number of documents to return (default 50, max 100)
+ * @param cursor - Pagination cursor from previous response
  */
 export const list = query({
   args: {
     householdId: v.id("households"),
     category: v.optional(v.string()),
     searchQuery: v.optional(v.string()),
+    limit: v.optional(v.number()),
+    cursor: v.optional(v.string()),
   },
-  returns: v.array(documentReturnValidator),
+  returns: v.object({
+    documents: v.array(documentReturnValidator),
+    nextCursor: v.union(v.string(), v.null()),
+    hasMore: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const membership = await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
 
-    // Get all documents for this household
-    const documents = await ctx.db
+    // Clamp limit to safe bounds
+    const requestedLimit = args.limit ?? DEFAULT_PAGE_SIZE;
+    const limit = Math.min(Math.max(1, requestedLimit), MAX_PAGE_SIZE);
+
+    // Build query with pagination
+    const query = ctx.db
       .query("vaultDocuments")
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .collect();
+      .order("desc"); // Most recent first
+
+    // Apply cursor if provided (for pagination)
+    const paginatedResult = await query.paginate({ numItems: limit, cursor: args.cursor ?? null });
 
     // Filter by access permissions
-    const accessibleDocs = documents.filter((doc) =>
+    const accessibleDocs = paginatedResult.page.filter((doc) =>
       checkDocumentAccess(doc, profile._id, membership.role),
     );
 
@@ -136,23 +238,36 @@ export const list = query({
 
     // Apply search filter
     if (args.searchQuery) {
-      const query = args.searchQuery.toLowerCase();
+      const searchQuery = args.searchQuery.toLowerCase();
       filteredDocs = filteredDocs.filter(
         (doc) =>
-          doc.name.toLowerCase().includes(query) || doc.description?.toLowerCase().includes(query),
+          doc.name.toLowerCase().includes(searchQuery) ||
+          doc.description?.toLowerCase().includes(searchQuery),
       );
     }
 
-    // Build response with uploader info
-    // Note: URLs are generated on-demand via vaultActions.generateDownloadUrl for security
-    const docsWithDetails = await Promise.all(
-      filteredDocs.map(async (doc) => ({
-        ...doc,
-        uploaderName: await getUploaderName(ctx, doc.uploadedBy),
-      })),
-    );
+    // Batch fetch uploader names to avoid N+1
+    const uploaderIds = [...new Set(filteredDocs.map((doc) => doc.uploadedBy))];
+    const uploaderProfiles = await Promise.all(uploaderIds.map((id) => ctx.db.get(id)));
+    const uploaderNameMap = new Map<string, string>();
+    for (let i = 0; i < uploaderIds.length; i++) {
+      const uploader = uploaderProfiles[i];
+      const name =
+        uploader && !uploader.deletedAt ? `${uploader.firstName} ${uploader.lastName}` : "Unknown";
+      uploaderNameMap.set(uploaderIds[i], name);
+    }
 
-    return docsWithDetails;
+    // Build response with uploader info
+    const docsWithDetails = filteredDocs.map((doc) => ({
+      ...doc,
+      uploaderName: uploaderNameMap.get(doc.uploadedBy) ?? "Unknown",
+    }));
+
+    return {
+      documents: docsWithDetails,
+      nextCursor: paginatedResult.continueCursor,
+      hasMore: !paginatedResult.isDone,
+    };
   },
 });
 
@@ -193,7 +308,7 @@ export const get = query({
 
 /**
  * List all categories for a household
- * Includes document count for each category
+ * Includes document count for each category (O(1) using pre-computed counter)
  */
 export const listCategories = query({
   args: {
@@ -208,16 +323,10 @@ export const listCategories = query({
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
       .collect();
 
-    // Get all documents to count usage
-    const documents = await ctx.db
-      .query("vaultDocuments")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .collect();
-
-    // Count documents per category
+    // Use pre-computed counter (defaults to 0 for backwards compatibility)
     const categoriesWithCounts = categories.map((category) => ({
       ...category,
-      documentCount: documents.filter((doc) => doc.categories.includes(category.name)).length,
+      documentCount: category.documentCount ?? 0,
     }));
 
     return categoriesWithCounts;
@@ -226,6 +335,19 @@ export const listCategories = query({
 
 /**
  * Get statistics for the vault
+ *
+ * Uses pre-computed counters where possible for O(1) performance.
+ * Falls back to calculating from documents for legacy data where counters
+ * haven't been initialized yet.
+ *
+ * - totalDocuments: Uses household.vaultDocumentCount counter (or calculates if not set)
+ * - totalSize: Uses household.storageUsedBytes counter (or calculates if not set)
+ * - totalCategories: Count from categories query
+ * - recentUploads: Requires iteration (could be optimized with by_household_and_creationTime index)
+ *
+ * Note: For users with restricted access (non-admin viewing admin-only docs),
+ * the counts reflect ALL household documents, not just accessible ones.
+ * This is intentional for displaying overall vault statistics.
  */
 export const getStats = query({
   args: {
@@ -238,33 +360,53 @@ export const getStats = query({
     recentUploads: v.number(),
   }),
   handler: async (ctx, args) => {
-    const membership = await requireHouseholdAccess(ctx, args.householdId);
-    const { profile } = await requireAuth(ctx);
+    await requireHouseholdAccess(ctx, args.householdId);
 
-    const documents = await ctx.db
-      .query("vaultDocuments")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .collect();
+    // Get household for pre-computed counters
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
 
-    // Filter by access
-    const accessibleDocs = documents.filter((doc) =>
-      checkDocumentAccess(doc, profile._id, membership.role),
-    );
-
+    // Fetch categories count
     const categories = await ctx.db
       .query("vaultCategories")
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
       .collect();
 
-    // Count recent uploads (last 30 days)
+    // Fetch documents for recent uploads calculation
+    // Also used as fallback if counters haven't been initialized
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const recentDocs = accessibleDocs.filter((doc) => doc._creationTime >= thirtyDaysAgo);
+    const allDocs = await ctx.db
+      .query("vaultDocuments")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+
+    const recentUploads = allDocs.filter((doc) => doc._creationTime >= thirtyDaysAgo).length;
+
+    // Use pre-computed counters if available, otherwise calculate from documents
+    // This handles legacy data where counters weren't initialized
+    const hasCounters =
+      household.vaultDocumentCount !== undefined && household.storageUsedBytes !== undefined;
+
+    let totalDocuments: number;
+    let totalSize: number;
+
+    if (hasCounters) {
+      // Use pre-computed counters (O(1))
+      totalDocuments = household.vaultDocumentCount ?? 0;
+      totalSize = household.storageUsedBytes ?? 0;
+    } else {
+      // Calculate from documents (fallback for legacy data)
+      totalDocuments = allDocs.length;
+      totalSize = allDocs.reduce((sum, doc) => sum + doc.fileSize, 0);
+    }
 
     return {
-      totalDocuments: accessibleDocs.length,
-      totalSize: accessibleDocs.reduce((sum, doc) => sum + doc.fileSize, 0),
+      totalDocuments,
+      totalSize,
       totalCategories: categories.length,
-      recentUploads: recentDocs.length,
+      recentUploads,
     };
   },
 });
@@ -276,6 +418,9 @@ export const getStats = query({
 /**
  * Create document metadata after file upload to B2
  * Call this after uploading the file directly to Backblaze B2
+ *
+ * SECURITY: Defense in depth - also validates storage quota here
+ * even though it's checked in generateUploadUrl action
  */
 export const create = mutation({
   args: {
@@ -298,18 +443,12 @@ export const create = mutation({
     await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
 
-    // Validate inputs
-    if (!args.name.trim()) {
-      throw new Error("Document name is required");
-    }
+    // SECURITY: Verify active subscription and storage quota (defense in depth)
+    await checkStorageQuota(ctx, args.householdId, args.fileSize);
 
-    if (args.name.length > 255) {
-      throw new Error("Document name is too long (max 255 characters)");
-    }
-
-    if (args.description && args.description.length > 1000) {
-      throw new Error("Description is too long (max 1000 characters)");
-    }
+    // Validate inputs using shared helpers
+    const validatedName = validateDocumentName(args.name, true);
+    const validatedDescription = validateDocumentDescription(args.description);
 
     // Validate B2 file ID
     if (!args.b2FileId || !args.b2FileName) {
@@ -338,8 +477,8 @@ export const create = mutation({
     const documentId = await ctx.db.insert("vaultDocuments", {
       householdId: args.householdId,
       uploadedBy: profile._id,
-      name: args.name.trim(),
-      description: args.description?.trim(),
+      name: validatedName,
+      description: validatedDescription,
       // Backblaze B2 storage references (no Convex storage)
       b2FileId: args.b2FileId,
       b2FileName: args.b2FileName,
@@ -353,8 +492,16 @@ export const create = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    // Atomically increment counters on household
+    await adjustStorageUsage(ctx, args.householdId, args.fileSize);
+    await adjustDocumentCount(ctx, args.householdId, 1);
+
+    // Increment category document counters
+    if (args.categories.length > 0) {
+      await updateCategoryCounters(ctx, args.householdId, args.categories, 1);
+    }
+
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "document_uploaded",
@@ -370,6 +517,8 @@ export const create = mutation({
 /**
  * Update document metadata
  * Cannot change the file itself, only metadata
+ *
+ * SECURITY: Requires active subscription
  */
 export const update = mutation({
   args: {
@@ -390,6 +539,9 @@ export const update = mutation({
     const membership = await requireHouseholdAccess(ctx, document.householdId);
     const { profile } = await requireAuth(ctx);
 
+    // SECURITY: Require active subscription for modifications
+    await requireActiveSubscription(ctx, document.householdId);
+
     // Only admins or the uploader can edit
     const isAdmin = membership.role === "owner" || membership.role === "steward";
     const isUploader = document.uploadedBy === profile._id;
@@ -403,24 +555,29 @@ export const update = mutation({
       updatedAt: Date.now(),
     };
 
+    // Validate and apply name update using shared helper
     if (args.name !== undefined) {
-      if (!args.name.trim()) {
-        throw new Error("Document name cannot be empty");
-      }
-      if (args.name.length > 255) {
-        throw new Error("Document name is too long (max 255 characters)");
-      }
-      updates.name = args.name.trim();
+      updates.name = validateDocumentName(args.name, false);
     }
 
+    // Validate and apply description update using shared helper
     if (args.description !== undefined) {
-      if (args.description && args.description.length > 1000) {
-        throw new Error("Description is too long (max 1000 characters)");
-      }
-      updates.description = args.description?.trim();
+      updates.description = validateDocumentDescription(args.description);
     }
+
+    // Track category changes for counter updates
+    let removedCategories: string[] = [];
+    let addedCategories: string[] = [];
 
     if (args.categories !== undefined) {
+      const oldCategories = document.categories;
+      const newCategories = args.categories;
+
+      // Find categories that were removed
+      removedCategories = oldCategories.filter((c) => !newCategories.includes(c));
+      // Find categories that were added
+      addedCategories = newCategories.filter((c) => !oldCategories.includes(c));
+
       updates.categories = args.categories;
     }
 
@@ -450,8 +607,15 @@ export const update = mutation({
     // Update document
     await ctx.db.patch(args.documentId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    // Update category counters if categories changed
+    if (removedCategories.length > 0) {
+      await updateCategoryCounters(ctx, document.householdId, removedCategories, -1);
+    }
+    if (addedCategories.length > 0) {
+      await updateCategoryCounters(ctx, document.householdId, addedCategories, 1);
+    }
+
+    await logActivity(ctx, {
       householdId: document.householdId,
       userId: profile._id,
       actionType: "other",
@@ -468,6 +632,8 @@ export const update = mutation({
  * Delete a document
  * Removes metadata from Convex and file from B2
  * Note: B2 deletion happens via vaultActions.deleteFile
+ *
+ * SECURITY: Requires active subscription
  */
 export const remove = mutation({
   args: {
@@ -483,6 +649,9 @@ export const remove = mutation({
     const membership = await requireHouseholdAccess(ctx, document.householdId);
     const { profile } = await requireAuth(ctx);
 
+    // SECURITY: Require active subscription for modifications
+    await requireActiveSubscription(ctx, document.householdId);
+
     // Only admins or the uploader can delete
     const isAdmin = membership.role === "owner" || membership.role === "steward";
     const isUploader = document.uploadedBy === profile._id;
@@ -495,11 +664,19 @@ export const remove = mutation({
     // This mutation only deletes the database record
     // The client should call both: vault.remove() and vaultActions.deleteFile()
 
+    // Atomically decrement counters on household
+    await adjustStorageUsage(ctx, document.householdId, -document.fileSize);
+    await adjustDocumentCount(ctx, document.householdId, -1);
+
+    // Decrement category document counters
+    if (document.categories.length > 0) {
+      await updateCategoryCounters(ctx, document.householdId, document.categories, -1);
+    }
+
     // Delete the document record
     await ctx.db.delete(args.documentId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: document.householdId,
       userId: profile._id,
       actionType: "document_deleted",
@@ -519,6 +696,8 @@ export const remove = mutation({
 /**
  * Create a new category
  * Anyone in the household can create categories
+ *
+ * SECURITY: Requires active subscription
  */
 export const createCategory = mutation({
   args: {
@@ -531,27 +710,21 @@ export const createCategory = mutation({
     await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
 
-    // Validate inputs
-    if (!args.name.trim()) {
-      throw new Error("Category name is required");
-    }
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, args.householdId);
 
-    if (args.name.length > 50) {
-      throw new Error("Category name is too long (max 50 characters)");
-    }
+    // Validate inputs using shared helpers
+    const validatedName = validateCategoryName(args.name);
+    const validatedDescription = validateCategoryDescription(args.description);
 
-    if (args.description && args.description.length > 200) {
-      throw new Error("Description is too long (max 200 characters)");
-    }
-
-    // Check if category already exists
+    // Check if category already exists (case-insensitive)
     const existing = await ctx.db
       .query("vaultCategories")
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
       .collect();
 
     const duplicate = existing.find(
-      (cat) => cat.name.toLowerCase() === args.name.trim().toLowerCase(),
+      (cat) => cat.name.toLowerCase() === validatedName.toLowerCase(),
     );
 
     if (duplicate) {
@@ -561,16 +734,16 @@ export const createCategory = mutation({
     // Create category
     const categoryId = await ctx.db.insert("vaultCategories", {
       householdId: args.householdId,
-      name: args.name.trim(),
-      description: args.description?.trim(),
+      name: validatedName,
+      description: validatedDescription,
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: categoryId,
       description: `Created category: ${args.name}`,
     });
 
@@ -581,6 +754,13 @@ export const createCategory = mutation({
 /**
  * Update a category
  * Admins only
+ *
+ * SECURITY: Requires active subscription
+ *
+ * PERFORMANCE NOTE: Renaming a category requires updating all documents that use it.
+ * This is O(n) where n = documents in household. Convex doesn't support indexing on
+ * array elements, so a full scan is unavoidable without a schema change (junction table).
+ * For most households (< 1000 documents), this is acceptable.
  */
 export const updateCategory = mutation({
   args: {
@@ -598,26 +778,24 @@ export const updateCategory = mutation({
     await requireHouseholdAdmin(ctx, category.householdId);
     const { profile } = await requireAuth(ctx);
 
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, category.householdId);
+
     // Build update object
     const updates: Partial<Doc<"vaultCategories">> = {};
 
     if (args.name !== undefined) {
-      if (!args.name.trim()) {
-        throw new Error("Category name cannot be empty");
-      }
-      if (args.name.length > 50) {
-        throw new Error("Category name is too long (max 50 characters)");
-      }
+      // Validate name using shared helper
+      const newName = validateCategoryName(args.name);
 
-      // Check for duplicates
-      const existing = await ctx.db
+      // Check for duplicates (case-insensitive)
+      const existingCategories = await ctx.db
         .query("vaultCategories")
         .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
         .collect();
 
-      const duplicate = existing.find(
-        (cat) =>
-          cat._id !== args.categoryId && cat.name.toLowerCase() === args.name?.trim().toLowerCase(),
+      const duplicate = existingCategories.find(
+        (cat) => cat._id !== args.categoryId && cat.name.toLowerCase() === newName.toLowerCase(),
       );
 
       if (duplicate) {
@@ -625,40 +803,41 @@ export const updateCategory = mutation({
       }
 
       // Update all documents using the old category name
-      const documents = await ctx.db
-        .query("vaultDocuments")
-        .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
-        .collect();
-
+      // NOTE: O(n) scan - see function docs for explanation
       const oldName = category.name;
-      const newName = args.name.trim();
+      if (oldName !== newName) {
+        const documents = await ctx.db
+          .query("vaultDocuments")
+          .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
+          .collect();
 
-      for (const doc of documents) {
-        if (doc.categories.includes(oldName)) {
-          const updatedCategories = doc.categories.map((cat) => (cat === oldName ? newName : cat));
-          await ctx.db.patch(doc._id, { categories: updatedCategories });
+        for (const doc of documents) {
+          if (doc.categories.includes(oldName)) {
+            const updatedCategories = doc.categories.map((cat) =>
+              cat === oldName ? newName : cat,
+            );
+            await ctx.db.patch(doc._id, { categories: updatedCategories });
+          }
         }
       }
 
       updates.name = newName;
     }
 
+    // Validate description using shared helper
     if (args.description !== undefined) {
-      if (args.description && args.description.length > 200) {
-        throw new Error("Description is too long (max 200 characters)");
-      }
-      updates.description = args.description?.trim();
+      updates.description = validateCategoryDescription(args.description);
     }
 
     // Update category
     await ctx.db.patch(args.categoryId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: category.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.categoryId,
       description: `Updated category: ${updates.name || category.name}`,
     });
 
@@ -669,6 +848,13 @@ export const updateCategory = mutation({
 /**
  * Delete a category
  * Admins only - removes category from all documents
+ *
+ * SECURITY: Requires active subscription
+ *
+ * PERFORMANCE NOTE: Deleting a category requires updating all documents that use it.
+ * This is O(n) where n = documents in household. Convex doesn't support indexing on
+ * array elements, so a full scan is unavoidable without a schema change (junction table).
+ * For most households (< 1000 documents), this is acceptable.
  */
 export const deleteCategory = mutation({
   args: {
@@ -684,15 +870,20 @@ export const deleteCategory = mutation({
     await requireHouseholdAdmin(ctx, category.householdId);
     const { profile } = await requireAuth(ctx);
 
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, category.householdId);
+
     // Remove category from all documents
+    // NOTE: O(n) scan - see function docs for explanation
+    const categoryName = category.name;
     const documents = await ctx.db
       .query("vaultDocuments")
       .withIndex("by_household", (q) => q.eq("householdId", category.householdId))
       .collect();
 
     for (const doc of documents) {
-      if (doc.categories.includes(category.name)) {
-        const updatedCategories = doc.categories.filter((cat) => cat !== category.name);
+      if (doc.categories.includes(categoryName)) {
+        const updatedCategories = doc.categories.filter((cat) => cat !== categoryName);
         await ctx.db.patch(doc._id, { categories: updatedCategories });
       }
     }
@@ -700,13 +891,13 @@ export const deleteCategory = mutation({
     // Delete category
     await ctx.db.delete(args.categoryId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: category.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
-      description: `Deleted category: ${category.name}`,
+      entityId: args.categoryId,
+      description: `Deleted category: ${categoryName}`,
     });
 
     return null;
@@ -783,5 +974,208 @@ export const initializeDefaultCategories = mutation({
     }
 
     return created;
+  },
+});
+
+// ============================================================================
+// STORAGE MIGRATION & MAINTENANCE
+// ============================================================================
+
+/**
+ * Recalculate storage usage and document count for a household
+ *
+ * Use this to:
+ * 1. Initialize storageUsedBytes/vaultDocumentCount for existing households (migration)
+ * 2. Fix any counter drift due to bugs or failed transactions
+ *
+ * This performs a full table scan, so use sparingly.
+ */
+export const recalculateStorageUsage = mutation({
+  args: {
+    householdId: v.id("households"),
+  },
+  returns: v.object({
+    previousBytes: v.number(),
+    calculatedBytes: v.number(),
+    previousDocumentCount: v.number(),
+    documentCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    // Require admin access to recalculate storage
+    await requireHouseholdAdmin(ctx, args.householdId);
+
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
+
+    // Calculate actual storage usage and count from documents
+    const documents = await ctx.db
+      .query("vaultDocuments")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+
+    const calculatedBytes = documents.reduce((sum, doc) => sum + doc.fileSize, 0);
+    const previousBytes = household.storageUsedBytes ?? 0;
+    const previousDocumentCount = household.vaultDocumentCount ?? 0;
+
+    // Update both counters
+    await ctx.db.patch(args.householdId, {
+      storageUsedBytes: calculatedBytes,
+      vaultDocumentCount: documents.length,
+    });
+
+    return {
+      previousBytes,
+      calculatedBytes,
+      previousDocumentCount,
+      documentCount: documents.length,
+    };
+  },
+});
+
+/**
+ * Recalculate category document counts for a household
+ *
+ * Use this to:
+ * 1. Initialize documentCount for existing categories (migration)
+ * 2. Fix any counter drift due to bugs or failed transactions
+ *
+ * This performs a full table scan, so use sparingly.
+ */
+export const recalculateCategoryCounts = mutation({
+  args: {
+    householdId: v.id("households"),
+  },
+  returns: v.object({
+    categoriesUpdated: v.number(),
+    results: v.array(
+      v.object({
+        name: v.string(),
+        previousCount: v.number(),
+        calculatedCount: v.number(),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    // Require admin access to recalculate
+    await requireHouseholdAdmin(ctx, args.householdId);
+
+    // Get all categories
+    const categories = await ctx.db
+      .query("vaultCategories")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+
+    // Get all documents
+    const documents = await ctx.db
+      .query("vaultDocuments")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+
+    // Count documents per category
+    const results: { name: string; previousCount: number; calculatedCount: number }[] = [];
+
+    for (const category of categories) {
+      const calculatedCount = documents.filter((doc) =>
+        doc.categories.includes(category.name),
+      ).length;
+      const previousCount = category.documentCount ?? 0;
+
+      // Update the counter
+      await ctx.db.patch(category._id, {
+        documentCount: calculatedCount,
+      });
+
+      results.push({
+        name: category.name,
+        previousCount,
+        calculatedCount,
+      });
+    }
+
+    return {
+      categoriesUpdated: categories.length,
+      results,
+    };
+  },
+});
+
+// ============================================================================
+// INTERNAL QUERIES (for use by actions)
+// ============================================================================
+
+/**
+ * Internal query to check storage quota for actions
+ * Used by vaultActions.generateUploadUrl to verify quota before providing upload URL
+ *
+ * Uses pre-computed `storageUsedBytes` counter for O(1) performance.
+ *
+ * SECURITY NOTE: This query does NOT verify household membership.
+ * Callers MUST call requireHouseholdAccessInternal BEFORE calling this query
+ * to verify the user has access to the household.
+ *
+ * The query intentionally returns quota info without auth to support
+ * the pattern: check auth -> check quota -> proceed (used in vaultActions).
+ */
+export const checkStorageQuotaInternal = internalQuery({
+  args: {
+    householdId: v.id("households"),
+    additionalBytes: v.number(),
+  },
+  returns: v.object({
+    allowed: v.boolean(),
+    currentBytes: v.number(),
+    maxBytes: v.number(),
+    remainingBytes: v.number(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    // Get household and check subscription status
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      return {
+        allowed: false,
+        currentBytes: 0,
+        maxBytes: 0,
+        remainingBytes: 0,
+        error: "Household not found",
+      };
+    }
+
+    // Check subscription status
+    if (household.subscriptionStatus !== "active") {
+      return {
+        allowed: false,
+        currentBytes: 0,
+        maxBytes: 0,
+        remainingBytes: 0,
+        error: `Subscription is ${household.subscriptionStatus}. Please update your subscription to continue.`,
+      };
+    }
+
+    const limits = PLAN_LIMITS[household.subscriptionTier];
+
+    // Use pre-computed counter (defaults to 0 for backwards compatibility)
+    const currentBytes = household.storageUsedBytes ?? 0;
+    const remainingBytes = Math.max(0, limits.storageBytesMax - currentBytes);
+
+    // Check if additional bytes would exceed limit
+    if (currentBytes + args.additionalBytes > limits.storageBytesMax) {
+      return {
+        allowed: false,
+        currentBytes,
+        maxBytes: limits.storageBytesMax,
+        remainingBytes,
+        error: `Storage limit exceeded. Used: ${formatBytesAsGB(currentBytes)}GB of ${formatBytesAsGB(limits.storageBytesMax)}GB. Upgrade your plan for more storage.`,
+      };
+    }
+
+    return {
+      allowed: true,
+      currentBytes,
+      maxBytes: limits.storageBytesMax,
+      remainingBytes,
+    };
   },
 });

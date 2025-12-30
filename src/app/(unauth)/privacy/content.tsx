@@ -52,14 +52,17 @@ function Strong({ children }: { children: React.ReactNode }) {
 function BulletList({ items }: { items: (string | React.ReactNode)[] }) {
   return (
     <ul className="list-none space-y-3 mb-6 pl-0">
-      {items.map((item, index) => (
-        <li
-          key={index}
-          className="text-muted-foreground leading-relaxed text-base sm:text-lg pl-6 relative before:content-[''] before:absolute before:left-0 before:top-[0.6em] before:w-2 before:h-2 before:bg-pathible-sage/40 before:rounded-full"
-        >
-          {item}
-        </li>
-      ))}
+      {items.map((item, index) => {
+        const key = typeof item === "string" ? item : `bullet-${index}`;
+        return (
+          <li
+            key={key}
+            className="text-muted-foreground leading-relaxed text-base sm:text-lg pl-6 relative before:content-[''] before:absolute before:left-0 before:top-[0.6em] before:w-2 before:h-2 before:bg-pathible-sage/40 before:rounded-full"
+          >
+            {item}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -68,7 +71,7 @@ function ImportantNotice({ children }: { children: React.ReactNode }) {
   return (
     <div className="my-8 p-6 bg-amber-50 border border-amber-200 rounded-2xl">
       <div className="flex gap-4">
-        <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+        <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
         <div className="text-amber-900 font-medium">{children}</div>
       </div>
     </div>
@@ -76,34 +79,47 @@ function ImportantNotice({ children }: { children: React.ReactNode }) {
 }
 
 function DataTable({ headers, rows }: { headers: string[]; rows: (string | React.ReactNode)[][] }) {
+  const headerEntries = headers.map((header, index) => ({
+    id: `${header}-${index}`,
+    label: header,
+  }));
   return (
     <div className="my-8 overflow-x-auto rounded-xl border border-pathible-sage/20 shadow-sm">
       <table className="w-full text-left border-collapse">
         <thead className="bg-pathible-sand/60 border-b border-pathible-sage/20">
           <tr>
-            {headers.map((header, index) => (
+            {headerEntries.map((header) => (
               <th
-                key={index}
+                key={header.id}
                 className="px-4 py-3 font-crimson font-semibold text-foreground text-sm sm:text-base whitespace-nowrap"
               >
-                {header}
+                {header.label}
               </th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-pathible-sage/10">
-          {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="hover:bg-pathible-sand/30 transition-colors">
-              {row.map((cell, cellIndex) => (
-                <td
-                  key={cellIndex}
-                  className="px-4 py-3 text-muted-foreground text-sm sm:text-base"
-                >
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((row, rowIndex) => {
+            const rowKey =
+              row.map((cell) => (typeof cell === "string" ? cell : "")).join("|") ||
+              `row-${rowIndex}`;
+            return (
+              <tr key={rowKey} className="hover:bg-pathible-sand/30 transition-colors">
+                {row.map((cell, cellIndex) => {
+                  const cellKey =
+                    typeof cell === "string" ? `${rowKey}-${cell}` : `${rowKey}-${cellIndex}`;
+                  return (
+                    <td
+                      key={cellKey}
+                      className="px-4 py-3 text-muted-foreground text-sm sm:text-base"
+                    >
+                      {cell}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -190,7 +206,7 @@ export function PrivacyPolicyContent() {
             "Contact Information",
             "Dispute Resolution",
           ].map((item, index) => (
-            <li key={index}>
+            <li key={item}>
               <a
                 href={`#${item.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
                 className="text-pathible-forest hover:text-pathible-green-hover transition-colors"

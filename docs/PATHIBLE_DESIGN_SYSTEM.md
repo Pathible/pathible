@@ -55,10 +55,10 @@ For admin/dashboard interfaces:
 
 ```tsx
 // Available as Tailwind utilities
-font-inter     // Inter - UI text (default body)
-font-crimson   // Crimson Text - Headings (default h1-h6)
-font-sans      // Geist Sans - Alternative sans-serif
-font-mono      // Geist Mono - Code/monospace
+font - inter; // Inter - UI text (default body)
+font - crimson; // Crimson Text - Headings (default h1-h6)
+font - sans; // Geist Sans - Alternative sans-serif
+font - mono; // Geist Mono - Code/monospace
 ```
 
 ### Type Scale Utilities
@@ -92,6 +92,7 @@ font-mono      // Geist Mono - Code/monospace
 ```
 
 All buttons include:
+
 - Minimum 44px height for accessibility
 - Focus ring with gold accent
 - Smooth transitions
@@ -121,14 +122,11 @@ All buttons include:
 
 ```tsx
 // Styled input field with focus states
-<input
-  type="text"
-  className="input-field w-full"
-  placeholder="Enter text..."
-/>
+<input type="text" className="input-field w-full" placeholder="Enter text..." />
 ```
 
 Features:
+
 - 2px sage green border
 - Gold focus ring
 - Smooth transitions
@@ -155,14 +153,15 @@ Dark mode is implemented using the `.dark` class on parent elements:
 
 ```tsx
 // Next.js example with next-themes
-import { ThemeProvider } from 'next-themes'
+import { ThemeProvider } from "next-themes";
 
 <ThemeProvider attribute="class" defaultTheme="light">
   {children}
-</ThemeProvider>
+</ThemeProvider>;
 ```
 
 Dark mode colors automatically adjust:
+
 - Background becomes charcoal
 - Text becomes warm sand
 - Cards get darker tones
@@ -212,6 +211,7 @@ For navigation sidebars:
 ### Standard Spacing Scale
 
 Uses Tailwind's default spacing (rem-based):
+
 - `p-2` = 0.5rem (8px) - Tight
 - `p-4` = 1rem (16px) - Default small
 - `p-6` = 1.5rem (24px) - Medium (used in cards)
@@ -222,10 +222,10 @@ Uses Tailwind's default spacing (rem-based):
 
 ```tsx
 // Available radius utilities
-rounded-sm  // --radius-sm (calc(0.5rem - 4px))
-rounded-md  // --radius-md (calc(0.5rem - 2px))
-rounded-lg  // --radius-lg (0.5rem) - Default
-rounded-xl  // --radius-xl (calc(0.5rem + 4px))
+rounded - sm; // --radius-sm (calc(0.5rem - 4px))
+rounded - md; // --radius-md (calc(0.5rem - 2px))
+rounded - lg; // --radius-lg (0.5rem) - Default
+rounded - xl; // --radius-xl (calc(0.5rem + 4px))
 ```
 
 ## Best Practices
@@ -239,9 +239,9 @@ export function FeatureCard({ title, description, icon }) {
     <div className="dashboard-card">
       <div className="text-pathible-gold mb-4">{icon}</div>
       <h3 className="text-h3 text-pathible-forest mb-2">{title}</h3>
-      <p className="text-secondary text-muted-foreground">{description}</p>
+      <p className="text-muted-foreground">{description}</p>
     </div>
-  )
+  );
 }
 ```
 
@@ -281,6 +281,7 @@ export function FeatureCard({ title, description, icon }) {
 ### Transitions
 
 All interactive elements should have smooth transitions:
+
 - `transition-colors duration-200` - Color changes
 - `transition-all duration-200` - Multiple properties
 - `hover:-translate-y-0.5` - Subtle lift effect
@@ -292,11 +293,7 @@ The checkmark animation is available for success states:
 
 ```tsx
 <svg viewBox="0 0 100 100" className="w-16 h-16">
-  <path
-    className="checkmark"
-    d="M20,55 L40,75 L80,25"
-    fill="none"
-  />
+  <path className="checkmark" d="M20,55 L40,75 L80,25" fill="none" />
 </svg>
 ```
 
@@ -305,6 +302,7 @@ The checkmark animation is available for success states:
 ### Updated Files
 
 1. **`/Users/jimgibbs/Code/pathible/src/app/globals.css`**
+
    - Complete Tailwind v4 migration
    - All Pathible colors and tokens
    - Component classes

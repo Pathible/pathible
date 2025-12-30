@@ -55,17 +55,13 @@ export function getS3Config(): BackblazeS3Config {
   const secretAccessKey = process.env.B2_S3_SECRET_ACCESS_KEY;
   const bucketName = process.env.B2_S3_BUCKET_NAME;
 
-  // Log available env vars for debugging (without exposing values)
+  // Log available env vars for debugging (boolean flags only - no credentials or infrastructure details)
   console.log("[B2 S3 Config] Environment variables check:", {
-    hasEndpoint: !!endpoint,
-    hasRegion: !!region,
-    hasAccessKeyId: !!accessKeyId,
-    hasSecretAccessKey: !!secretAccessKey,
-    hasBucketName: !!bucketName,
-    endpoint: endpoint || "undefined",
-    region: region || "undefined",
-    accessKeyIdPrefix: accessKeyId ? `${accessKeyId.substring(0, 8)}...` : "undefined",
-    bucketName: bucketName || "undefined",
+    endpointConfigured: !!endpoint,
+    regionConfigured: !!region,
+    accessKeyIdConfigured: !!accessKeyId,
+    secretAccessKeyConfigured: !!secretAccessKey,
+    bucketNameConfigured: !!bucketName,
   });
 
   if (!endpoint) {
@@ -119,15 +115,12 @@ export function getBackblazeConfig(): BackblazeConfig {
   const bucketId = process.env.BACKBLAZE_BUCKET_ID;
   const bucketName = process.env.BACKBLAZE_BUCKET_NAME;
 
-  // Log available env vars for debugging (without exposing values)
+  // Log available env vars for debugging (boolean flags only - no credentials or infrastructure details)
   console.log("[B2 Config] Environment variables check:", {
-    hasKeyId: !!keyId,
-    hasApplicationKey: !!applicationKey,
-    hasBucketId: !!bucketId,
-    hasBucketName: !!bucketName,
-    keyIdPrefix: keyId ? `${keyId.substring(0, 8)}...` : "undefined",
-    bucketId: bucketId || "undefined",
-    bucketName: bucketName || "undefined",
+    keyIdConfigured: !!keyId,
+    applicationKeyConfigured: !!applicationKey,
+    bucketIdConfigured: !!bucketId,
+    bucketNameConfigured: !!bucketName,
   });
 
   if (!keyId) {

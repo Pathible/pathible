@@ -1,7 +1,16 @@
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./auth";
+import {
+  checkFamilyMemberLimit,
+  requireActiveSubscription,
+  requireAuth,
+  requireHouseholdAccess,
+  requireHouseholdAdmin,
+} from "./auth";
+import { logActivity } from "./shared/activity";
+import { incrementMemberCount } from "./shared/counters";
+import { EMAIL_REGEX } from "./shared/validators";
 
 /**
  * Household management functions
@@ -9,6 +18,10 @@ import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./au
  * Households are the primary organizational unit for families in Pathible.
  * Each household can have multiple members with different roles.
  */
+
+function countsTowardMemberLimit(membership: Doc<"householdMemberships">): boolean {
+  return membership.role !== "owner" && membership.status === "active";
+}
 
 // ============================================================================
 // QUERIES
@@ -23,84 +36,58 @@ export const get = query({
     householdId: v.id("households"),
   },
   returns: v.union(
-    v.array(
-      v.object({
-        _id: v.id("households"),
-        _creationTime: v.number(),
-        name: v.string(),
-        description: v.optional(v.string()),
-        imageUrl: v.optional(v.string()),
-        primaryContactId: v.id("profiles"),
-        subscriptionTier: v.union(
-          v.literal("foundations"),
-          v.literal("heritage"),
-          v.literal("legacy"),
-        ),
-        subscriptionStatus: v.union(
-          v.literal("active"),
-          v.literal("inactive"),
-          v.literal("cancelled"),
-          v.literal("past_due"),
-        ),
-        updatedAt: v.number(),
-        // Include the user's role in this household
-        userRole: v.union(
-          v.literal("owner"),
-          v.literal("steward"),
-          v.literal("viewer"),
-          v.literal("executor"),
-        ),
-        memberCount: v.number(),
-      }),
-    ),
+    v.object({
+      _id: v.id("households"),
+      _creationTime: v.number(),
+      name: v.string(),
+      description: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      primaryContactId: v.id("profiles"),
+      subscriptionTier: v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+      ),
+      subscriptionStatus: v.union(
+        v.literal("active"),
+        v.literal("inactive"),
+        v.literal("cancelled"),
+        v.literal("past_due"),
+      ),
+      updatedAt: v.number(),
+      // Include the user's role in this household
+      userRole: v.union(
+        v.literal("owner"),
+        v.literal("steward"),
+        v.literal("viewer"),
+        v.literal("executor"),
+      ),
+      memberCount: v.number(),
+    }),
     v.null(),
   ),
-  handler: async (ctx) => {
-    // Handle auth race condition: return null if auth token not yet synchronized
-    // This allows the frontend to show loading state until Convex auth is ready
-    let profile: Awaited<ReturnType<typeof requireAuth>>["profile"];
-    try {
-      const auth = await requireAuth(ctx);
-      profile = auth.profile;
-    } catch (err) {
-      console.error("Auth failed in households:list:", err);
-      // Return null to signal "auth not ready" - distinct from [] which means "no households"
+  handler: async (ctx, args) => {
+    // Get the specific household requested
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
       return null;
     }
 
-    // Get all active memberships for this user
-    const memberships = await ctx.db
-      .query("householdMemberships")
-      .withIndex("by_user", (q) => q.eq("userId", profile._id))
-      .collect();
+    // Verify the user has access to this household
+    let membership: Doc<"householdMemberships">;
+    try {
+      membership = await requireHouseholdAccess(ctx, args.householdId);
+    } catch {
+      // User is not a member of this household
+      return null;
+    }
 
-    const activeMemberships = memberships.filter((m) => m.status === "active");
-
-    // Get household details for each membership
-    const households = await Promise.all(
-      activeMemberships.map(async (membership) => {
-        const household = await ctx.db.get(membership.householdId);
-        if (!household) return null;
-
-        // Count active members
-        const allMemberships = await ctx.db
-          .query("householdMemberships")
-          .withIndex("by_household_and_status", (q) =>
-            q.eq("householdId", membership.householdId).eq("status", "active"),
-          )
-          .collect();
-
-        return {
-          ...household,
-          userRole: membership.role,
-          memberCount: allMemberships.length,
-        };
-      }),
-    );
-
-    // Filter out any null values and return with proper typing
-    type HouseholdWithDetails = NonNullable<(typeof households)[number]>;
-    return households.filter((h): h is HouseholdWithDetails => h !== null);
+    return {
+      ...household,
+      userRole: membership.role,
+      // Use pre-computed counter (O(1) instead of N+1 query)
+      memberCount: household.memberCount ?? 0,
+    };
   },
 });
 
@@ -174,18 +161,11 @@ export const list = query({
         const household = await ctx.db.get(membership.householdId);
         if (!household) return null;
 
-        // Count active members
-        const allMemberships = await ctx.db
-          .query("householdMemberships")
-          .withIndex("by_household_and_status", (q) =>
-            q.eq("householdId", membership.householdId).eq("status", "active"),
-          )
-          .collect();
-
         return {
           ...household,
           userRole: membership.role,
-          memberCount: allMemberships.length,
+          // Use pre-computed counter (O(1) instead of N+1 query)
+          memberCount: household.memberCount ?? 0,
         };
       }),
     );
@@ -373,6 +353,9 @@ export const create = mutation({
       primaryContactId: profile._id,
       subscriptionTier: "foundations",
       subscriptionStatus: "active",
+      storageUsedBytes: 0,
+      memberCount: 0,
+      familyUnitCount: 0,
       updatedAt: Date.now(),
     });
 
@@ -385,8 +368,7 @@ export const create = mutation({
       joinedAt: Date.now(),
     });
 
-    // Log the activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId,
       userId: profile._id,
       actionType: "other",
@@ -414,6 +396,9 @@ export const update = mutation({
   handler: async (ctx, args) => {
     await requireHouseholdAdmin(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription for modifications
+    await requireActiveSubscription(ctx, args.householdId);
 
     // Build update object with proper typing
     const updates: {
@@ -449,8 +434,7 @@ export const update = mutation({
     // Update the household
     await ctx.db.patch(args.householdId, updates);
 
-    // Log the activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
@@ -480,9 +464,12 @@ export const inviteMember = mutation({
     await requireHouseholdAdmin(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
 
+    // SECURITY: Require active subscription and check member limit before inviting
+    await requireActiveSubscription(ctx, args.householdId);
+    await checkFamilyMemberLimit(ctx, args.householdId, true);
+
     // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(args.email)) {
+    if (!EMAIL_REGEX.test(args.email)) {
       throw new Error("Invalid email address");
     }
 
@@ -490,20 +477,19 @@ export const inviteMember = mutation({
     // Better Auth manages its own tables. The existing membership check will
     // happen when they accept the invitation.
 
-    // Check for pending invitation by email and household
+    // Check for pending invitation by email and household using compound index
     const pendingInvitation = await ctx.db
       .query("householdInvitations")
-      .withIndex("by_email", (q) => q.eq("email", args.email.toLowerCase()))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("householdId"), args.householdId),
-          q.eq(q.field("status"), "pending"),
-          q.gt(q.field("expiresAt"), Date.now()),
-        ),
+      .withIndex("by_household_email_status", (q) =>
+        q
+          .eq("householdId", args.householdId)
+          .eq("email", args.email.toLowerCase())
+          .eq("status", "pending"),
       )
-      .unique();
+      .first();
 
-    if (pendingInvitation) {
+    // Check if there's a valid (non-expired) pending invitation
+    if (pendingInvitation && pendingInvitation.expiresAt > Date.now()) {
       throw new Error("An invitation is already pending for this email");
     }
 
@@ -522,8 +508,7 @@ export const inviteMember = mutation({
       expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // Log the activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "member_invited",
@@ -591,8 +576,17 @@ export const acceptInvitation = mutation({
 
     // Create or update membership
     let membershipId: Id<"householdMemberships">;
+    let shouldIncrement = false;
+
     if (existingMembership) {
-      // Reactivate existing membership
+      const wasCounted = countsTowardMemberLimit(existingMembership);
+      const nextMembership = {
+        ...existingMembership,
+        role: invitation.role,
+        relationship: invitation.relationship,
+        status: "active" as const,
+      };
+
       await ctx.db.patch(existingMembership._id, {
         role: invitation.role,
         relationship: invitation.relationship,
@@ -600,6 +594,7 @@ export const acceptInvitation = mutation({
         joinedAt: Date.now(),
       });
       membershipId = existingMembership._id;
+      shouldIncrement = !wasCounted && countsTowardMemberLimit(nextMembership);
     } else {
       // Create new membership
       membershipId = await ctx.db.insert("householdMemberships", {
@@ -610,13 +605,18 @@ export const acceptInvitation = mutation({
         status: "active",
         joinedAt: Date.now(),
       });
+      // Invitations never create owner roles, so they always count toward the non-owner limit.
+      shouldIncrement = true;
+    }
+
+    if (shouldIncrement) {
+      await incrementMemberCount(ctx.db, invitation.householdId, 1);
     }
 
     // Mark invitation as accepted
     await ctx.db.patch(invitation._id, { status: "accepted" });
 
-    // Log the activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: invitation.householdId,
       userId: profile._id,
       actionType: "member_joined",
@@ -653,6 +653,9 @@ export const removeMember = mutation({
     const { profile } = await requireAuth(ctx);
     const membership = await requireHouseholdAccess(ctx, args.householdId);
 
+    // SECURITY: Require active subscription for member management
+    await requireActiveSubscription(ctx, args.householdId);
+
     // Get the membership being removed
     const targetMembership = await ctx.db.get(args.membershipId);
     if (!targetMembership) {
@@ -687,8 +690,14 @@ export const removeMember = mutation({
       }
     }
 
+    const wasCounted = countsTowardMemberLimit(targetMembership);
+
     // Mark membership as inactive
     await ctx.db.patch(args.membershipId, { status: "inactive" });
+
+    if (wasCounted) {
+      await incrementMemberCount(ctx.db, args.householdId, -1);
+    }
 
     // Log the activity
     const targetProfile = await ctx.db.get(targetMembership.userId);
@@ -700,7 +709,7 @@ export const removeMember = mutation({
         (targetProfile?.lastName || "") +
         " from household";
 
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
@@ -732,6 +741,9 @@ export const updateMemberRole = mutation({
   handler: async (ctx, args) => {
     const { profile } = await requireAuth(ctx);
     const membership = await requireHouseholdAccess(ctx, args.householdId);
+
+    // SECURITY: Require active subscription for role changes
+    await requireActiveSubscription(ctx, args.householdId);
 
     // Only owners can change roles
     if (membership.role !== "owner") {
@@ -768,8 +780,15 @@ export const updateMemberRole = mutation({
       }
     }
 
+    const wasCounted = countsTowardMemberLimit(targetMembership);
+    const willBeCounted = targetMembership.status === "active" && args.role !== "owner";
+
     // Update the role
     await ctx.db.patch(args.membershipId, { role: args.role });
+
+    if (wasCounted !== willBeCounted) {
+      await incrementMemberCount(ctx.db, args.householdId, willBeCounted ? 1 : -1);
+    }
 
     // Log the activity
     const targetProfile = await ctx.db.get(targetMembership.userId);
@@ -781,7 +800,7 @@ export const updateMemberRole = mutation({
       "'s role to " +
       args.role;
 
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",

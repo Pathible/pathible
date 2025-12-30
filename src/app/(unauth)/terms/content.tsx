@@ -1,4 +1,4 @@
-import { AlertTriangle, Mail } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 // Styled section components for consistent formatting
 function Section({
@@ -52,14 +52,17 @@ function Strong({ children }: { children: React.ReactNode }) {
 function BulletList({ items }: { items: (string | React.ReactNode)[] }) {
   return (
     <ul className="list-none space-y-3 mb-6 pl-0">
-      {items.map((item, index) => (
-        <li
-          key={index}
-          className="text-muted-foreground leading-relaxed text-base sm:text-lg pl-6 relative before:content-[''] before:absolute before:left-0 before:top-[0.6em] before:w-2 before:h-2 before:bg-pathible-sage/40 before:rounded-full"
-        >
-          {item}
-        </li>
-      ))}
+      {items.map((item, index) => {
+        const key = typeof item === "string" ? item : `bullet-${index}`;
+        return (
+          <li
+            key={key}
+            className="text-muted-foreground leading-relaxed text-base sm:text-lg pl-6 relative before:content-[''] before:absolute before:left-0 before:top-[0.6em] before:w-2 before:h-2 before:bg-pathible-sage/40 before:rounded-full"
+          >
+            {item}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -67,17 +70,20 @@ function BulletList({ items }: { items: (string | React.ReactNode)[] }) {
 function NumberedList({ items }: { items: (string | React.ReactNode)[] }) {
   return (
     <ol className="list-none space-y-3 mb-6 pl-0 counter-reset-list">
-      {items.map((item, index) => (
-        <li
-          key={index}
-          className="text-muted-foreground leading-relaxed text-base sm:text-lg pl-10 relative"
-        >
-          <span className="absolute left-0 top-0 w-7 h-7 rounded-full bg-pathible-forest/10 flex items-center justify-center text-sm font-medium text-pathible-forest">
-            {String.fromCharCode(97 + index)}
-          </span>
-          {item}
-        </li>
-      ))}
+      {items.map((item, index) => {
+        const key = typeof item === "string" ? item : `numbered-${index}`;
+        return (
+          <li
+            key={key}
+            className="text-muted-foreground leading-relaxed text-base sm:text-lg pl-10 relative"
+          >
+            <span className="absolute left-0 top-0 w-7 h-7 rounded-full bg-pathible-forest/10 flex items-center justify-center text-sm font-medium text-pathible-forest">
+              {String.fromCharCode(97 + index)}
+            </span>
+            {item}
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -98,7 +104,9 @@ function ImportantNotice({
     <div className={`my-8 p-6 border rounded-2xl ${styles[variant]}`}>
       <div className="flex gap-4">
         <AlertTriangle
-          className={`w-6 h-6 flex-shrink-0 mt-0.5 ${variant === "warning" ? "text-amber-600" : "text-pathible-forest"}`}
+          className={`w-6 h-6 shrink-0 mt-0.5 ${
+            variant === "warning" ? "text-amber-600" : "text-pathible-forest"
+          }`}
         />
         <div className="font-medium">{children}</div>
       </div>
@@ -159,7 +167,7 @@ export function TermsOfServiceContent() {
             "Contact Information",
             "Acknowledgment and Acceptance",
           ].map((item, index) => (
-            <li key={index}>
+            <li key={item}>
               <a
                 href={`#${item.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
                 className="text-pathible-forest hover:text-pathible-green-hover transition-colors"

@@ -47,7 +47,7 @@ export function VaultContent() {
 
   // Only fetch vault data once we have a household ID
   const stats = useQuery(api.vault.getStats, householdId ? { householdId } : "skip");
-  const documents = useQuery(
+  const documentsResponse = useQuery(
     api.vault.list,
     householdId
       ? {
@@ -57,6 +57,8 @@ export function VaultContent() {
         }
       : "skip",
   );
+  // Extract documents from paginated response (with type guard for safety)
+  const documents = Array.isArray(documentsResponse?.documents) ? documentsResponse.documents : [];
   const categories = useQuery(api.vault.listCategories, householdId ? { householdId } : "skip");
 
   // Initialize default categories mutation
@@ -141,7 +143,8 @@ export function VaultContent() {
     );
   }
 
-  const isLoading = stats === undefined || documents === undefined || categories === undefined;
+  const isLoading =
+    stats === undefined || documentsResponse === undefined || categories === undefined;
 
   return (
     <div className="space-y-6">
@@ -182,7 +185,7 @@ export function VaultContent() {
 
       {/* Documents List */}
       <DocumentList
-        documents={documents || []}
+        documents={documents}
         categories={categories || []}
         householdId={householdId}
         isLoading={isLoading}

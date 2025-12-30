@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import { requireAuth, requireHouseholdAccess } from "./auth";
+import { requireActiveSubscription, requireAuth, requireHouseholdAccess } from "./auth";
+import { logActivity } from "./shared/activity";
 
 /**
  * Financial Intelligence - Financial Account & Asset Management
@@ -463,6 +464,8 @@ export const getSuggestions = query({
 
 /**
  * Create a new financial account
+ *
+ * SECURITY: Requires active subscription
  */
 export const createAccount = mutation({
   args: {
@@ -478,6 +481,9 @@ export const createAccount = mutation({
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, args.householdId);
 
     // Validate inputs
     if (!args.name.trim()) {
@@ -512,12 +518,12 @@ export const createAccount = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: accountId,
       description: `Added financial account: ${args.name}`,
     });
 
@@ -527,6 +533,8 @@ export const createAccount = mutation({
 
 /**
  * Update an existing financial account
+ *
+ * SECURITY: Requires active subscription
  */
 export const updateAccount = mutation({
   args: {
@@ -547,6 +555,9 @@ export const updateAccount = mutation({
 
     await requireHouseholdAccess(ctx, account.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, account.householdId);
 
     // Build update object
     const updates: Partial<Doc<"financialAccounts">> = {
@@ -593,12 +604,12 @@ export const updateAccount = mutation({
     // Update account
     await ctx.db.patch(args.accountId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: account.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.accountId,
       description: `Updated financial account: ${updates.name || account.name}`,
     });
 
@@ -608,6 +619,8 @@ export const updateAccount = mutation({
 
 /**
  * Delete a financial account
+ *
+ * SECURITY: Requires active subscription
  */
 export const deleteAccount = mutation({
   args: {
@@ -623,15 +636,18 @@ export const deleteAccount = mutation({
     await requireHouseholdAccess(ctx, account.householdId);
     const { profile } = await requireAuth(ctx);
 
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, account.householdId);
+
     // Delete the account
     await ctx.db.delete(args.accountId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: account.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.accountId,
       description: `Deleted financial account: ${account.name}`,
     });
 
@@ -645,6 +661,8 @@ export const deleteAccount = mutation({
 
 /**
  * Create a new property
+ *
+ * SECURITY: Requires active subscription
  */
 export const createProperty = mutation({
   args: {
@@ -660,6 +678,9 @@ export const createProperty = mutation({
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, args.householdId);
 
     // Validate inputs
     if (!args.name.trim()) {
@@ -689,12 +710,12 @@ export const createProperty = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: propertyId,
       description: `Added property: ${args.name}`,
     });
 
@@ -704,6 +725,8 @@ export const createProperty = mutation({
 
 /**
  * Update an existing property
+ *
+ * SECURITY: Requires active subscription
  */
 export const updateProperty = mutation({
   args: {
@@ -724,6 +747,9 @@ export const updateProperty = mutation({
 
     await requireHouseholdAccess(ctx, property.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, property.householdId);
 
     // Build update object
     const updates: Partial<Doc<"properties">> = {
@@ -766,12 +792,12 @@ export const updateProperty = mutation({
     // Update property
     await ctx.db.patch(args.propertyId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: property.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.propertyId,
       description: `Updated property: ${updates.name || property.name}`,
     });
 
@@ -781,6 +807,8 @@ export const updateProperty = mutation({
 
 /**
  * Delete a property
+ *
+ * SECURITY: Requires active subscription
  */
 export const deleteProperty = mutation({
   args: {
@@ -793,18 +821,20 @@ export const deleteProperty = mutation({
       throw new Error("Property not found");
     }
 
+    // SECURITY: Verify access first to avoid leaking subscription status
     await requireHouseholdAccess(ctx, property.householdId);
+    await requireActiveSubscription(ctx, property.householdId);
     const { profile } = await requireAuth(ctx);
 
     // Delete the property
     await ctx.db.delete(args.propertyId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: property.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.propertyId,
       description: `Deleted property: ${property.name}`,
     });
 
@@ -818,6 +848,8 @@ export const deleteProperty = mutation({
 
 /**
  * Create a new insurance policy
+ *
+ * SECURITY: Requires active subscription
  */
 export const createInsurancePolicy = mutation({
   args: {
@@ -835,6 +867,9 @@ export const createInsurancePolicy = mutation({
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, args.householdId);
 
     // Validate inputs
     if (!args.provider.trim()) {
@@ -871,12 +906,12 @@ export const createInsurancePolicy = mutation({
       updatedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: policyId,
       description: `Added ${args.type} insurance policy from ${args.provider}`,
     });
 
@@ -886,6 +921,8 @@ export const createInsurancePolicy = mutation({
 
 /**
  * Update an existing insurance policy
+ *
+ * SECURITY: Requires active subscription
  */
 export const updateInsurancePolicy = mutation({
   args: {
@@ -907,6 +944,9 @@ export const updateInsurancePolicy = mutation({
     }
 
     await requireHouseholdAccess(ctx, policy.householdId);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, policy.householdId);
     const { profile } = await requireAuth(ctx);
 
     // Build update object
@@ -961,12 +1001,12 @@ export const updateInsurancePolicy = mutation({
     // Update policy
     await ctx.db.patch(args.policyId, updates);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: policy.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.policyId,
       description: `Updated ${updates.type || policy.type} insurance policy`,
     });
 
@@ -976,6 +1016,8 @@ export const updateInsurancePolicy = mutation({
 
 /**
  * Delete an insurance policy
+ *
+ * SECURITY: Requires active subscription
  */
 export const deleteInsurancePolicy = mutation({
   args: {
@@ -991,15 +1033,18 @@ export const deleteInsurancePolicy = mutation({
     await requireHouseholdAccess(ctx, policy.householdId);
     const { profile } = await requireAuth(ctx);
 
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, policy.householdId);
+
     // Delete the policy
     await ctx.db.delete(args.policyId);
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: policy.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.policyId,
       description: `Deleted ${policy.type} insurance policy from ${policy.provider}`,
     });
 
@@ -1014,6 +1059,8 @@ export const deleteInsurancePolicy = mutation({
 /**
  * Dismiss a suggestion
  * Marks the suggestion as dismissed and sets the dismissedAt timestamp
+ *
+ * SECURITY: Requires active subscription
  */
 export const dismissSuggestion = mutation({
   args: {
@@ -1028,6 +1075,9 @@ export const dismissSuggestion = mutation({
 
     await requireHouseholdAccess(ctx, suggestion.householdId);
     const { profile } = await requireAuth(ctx);
+
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, suggestion.householdId);
 
     // Verify the suggestion belongs to the current user
     if (suggestion.userId !== profile._id) {
@@ -1047,6 +1097,8 @@ export const dismissSuggestion = mutation({
 /**
  * Complete a suggestion
  * Marks the suggestion as completed and sets the completedAt timestamp
+ *
+ * SECURITY: Requires active subscription
  */
 export const completeSuggestion = mutation({
   args: {
@@ -1062,6 +1114,9 @@ export const completeSuggestion = mutation({
     await requireHouseholdAccess(ctx, suggestion.householdId);
     const { profile } = await requireAuth(ctx);
 
+    // SECURITY: Require active subscription
+    await requireActiveSubscription(ctx, suggestion.householdId);
+
     // Verify the suggestion belongs to the current user
     if (suggestion.userId !== profile._id) {
       throw new Error("Access denied: This suggestion does not belong to you");
@@ -1073,12 +1128,12 @@ export const completeSuggestion = mutation({
       completedAt: Date.now(),
     });
 
-    // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: suggestion.householdId,
       userId: profile._id,
       actionType: "other",
       entityType: "other",
+      entityId: args.suggestionId,
       description: "Completed a smart suggestion",
     });
 
