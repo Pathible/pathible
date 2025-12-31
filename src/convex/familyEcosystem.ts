@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
@@ -1110,6 +1111,7 @@ export const inviteToPrimaryFamily = mutation({
     phone: v.optional(v.string()),
     relationshipType: relationshipTypeValidator,
     gender: v.optional(genderValidator),
+    role: v.optional(v.union(v.literal("steward"), v.literal("viewer"), v.literal("executor"))),
   },
   returns: v.id("familyMembers"),
   handler: async (ctx, args) => {
@@ -1132,8 +1134,21 @@ export const inviteToPrimaryFamily = mutation({
     }
 
     // Validate email format
-    if (!EMAIL_REGEX.test(args.email)) {
+    const normalizedEmail = args.email.toLowerCase().trim();
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
       throw new Error("Invalid email address");
+    }
+
+    // Check for existing pending invitation to this household
+    const existingInvitation = await ctx.db
+      .query("householdInvitations")
+      .withIndex("by_household_email_status", (q) =>
+        q.eq("householdId", args.householdId).eq("email", normalizedEmail).eq("status", "pending"),
+      )
+      .first();
+
+    if (existingInvitation && existingInvitation.expiresAt > Date.now()) {
+      throw new Error("An invitation is already pending for this email");
     }
 
     // Get or create the primary family unit using helper
@@ -1145,14 +1160,17 @@ export const inviteToPrimaryFamily = mutation({
       .withIndex("by_familyUnit", (q) => q.eq("familyUnitId", primaryUnit._id))
       .collect();
 
-    const existingMember = existingMembers.find(
-      (m) => m.email?.toLowerCase() === args.email.toLowerCase(),
-    );
+    const existingMember = existingMembers.find((m) => m.email?.toLowerCase() === normalizedEmail);
 
     if (existingMember) {
       throw new Error("A member with this email already exists in your family");
     }
 
+    // Generate unique invitation token
+    const token = crypto.randomUUID();
+    const householdRole = args.role ?? "viewer";
+
+    // Create the family member with pending_invite status
     const memberId = await createFamilyMemberInternal(ctx, {
       familyUnitId: primaryUnit._id,
       householdId: args.householdId,
@@ -1160,14 +1178,32 @@ export const inviteToPrimaryFamily = mutation({
       member: {
         firstName: args.firstName.trim(),
         lastName: args.lastName.trim(),
-        email: args.email.toLowerCase().trim(),
+        email: normalizedEmail,
         phone: args.phone?.trim(),
         gender: args.gender,
         relationshipType: args.relationshipType,
         roles: [],
+        status: "pending_invite",
       },
       activityDescription: `Invited ${args.firstName} ${args.lastName} to primary family`,
       actionType: "member_invited",
+    });
+
+    // Create the household invitation record
+    const invitationId = await ctx.db.insert("householdInvitations", {
+      householdId: args.householdId,
+      email: normalizedEmail,
+      invitedBy: profile._id,
+      relationship: args.relationshipType,
+      role: householdRole,
+      token,
+      status: "pending",
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Schedule invitation email (non-blocking)
+    await ctx.scheduler.runAfter(0, internal.onboarding.sendInvitationEmail, {
+      invitationId,
     });
 
     return memberId;
