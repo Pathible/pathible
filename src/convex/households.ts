@@ -133,6 +133,7 @@ export const list = query({
         memberCount: v.number(),
         familyUnitCount: v.optional(v.number()),
         storageUsedBytes: v.optional(v.number()),
+        vaultDocumentCount: v.optional(v.number()),
       }),
     ),
     v.null(),
