@@ -267,7 +267,7 @@ export function TourSelectionMode({ isActive, onSelect, onClose }: TourSelection
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -100, opacity: 0 }}
-        className="fixed top-0 left-0 right-0 z-[10001] bg-primary text-primary-foreground shadow-lg"
+        className="fixed top-0 left-0 right-0 z-10001 bg-primary text-primary-foreground shadow-lg"
       >
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -311,8 +311,8 @@ export function TourSelectionMode({ isActive, onSelect, onClose }: TourSelection
             animate={{ opacity: 1 }}
             className={`fixed pointer-events-none rounded transition-all duration-150 ${
               isHovered
-                ? "ring-2 ring-primary ring-offset-2 bg-primary/20 z-[10000]"
-                : "ring-1 ring-primary/30 bg-primary/5 z-[9999]"
+                ? "ring-2 ring-primary ring-offset-2 bg-primary/20 z-10000"
+                : "ring-1 ring-primary/30 bg-primary/5 z-9999"
             }`}
             style={{
               top: rect.top - 2,
@@ -331,7 +331,7 @@ export function TourSelectionMode({ isActive, onSelect, onClose }: TourSelection
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 5 }}
-            className="fixed z-[10002] bg-popover border border-border rounded-lg shadow-xl p-3 max-w-sm"
+            className="fixed z-10002 bg-popover border border-border rounded-lg shadow-xl p-3 max-w-sm"
             style={{
               top: hoveredInfo.rect.bottom + 8,
               left: Math.min(hoveredInfo.rect.left, window.innerWidth - 320),

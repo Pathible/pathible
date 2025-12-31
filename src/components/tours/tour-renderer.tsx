@@ -190,10 +190,14 @@ export function TourRenderer() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[9998] pointer-events-none"
+            className="fixed inset-0 z-9998 pointer-events-none"
             style={{
               background: targetRect
-                ? `radial-gradient(ellipse ${targetRect.width + 32}px ${targetRect.height + 32}px at ${targetRect.left + targetRect.width / 2}px ${targetRect.top + targetRect.height / 2}px, transparent 0%, rgba(0, 0, 0, 0.75) 100%)`
+                ? `radial-gradient(ellipse ${targetRect.width + 32}px ${
+                    targetRect.height + 32
+                  }px at ${targetRect.left + targetRect.width / 2}px ${
+                    targetRect.top + targetRect.height / 2
+                  }px, transparent 0%, rgba(0, 0, 0, 0.75) 100%)`
                 : "rgba(0, 0, 0, 0.75)",
             }}
           />
@@ -202,7 +206,7 @@ export function TourRenderer() {
           {/* biome-ignore lint/a11y/useKeyWithClickEvents: Backdrop overlay intentionally blocks clicks */}
           {/* biome-ignore lint/a11y/noStaticElementInteractions: Backdrop overlay intentionally blocks clicks */}
           <div
-            className="fixed inset-0 z-[9998]"
+            className="fixed inset-0 z-9998"
             onClick={(e) => {
               // Allow clicks on the target element
               if (targetElement?.contains(e.target as Node)) {
@@ -221,7 +225,7 @@ export function TourRenderer() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="fixed z-[9999] pointer-events-none rounded-lg ring-4 ring-primary ring-offset-4 ring-offset-background"
+              className="fixed z-9999 pointer-events-none rounded-lg ring-4 ring-primary ring-offset-4 ring-offset-background"
               style={{
                 top: targetRect.top - 4,
                 left: targetRect.left - 4,
@@ -239,7 +243,7 @@ export function TourRenderer() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed z-[10000] w-80 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden"
+            className="fixed z-10000 w-80 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden"
             style={tooltipPosition}
           >
             {/* Header with progress */}
