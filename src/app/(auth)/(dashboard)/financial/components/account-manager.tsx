@@ -1,9 +1,19 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { MoreVertical, Pencil, Plus, Trash, Wallet } from "lucide-react";
+import { Pencil, Plus, Trash2, Wallet } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,12 +31,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -58,6 +62,12 @@ interface AccountManagerProps {
 export function AccountManager({ accounts, householdId, isLoading }: AccountManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<{
+    id: Id<"financialAccounts">;
+    name: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     type: "checking" as Account["type"],
@@ -124,14 +134,24 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
     }
   };
 
-  const handleDelete = async (accountId: Id<"financialAccounts">) => {
-    if (!confirm("Are you sure you want to delete this account?")) return;
+  const openDeleteConfirm = (accountId: Id<"financialAccounts">, accountName: string) => {
+    setAccountToDelete({ id: accountId, name: accountName });
+    setDeleteDialogOpen(true);
+  };
 
+  const handleDelete = async () => {
+    if (!accountToDelete) return;
+
+    setIsDeleting(true);
     try {
-      await deleteAccount({ accountId });
+      await deleteAccount({ accountId: accountToDelete.id });
       toast.success("Account deleted successfully");
+      setDeleteDialogOpen(false);
+      setAccountToDelete(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete account");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -211,26 +231,28 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
                         <p className="font-semibold">{formatCurrency(account.balance)}</p>
                       </div>
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleOpenDialog(account)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(account._id)}
-                          className="text-destructive"
-                        >
-                          <Trash className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleOpenDialog(account)}
+                        title="Edit account"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => openDeleteConfirm(account._id, account.name)}
+                        title="Delete account"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -323,6 +345,27 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {accountToDelete?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

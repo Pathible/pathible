@@ -5,6 +5,16 @@ import { ArrowLeft, MessageCircle, Plus, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +63,11 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
   // Dialog states
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [showEditMemberDialog, setShowEditMemberDialog] = useState(false);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<{
+    id: Id<"familyMembers">;
+    name: string;
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form states
@@ -141,15 +156,25 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
     }
   };
 
-  const handleRemoveMember = async (memberId: Id<"familyMembers">) => {
-    if (!confirm("Are you sure you want to remove this member?")) return;
+  const openDeleteConfirm = (memberId: Id<"familyMembers">, memberName: string) => {
+    setMemberToDelete({ id: memberId, name: memberName });
+    setShowDeleteConfirmDialog(true);
+  };
 
+  const handleRemoveMember = async () => {
+    if (!memberToDelete) return;
+
+    setIsSubmitting(true);
     try {
-      await removeFamilyMember({ memberId });
+      await removeFamilyMember({ memberId: memberToDelete.id });
       toast.success("Member removed successfully");
+      setShowDeleteConfirmDialog(false);
+      setMemberToDelete(null);
     } catch (error) {
       console.error("Failed to remove member:", error);
       toast.error("Failed to remove member");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -260,7 +285,9 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
                         key={member._id}
                         member={member}
                         onEdit={() => openEditDialog(member)}
-                        onRemove={() => handleRemoveMember(member._id)}
+                        onRemove={() =>
+                          openDeleteConfirm(member._id, `${member.firstName} ${member.lastName}`)
+                        }
                       />
                     ))}
                   </div>
@@ -489,6 +516,29 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Family Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {memberToDelete?.name} from this family? This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveMember}
+              disabled={isSubmitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSubmitting ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

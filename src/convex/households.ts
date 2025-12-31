@@ -625,6 +625,26 @@ export const acceptInvitation = mutation({
     // Mark invitation as accepted
     await ctx.db.patch(invitation._id, { status: "accepted" });
 
+    // Link any pending family member record to this profile
+    const pendingFamilyMembers = await ctx.db
+      .query("familyMembers")
+      .withIndex("by_household_and_status", (q) =>
+        q.eq("householdId", invitation.householdId).eq("status", "pending_invite"),
+      )
+      .collect();
+
+    const matchingFamilyMember = pendingFamilyMembers.find(
+      (m) => m.email?.toLowerCase() === invitation.email.toLowerCase(),
+    );
+
+    if (matchingFamilyMember) {
+      await ctx.db.patch(matchingFamilyMember._id, {
+        profileId: profile._id,
+        status: "active",
+        updatedAt: Date.now(),
+      });
+    }
+
     await logActivity(ctx, {
       householdId: invitation.householdId,
       userId: profile._id,

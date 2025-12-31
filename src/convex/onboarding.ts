@@ -665,3 +665,37 @@ export const sendInvitationEmail = internalAction({
     return null;
   },
 });
+
+/**
+ * TEMPORARY: Resend emails for ALL pending invitations
+ * Remove after testing is complete
+ * Run from dashboard with empty args: {}
+ */
+export const resendPendingInvitationEmails = internalMutation({
+  args: {},
+  returns: v.object({
+    processed: v.number(),
+    invitations: v.array(v.string()),
+  }),
+  handler: async (ctx) => {
+    // Get all pending invitations across all households
+    const allInvitations = await ctx.db.query("householdInvitations").collect();
+    const pendingInvitations = allInvitations.filter((inv) => inv.status === "pending");
+
+    // Schedule email for each pending invitation that hasn't expired
+    const emails: string[] = [];
+    for (const invitation of pendingInvitations) {
+      if (invitation.expiresAt > Date.now()) {
+        await ctx.scheduler.runAfter(0, internal.onboarding.sendInvitationEmail, {
+          invitationId: invitation._id,
+        });
+        emails.push(invitation.email);
+      }
+    }
+
+    return {
+      processed: emails.length,
+      invitations: emails,
+    };
+  },
+});
