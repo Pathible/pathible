@@ -37,7 +37,6 @@ const deletedSchema = v.object({
   insurancePolicies: v.number(),
   userSuggestions: v.number(),
   notifications: v.number(),
-  subscriptions: v.number(),
   userRoles: v.number(),
 });
 
@@ -63,7 +62,6 @@ const emptyDeleted = {
   insurancePolicies: 0,
   userSuggestions: 0,
   notifications: 0,
-  subscriptions: 0,
   userRoles: 0,
 };
 
@@ -82,7 +80,7 @@ const emptyDeleted = {
  * - Legacy plans and key contacts
  * - Financial accounts, properties, insurance policies
  * - Smart suggestions and user suggestions
- * - Notifications and subscriptions
+ * - Notifications
  * - User roles
  *
  * Note: B2 files are NOT deleted here - they need separate cleanup
@@ -378,19 +376,6 @@ export const resetTestUser = mutation({
       for (const log of activityLogs) {
         await ctx.db.delete(log._id);
         deleted.activityLogs++;
-      }
-
-      // --- Subscriptions ---
-
-      // Delete subscriptions
-      const subscriptions = await ctx.db
-        .query("subscriptions")
-        .withIndex("by_household", (q) => q.eq("householdId", householdId))
-        .collect();
-
-      for (const subscription of subscriptions) {
-        await ctx.db.delete(subscription._id);
-        deleted.subscriptions++;
       }
 
       // --- Household Memberships & Invitations ---

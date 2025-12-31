@@ -67,6 +67,54 @@ export async function requireServerAuth() {
 }
 
 /**
+ * Check if the current user has admin role
+ *
+ * This function queries Convex to check the user's role in the userRoles table.
+ * Used by server-side code (layouts) to determine if admin-specific bypass logic applies.
+ *
+ * Returns false if:
+ * - User is not authenticated
+ * - Convex URL is not configured
+ * - Query fails (fail-closed for security - deny access on error)
+ * - User doesn't have admin role
+ */
+export async function getIsAdmin(): Promise<boolean> {
+  try {
+    // Get the Clerk auth token for Convex
+    const { getToken, userId } = await auth();
+
+    if (!userId) {
+      return false;
+    }
+
+    const token = await getToken({ template: "convex" });
+    if (!token) {
+      console.warn("[Auth] No Convex token available for admin check");
+      return false;
+    }
+
+    // Setup Convex HTTP client
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!convexUrl) {
+      console.error("[Auth] NEXT_PUBLIC_CONVEX_URL not configured");
+      return false;
+    }
+
+    const convexClient = new ConvexHttpClient(convexUrl);
+    convexClient.setAuth(token);
+
+    // Query user's role from Convex
+    const role = await convexClient.query(api.roles.getMyRole);
+
+    return role === "admin";
+  } catch (error) {
+    // Log error and fail closed - deny admin access on errors for security
+    console.error("[Auth] Failed to check admin status:", error);
+    return false;
+  }
+}
+
+/**
  * Onboarding status type returned from Convex
  */
 export interface OnboardingStatus {

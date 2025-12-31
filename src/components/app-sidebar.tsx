@@ -19,31 +19,37 @@ const navItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+    tourKey: "nav-dashboard",
   },
   {
     title: "Heritage Vault",
     href: "/vault",
     icon: Shield,
+    tourKey: "nav-vault",
   },
   {
     title: "Financial Intelligence",
     href: "/financial",
     icon: TrendingUp,
+    tourKey: "nav-financial",
   },
   {
     title: "Family Ecosystem",
     href: "/family",
     icon: Users,
+    tourKey: "nav-family",
   },
   {
     title: "Wisdom & Education",
     href: "/wisdom",
     icon: BookOpen,
+    tourKey: "nav-wisdom",
   },
   {
     title: "Legacy Planning",
     href: "/legacy",
     icon: FileText,
+    tourKey: "nav-legacy",
   },
 ];
 
@@ -64,7 +70,7 @@ export function AppSidebar() {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
                 return (
-                  <SidebarMenuItem key={item.href}>
+                  <SidebarMenuItem key={item.href} data-tour={item.tourKey}>
                     <SidebarMenuButton asChild isActive={isActive} className="px-2">
                       <Link href={item.href}>
                         <Icon className="h-4 w-4" />
