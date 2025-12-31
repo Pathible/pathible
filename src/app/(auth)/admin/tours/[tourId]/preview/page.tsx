@@ -100,8 +100,14 @@ function PreviewContent({ tourId }: PreviewContentProps) {
                   <div>
                     <p className="font-medium">{s.title}</p>
                     <p className="text-sm text-muted-foreground">
-                      Route: <code className="rounded bg-muted px-1">{s.route}</code> • Anchor:{" "}
-                      <code className="rounded bg-muted px-1">{s.anchorKey}</code>
+                      Route:{" "}
+                      <code className="rounded bg-zinc-200 px-1 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                        {s.route}
+                      </code>{" "}
+                      • Anchor:{" "}
+                      <code className="rounded bg-zinc-200 px-1 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                        {s.anchorKey}
+                      </code>
                     </p>
                   </div>
                   <Badge variant={s.enabled ? "default" : "secondary"}>
@@ -127,11 +133,15 @@ function PreviewContent({ tourId }: PreviewContentProps) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Route</p>
-                  <code className="rounded bg-muted px-2 py-1 text-sm">{step.route}</code>
+                  <code className="rounded bg-zinc-200 px-2 py-1 text-sm text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                    {step.route}
+                  </code>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Anchor Key</p>
-                  <code className="rounded bg-muted px-2 py-1 text-sm">{step.anchorKey}</code>
+                  <code className="rounded bg-zinc-200 px-2 py-1 text-sm text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                    {step.anchorKey}
+                  </code>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Status</p>
@@ -168,9 +178,11 @@ function PreviewContent({ tourId }: PreviewContentProps) {
                 <AlertTitle>How anchors work</AlertTitle>
                 <AlertDescription>
                   Tour steps anchor to elements using the{" "}
-                  <code className="rounded bg-muted px-1">data-tour</code> attribute. Make sure the
-                  target element has{" "}
-                  <code className="rounded bg-muted px-1">
+                  <code className="rounded bg-zinc-200 px-1 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                    data-tour
+                  </code>{" "}
+                  attribute. Make sure the target element has{" "}
+                  <code className="rounded bg-zinc-200 px-1 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
                     data-tour=&quot;{step.anchorKey}&quot;
                   </code>{" "}
                   on the page.
@@ -183,7 +195,11 @@ function PreviewContent({ tourId }: PreviewContentProps) {
                   {anchorStatus === "checking" ? "Opening..." : "Open Route to Test"}
                 </Button>
                 <p className="text-sm text-muted-foreground">
-                  Opens <code className="rounded bg-muted px-1">{step.route}</code> in a new tab
+                  Opens{" "}
+                  <code className="rounded bg-zinc-200 px-1 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                    {step.route}
+                  </code>{" "}
+                  in a new tab
                 </p>
               </div>
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { Archive, Compass, Edit, MoreHorizontal, Plus, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { Archive, Compass, MoreHorizontal, Plus, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -68,10 +68,12 @@ function generateKeyFromName(name: string): string {
 }
 
 export function ToursList() {
+  const router = useRouter();
   const tours = useQuery(api.tours.listAll);
   const createTour = useMutation(api.tours.create);
   const archiveTour = useMutation(api.tours.archive);
   const seedWelcomeTour = useMutation(api.tours.seedWelcomeTour);
+  const seedFeatureTours = useMutation(api.tours.seedFeatureTours);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -155,11 +157,28 @@ export function ToursList() {
     try {
       await seedWelcomeTour({});
       toast.success("Welcome Tour Created", {
-        description: "The Welcome Tour has been seeded with 6 steps and published.",
+        description: "The Welcome Tour has been seeded with 9 steps and published.",
       });
     } catch (error) {
       toast.error("Error", {
         description: error instanceof Error ? error.message : "Failed to seed Welcome Tour",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSeedFeatureTours = async () => {
+    setIsSubmitting(true);
+    try {
+      await seedFeatureTours({});
+      toast.success("Feature Tours Created", {
+        description:
+          "5 feature tours (Vault, Wisdom, Family, Financial, Legacy) have been created with 11 steps total.",
+      });
+    } catch (error) {
+      toast.error("Error", {
+        description: error instanceof Error ? error.message : "Failed to seed Feature Tours",
       });
     } finally {
       setIsSubmitting(false);
@@ -188,6 +207,10 @@ export function ToursList() {
           <Button variant="outline" onClick={handleSeedWelcomeTour} disabled={isSubmitting}>
             <Sparkles className="mr-2 h-4 w-4" />
             Seed Welcome Tour
+          </Button>
+          <Button variant="outline" onClick={handleSeedFeatureTours} disabled={isSubmitting}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Seed Feature Tours
           </Button>
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -235,10 +258,16 @@ export function ToursList() {
               </TableHeader>
               <TableBody>
                 {tours.map((tour) => (
-                  <TableRow key={tour._id}>
+                  <TableRow
+                    key={tour._id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => router.push(`/admin/tours/${tour._id}`)}
+                  >
                     <TableCell className="font-medium">{tour.name}</TableCell>
                     <TableCell>
-                      <code className="rounded bg-muted px-1.5 py-0.5 text-sm">{tour.key}</code>
+                      <code className="rounded bg-zinc-200 px-1.5 py-0.5 text-sm text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                        {tour.key}
+                      </code>
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(tour.status)}>{tour.status}</Badge>
@@ -247,31 +276,33 @@ export function ToursList() {
                     <TableCell>{tour.priority}</TableCell>
                     <TableCell>{formatDate(tour.updatedAt)}</TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/tours/${tour._id}`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          {tour.status !== "archived" && (
+                      {tour.status !== "archived" && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => openArchiveDialog(tour)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openArchiveDialog(tour);
+                              }}
                               className="text-destructive focus:text-destructive"
                             >
                               <Archive className="mr-2 h-4 w-4" />
                               Archive
                             </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
