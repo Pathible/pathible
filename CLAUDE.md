@@ -323,3 +323,45 @@ pnpm generate
 - `useSearchParams()` must be wrapped in `<Suspense>` for static pages
 - `usePathname()` and `useRouter()` require `"use client"` directive
 - Dynamic imports with `ssr: false` need special handling
+
+## Production Deployment
+
+### Pre-Deployment Verification
+
+Before deploying to production, run:
+
+```bash
+pnpm verify:prod
+```
+
+This checks that critical configuration is in place.
+
+### Required Configuration (Three Places Must Match)
+
+For Clerk + Convex authentication to work in production, these three configurations **must match exactly**:
+
+#### 1. Clerk Dashboard (JWT Templates → "convex")
+- **Issuer**: `https://clerk.pathible.com`
+- **Audience**: `convex`
+
+#### 2. Vercel Environment Variables
+| Variable | Value |
+|----------|-------|
+| `CONVEX_DEPLOY_KEY` | From Convex Dashboard → Settings → Deploy Key |
+| `NEXT_PUBLIC_CONVEX_URL` | `https://hushed-horse-302.convex.cloud` |
+| `CLERK_JWT_ISSUER_DOMAIN` | `https://clerk.pathible.com` |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | From Clerk production instance |
+| `CLERK_SECRET_KEY` | From Clerk production instance |
+
+#### 3. Convex Dashboard (Settings → Environment Variables)
+| Variable | Value |
+|----------|-------|
+| `CLERK_JWT_ISSUER_DOMAIN` | `https://clerk.pathible.com` |
+
+### Common Production Issues
+
+**"NoAuthProvider" error**: The `CLERK_JWT_ISSUER_DOMAIN` doesn't match between Clerk, Vercel, and Convex. All three must be identical.
+
+**"Could not find public function"**: Convex functions weren't deployed. Ensure `build:vercel` uses `convex deploy` (not just `codegen`).
+
+**Redirect to accounts.pathible.com**: This is Clerk's Account Portal. Disable it in Clerk Dashboard → Account Portal, or configure middleware to redirect to custom sign-in pages.

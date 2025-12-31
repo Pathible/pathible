@@ -19,7 +19,8 @@
     "test:e2e:open": "cypress open",
     "test:e2e:ci": "cypress run --browser chrome --headless",
     "update-everything": "up --latest",
-    "prepare": "husky"
+    "prepare": "husky",
+    "verify:prod": "./scripts/verify-production.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.948.0",
