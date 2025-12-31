@@ -3,6 +3,14 @@
  *
  * Uses Clerk's clerkMiddleware to handle authentication.
  * See: https://clerk.com/docs/reference/nextjs/clerk-middleware
+ *
+ * Protection layers:
+ * 1. Middleware (this file) - Fast edge checks for auth & subscription
+ * 2. Layout (/app/(auth)/layout.tsx) - Server-side onboarding checks
+ *
+ * Note: Middleware cannot make Convex calls, so onboarding checks
+ * (which require querying the Convex database for profile/household)
+ * are done in the layout for protected routes.
  */
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { checkHasActivePlan } from "@/lib/subscription-plans";

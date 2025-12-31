@@ -661,25 +661,85 @@ export default defineSchema({
   activityLog: defineTable({
     householdId: v.id("households"),
     userId: v.id("profiles"),
+    // Module groups related features together for filtering
+    module: v.optional(
+      v.union(
+        v.literal("vault"),
+        v.literal("wisdom"),
+        v.literal("financial"),
+        v.literal("family"),
+        v.literal("legacy"),
+        v.literal("household"),
+        v.literal("suggestion"),
+      ),
+    ),
     actionType: v.union(
+      // Document actions
       v.literal("document_uploaded"),
       v.literal("document_viewed"),
+      v.literal("document_updated"),
       v.literal("document_deleted"),
+      // Wisdom actions
       v.literal("wisdom_created"),
       v.literal("wisdom_updated"),
+      v.literal("wisdom_deleted"),
+      // Letter actions
       v.literal("letter_created"),
+      // Household actions
+      v.literal("household_created"),
+      v.literal("household_updated"),
       v.literal("member_invited"),
       v.literal("member_joined"),
+      v.literal("member_removed"),
+      v.literal("member_role_updated"),
+      // Plan actions
       v.literal("plan_updated"),
+      // Financial actions
+      v.literal("asset_created"),
+      v.literal("asset_updated"),
+      v.literal("asset_deleted"),
+      v.literal("policy_created"),
+      v.literal("policy_updated"),
+      v.literal("policy_deleted"),
+      // Category actions
+      v.literal("category_created"),
+      v.literal("category_updated"),
+      v.literal("category_deleted"),
+      // Family ecosystem actions
+      v.literal("family_unit_created"),
+      v.literal("family_unit_updated"),
+      v.literal("family_unit_deleted"),
+      v.literal("family_member_created"),
+      v.literal("family_member_updated"),
+      v.literal("family_member_deleted"),
+      // Suggestion actions
+      v.literal("suggestion_completed"),
+      // Fallback
       v.literal("other"),
     ),
     entityType: v.optional(
       v.union(
+        // Vault entities
         v.literal("document"),
-        v.literal("wisdom"),
+        v.literal("category"),
+        // Wisdom entities
+        v.literal("wisdom_entry"),
+        v.literal("core_belief"),
+        v.literal("wisdom"), // Legacy value for backward compatibility
+        // Legacy entities
         v.literal("letter"),
         v.literal("plan"),
+        // Household entities
         v.literal("household"),
+        // Financial entities
+        v.literal("financial_account"),
+        v.literal("property"),
+        v.literal("insurance_policy"),
+        // Family entities
+        v.literal("family_unit"),
+        v.literal("family_member"),
+        // Other
+        v.literal("suggestion"),
         v.literal("other"),
       ),
     ),
@@ -687,7 +747,8 @@ export default defineSchema({
     description: v.string(),
   })
     .index("by_household", ["householdId"])
-    .index("by_user", ["userId"]),
+    .index("by_user", ["userId"])
+    .index("by_household_and_module", ["householdId", "module"]),
 
   /**
    * Notifications - user notifications

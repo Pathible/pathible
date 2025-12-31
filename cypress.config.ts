@@ -1,4 +1,9 @@
+import { clerkSetup } from "@clerk/testing/cypress";
 import { defineConfig } from "cypress";
+import dotenv from "dotenv";
+
+// Load environment variables from .env.test for E2E testing
+dotenv.config({ path: ".env.test" });
 
 export default defineConfig({
   e2e: {
@@ -13,8 +18,12 @@ export default defineConfig({
     requestTimeout: 10000,
     responseTimeout: 10000,
 
-    setupNodeEvents(on, config) {
-      // implement node event listeners here
+    async setupNodeEvents(on, config) {
+      // Set up Clerk testing tokens for E2E tests
+      // This bypasses bot detection and enables automated auth testing
+      const clerkConfig = await clerkSetup({ config });
+
+      // Additional task handlers
       on("task", {
         log(message) {
           console.log(message);
@@ -22,15 +31,16 @@ export default defineConfig({
         },
       });
 
-      return config;
+      return clerkConfig;
     },
 
     env: {
-      // Test OTP code that will be used in tests
-      TEST_OTP: "123456",
-      // Test user emails
-      NEW_USER_EMAIL: "newuser@test.pathible.com",
-      RETURNING_USER_EMAIL: "returning@test.pathible.com",
+      // Load from .env.test - Cypress automatically picks up CYPRESS_* prefixed vars
+      // IMPORTANT: Clerk requires +clerk_test subaddress for Testing Tokens
+      TEST_USER_EMAIL: process.env.CYPRESS_TEST_USER_EMAIL || "test+clerk_test@example.com",
+      // Clerk keys for testing (needed by @clerk/testing)
+      CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
     },
   },
 

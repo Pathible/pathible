@@ -146,7 +146,10 @@ export default function OnboardingPage() {
   const progressPercentage = (currentStep / totalSteps) * 100;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
+    <div
+      className="min-h-screen flex items-center justify-center bg-background px-4 py-8"
+      data-testid="onboarding-page"
+    >
       <div className="w-full max-w-2xl">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -160,9 +163,12 @@ export default function OnboardingPage() {
         </div>
 
         {/* Progress Bar */}
-        <div className="mb-8">
+        <div className="mb-8" data-testid="onboarding-progress">
           <Progress value={progressPercentage} className="h-2 mb-2" />
-          <p className="text-sm text-muted-foreground text-center">
+          <p
+            className="text-sm text-muted-foreground text-center"
+            data-testid="onboarding-step-indicator"
+          >
             Step {currentStep} of {totalSteps}
           </p>
         </div>
@@ -185,12 +191,13 @@ export default function OnboardingPage() {
           <CardContent className="space-y-6">
             {/* Step 1: Profile */}
             {currentStep === 1 && (
-              <>
+              <div data-testid="onboarding-step-profile">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name *</Label>
                     <Input
                       id="firstName"
+                      data-testid="onboarding-firstName"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       placeholder="John"
@@ -201,6 +208,7 @@ export default function OnboardingPage() {
                     <Label htmlFor="lastName">Last Name *</Label>
                     <Input
                       id="lastName"
+                      data-testid="onboarding-lastName"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="Smith"
@@ -209,10 +217,11 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 mt-6">
                   <Label htmlFor="phone">Phone Number (Optional)</Label>
                   <Input
                     id="phone"
+                    data-testid="onboarding-phone"
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -220,25 +229,27 @@ export default function OnboardingPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 mt-6">
                   <Label htmlFor="dateOfBirth">Date of Birth (Optional)</Label>
                   <Input
                     id="dateOfBirth"
+                    data-testid="onboarding-dateOfBirth"
                     type="date"
                     value={dateOfBirth}
                     onChange={(e) => setDateOfBirth(e.target.value)}
                   />
                 </div>
-              </>
+              </div>
             )}
 
             {/* Step 2: Household */}
             {currentStep === 2 && (
-              <>
+              <div data-testid="onboarding-step-household">
                 <div className="space-y-2">
                   <Label htmlFor="householdName">Household Name *</Label>
                   <Input
                     id="householdName"
+                    data-testid="onboarding-householdName"
                     value={householdName}
                     onChange={(e) => setHouseholdName(e.target.value)}
                     placeholder="The Smith Family"
@@ -249,25 +260,27 @@ export default function OnboardingPage() {
                   </p>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 mt-6">
                   <Label htmlFor="householdDescription">Description (Optional)</Label>
                   <Input
                     id="householdDescription"
+                    data-testid="onboarding-householdDescription"
                     value={householdDescription}
                     onChange={(e) => setHouseholdDescription(e.target.value)}
                     placeholder="A brief description of your family..."
                   />
                 </div>
-              </>
+              </div>
             )}
 
             {/* Step 3: Goals */}
             {currentStep === 3 && (
-              <div className="space-y-4">
+              <div className="space-y-4" data-testid="onboarding-step-goals">
                 {goalOptions.map((goal) => (
                   <div key={goal.id} className="flex items-start space-x-3">
                     <Checkbox
                       id={goal.id}
+                      data-testid={`onboarding-goal-${goal.id}`}
                       checked={selectedGoals.includes(goal.id)}
                       onCheckedChange={() => handleGoalToggle(goal.id)}
                     />
@@ -288,12 +301,17 @@ export default function OnboardingPage() {
                 variant="outline"
                 onClick={handleBack}
                 disabled={currentStep === 1 || isLoading}
+                data-testid="onboarding-back-button"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
 
-              <Button onClick={handleNext} disabled={isLoading}>
+              <Button
+                onClick={handleNext}
+                disabled={isLoading}
+                data-testid="onboarding-next-button"
+              >
                 {isLoading ? "Saving..." : currentStep === totalSteps ? "Complete Setup" : "Next"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

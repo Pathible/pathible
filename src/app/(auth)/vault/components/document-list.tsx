@@ -109,7 +109,7 @@ export function DocumentList({ documents, categories, householdId, isLoading }: 
 
   if (documents.length === 0) {
     return (
-      <Card className="border-dashed">
+      <Card className="border-dashed" data-testid="vault-documents-empty">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <FileText className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No documents found</h3>
@@ -123,10 +123,17 @@ export function DocumentList({ documents, categories, householdId, isLoading }: 
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        data-testid="vault-documents-list"
+        data-document-count={documents.length}
+      >
         {documents.map((document) => (
           <Card
             key={document._id}
+            data-testid="vault-document-card"
+            data-document-id={document._id}
+            data-document-categories={document.categories.join(",")}
             className="hover:shadow-lg transition-shadow cursor-pointer group"
             onClick={() => setSelectedDocument(document)}
           >

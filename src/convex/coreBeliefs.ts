@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./auth";
+import { logActivity } from "./shared/activity";
 
 /**
  * Wisdom & Education - Core Beliefs Module
@@ -195,11 +196,12 @@ export const create = mutation({
     });
 
     // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "wisdom",
+      actionType: "wisdom_created",
+      entityType: "core_belief",
       entityId: beliefId,
       description: `Added core belief: ${args.statement}`,
     });
@@ -252,11 +254,12 @@ export const update = mutation({
     await ctx.db.patch(args.beliefId, updates);
 
     // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: belief.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "wisdom",
+      actionType: "wisdom_updated",
+      entityType: "core_belief",
       entityId: args.beliefId,
       description: `Updated core belief: ${updates.statement || belief.statement}`,
     });
@@ -291,11 +294,12 @@ export const remove = mutation({
     await ctx.db.delete(args.beliefId);
 
     // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "wisdom",
+      actionType: "wisdom_deleted",
+      entityType: "core_belief",
       entityId: args.beliefId,
       description: `Deleted core belief: ${statement}`,
     });

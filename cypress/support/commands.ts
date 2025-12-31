@@ -1,61 +1,33 @@
 /// <reference types="cypress" />
 
+/**
+ * Cypress Custom Commands
+ *
+ * This file contains custom commands for E2E testing with Clerk authentication.
+ * Clerk-specific commands (clerkSignIn, clerkSignOut, clerkLoaded) are provided
+ * by @clerk/testing/cypress and registered in e2e.ts.
+ */
+
 declare global {
   namespace Cypress {
     interface Chainable {
       /**
-       * Custom command to log in with OTP
-       * @example cy.loginWithOtp('user@test.com', '123456')
-       */
-      loginWithOtp(email: string, otp: string): Chainable<void>;
-
-      /**
-       * Custom command to create a profile
-       * @example cy.createProfile('John', 'Doe')
-       */
-      createProfile(firstName: string, lastName: string): Chainable<void>;
-
-      /**
-       * Custom command to check if element exists without failing
+       * Check if element exists without failing the test
        * @example cy.elementExists('[data-testid="profile"]').then(exists => {...})
        */
       elementExists(selector: string): Chainable<boolean>;
 
       /**
-       * Custom command to wait for navigation and ensure page is loaded
+       * Wait for navigation to complete and ensure page is loaded
        * @example cy.waitForNavigation('/dashboard')
        */
       waitForNavigation(path: string): Chainable<void>;
 
       /**
-       * Custom command to mock OTP sending and automatically intercept
-       * @example cy.mockOtpFlow()
+       * Clean up test state (cookies, localStorage, sessionStorage)
+       * @example cy.cleanupTestState()
        */
-      mockOtpFlow(): Chainable<void>;
-
-      /**
-       * Custom command to clean up test user data
-       * @example cy.cleanupTestUser('test@example.com')
-       */
-      cleanupTestUser(email: string): Chainable<void>;
-
-      /**
-       * Custom command to directly authenticate via API (bypassing UI)
-       * @example cy.authenticateViaApi('user@test.com')
-       */
-      authenticateViaApi(email: string): Chainable<void>;
-
-      /**
-       * Custom command to verify user is authenticated
-       * @example cy.verifyAuthenticated()
-       */
-      verifyAuthenticated(): Chainable<void>;
-
-      /**
-       * Custom command to verify user is NOT authenticated
-       * @example cy.verifyNotAuthenticated()
-       */
-      verifyNotAuthenticated(): Chainable<void>;
+      cleanupTestState(): Chainable<void>;
 
       /**
        * Mock a user with a specific subscription plan
@@ -64,7 +36,7 @@ declare global {
       mockUserWithPlan(plan: "foundations" | "heritage" | "legacy"): Chainable<void>;
 
       /**
-       * Assert that a feature is accessible (visible)
+       * Assert that a feature element is accessible (visible)
        * @example cy.assertFeatureAccessible('[data-testid="vault-tags-section"]')
        */
       assertFeatureAccessible(selector: string): Chainable<void>;
@@ -82,60 +54,54 @@ declare global {
       assertUpgradePromptShown(featureSlug: string): Chainable<void>;
 
       /**
-       * Login and mock a specific plan for feature testing
-       * @example cy.loginWithPlan('heritage')
+       * Reset test user to clean state (deletes profile, households, and all related data)
+       * Must be called AFTER signing in with Clerk.
+       * SECURITY: Only works for test user emails (+clerk_test, +e2e_test, etc.)
+       * @example cy.resetTestUser()
        */
-      loginWithPlan(plan: "foundations" | "heritage" | "legacy"): Chainable<void>;
+      resetTestUser(): Chainable<{
+        success: boolean;
+        message: string;
+        deleted: {
+          profile: boolean;
+          memberships: number;
+          households: number;
+          familyUnits: number;
+          familyMembers: number;
+          documents: number;
+          categories: number;
+          preferences: number;
+          invitations: number;
+          activityLogs: number;
+          wisdomEntries: number;
+          letters: number;
+          coreBeliefs: number;
+          legacyPlans: number;
+          keyContacts: number;
+          financialAccounts: number;
+          properties: number;
+          insurancePolicies: number;
+          userSuggestions: number;
+          notifications: number;
+          subscriptions: number;
+          userRoles: number;
+        };
+      }>;
+
+      /**
+       * Check if test user is in clean state (no profile)
+       * Must be called AFTER signing in with Clerk.
+       * @example cy.isTestUserClean().then(result => {...})
+       */
+      isTestUserClean(): Chainable<{
+        isClean: boolean;
+        hasProfile: boolean;
+        hasMemberships: boolean;
+        hasHouseholds: boolean;
+      }>;
     }
   }
 }
-
-/**
- * Login with OTP
- * Fills in email, requests OTP, and enters code
- * Uses {force: true} to handle element coverage issues
- */
-Cypress.Commands.add("loginWithOtp", (email: string, otp: string) => {
-  // Visit login page
-  cy.visit("/login");
-
-  // Fill in email (use force to handle any overlays)
-  cy.get('[data-testid="email-input"]', { timeout: 10000 })
-    .should("be.visible")
-    .type(email, { force: true });
-
-  // Click send code button
-  cy.get('[data-testid="send-code-button"]').click({ force: true });
-
-  // Wait for OTP input to appear
-  cy.get('[data-testid="otp-input"]', { timeout: 15000 }).should("be.visible");
-
-  // Enter OTP code - type directly on the InputOTP component
-  cy.get('[data-testid="otp-input"]').type(otp, { force: true });
-
-  // The verification happens automatically when 6 digits are entered
-  // Wait for redirect (either to dashboard or onboarding)
-  cy.url({ timeout: 20000 }).should("not.include", "/login");
-});
-
-/**
- * Create a profile
- * Fills in first name and last name on onboarding page
- */
-Cypress.Commands.add("createProfile", (firstName: string, lastName: string) => {
-  // Should be on onboarding page
-  cy.url().should("include", "/onboarding");
-
-  // Fill in profile form
-  cy.get('[data-testid="first-name-input"]').should("be.visible").type(firstName);
-  cy.get('[data-testid="last-name-input"]').should("be.visible").type(lastName);
-
-  // Submit form
-  cy.get('[data-testid="submit-profile-button"]').click();
-
-  // Wait for redirect to dashboard
-  cy.url({ timeout: 15000 }).should("include", "/dashboard");
-});
 
 /**
  * Check if element exists without failing the test
@@ -156,153 +122,14 @@ Cypress.Commands.add("waitForNavigation", (path: string) => {
 });
 
 /**
- * Mock the OTP flow by intercepting the API calls
- * This allows tests to proceed without actual email sending
- * and includes comprehensive Convex API mocking
+ * Clean up test state (cookies, localStorage, sessionStorage)
  */
-Cypress.Commands.add("mockOtpFlow", () => {
-  // Intercept OTP send request
-  cy.intercept("POST", "**/api/auth/email-otp/send-verification-otp", {
-    statusCode: 200,
-    body: { success: true },
-  }).as("sendOtp");
-
-  // Intercept OTP verification request - return success
-  cy.intercept("POST", "**/api/auth/sign-in/email-otp", {
-    statusCode: 200,
-    body: {
-      user: {
-        _id: "test-user-id",
-        id: "test-user-id",
-        email: Cypress.env("NEW_USER_EMAIL") || "newuser@test.pathible.com",
-        emailVerified: true,
-        createdAt: Date.now(),
-      },
-      session: {
-        token: "test-token",
-        sessionToken: "test-session-token",
-        expiresAt: Date.now() + 1000 * 60 * 60 * 24, // 24 hours
-      },
-    },
-  }).as("verifyOtp");
-
-  // Intercept Convex token endpoint
-  cy.intercept("GET", "**/api/auth/convex/token", {
-    statusCode: 200,
-    body: { token: "test-convex-jwt-token" },
-  }).as("getConvexToken");
-
-  // Mock Convex profile queries
-  cy.intercept("POST", "**/api/query", (req) => {
-    if (req.body.path === "profiles:get") {
-      // Return null for new users (no profile)
-      req.reply({
-        statusCode: 200,
-        body: { value: null },
-      });
-    } else if (req.body.path === "auth:getCurrentUser") {
-      req.reply({
-        statusCode: 200,
-        body: {
-          value: {
-            _id: "test-user-id",
-            email: "test@example.com",
-            emailVerified: true,
-          },
-        },
-      });
-    } else if (req.body.path === "auth:getCurrentUserWithProfile") {
-      // Return null for new users (no profile yet)
-      req.reply({
-        statusCode: 200,
-        body: { value: null },
-      });
-    } else {
-      // Allow other Convex queries through
-      req.continue();
-    }
-  }).as("convexQuery");
-
-  // Mock Convex mutations (profile creation)
-  cy.intercept("POST", "**/api/mutation", (req) => {
-    if (req.body.path === "profiles:create") {
-      req.reply({
-        statusCode: 200,
-        body: { value: "profile-created-id" },
-      });
-    } else {
-      req.continue();
-    }
-  }).as("convexMutation");
-
-  // Mock session checks
-  cy.intercept("GET", "**/api/auth/get-session", {
-    statusCode: 200,
-    body: {
-      data: {
-        session: {
-          userId: "test-user-id",
-          expiresAt: Date.now() + 86400000,
-        },
-        user: {
-          id: "test-user-id",
-          email: "test@example.com",
-          emailVerified: true,
-        },
-      },
-    },
-  }).as("getSession");
-});
-
-/**
- * Clean up test user data (if API available)
- * Note: This is a placeholder - implement based on your cleanup strategy
- */
-Cypress.Commands.add("cleanupTestUser", (email: string) => {
-  // This would typically call a test-only API endpoint to clean up
-  cy.log(`Cleaning up test user: ${email}`);
-  // For now, just clear cookies and local storage
+Cypress.Commands.add("cleanupTestState", () => {
   cy.clearCookies();
   cy.clearLocalStorage();
   cy.window().then((win) => {
     win.sessionStorage.clear();
   });
-});
-
-/**
- * Authenticate directly via API (for setting up test state)
- * This bypasses the UI and directly sets authentication state
- */
-Cypress.Commands.add("authenticateViaApi", (email: string) => {
-  // Set cookies/session as if user logged in
-  // This is a mock - adjust based on your auth implementation
-  cy.setCookie("better-auth.session_token", "test-session-token");
-
-  // Set local storage if needed
-  cy.window().then((win) => {
-    win.localStorage.setItem("auth-email", email);
-  });
-
-  cy.log(`Authenticated as: ${email}`);
-});
-
-/**
- * Verify user is authenticated by checking for auth indicators
- */
-Cypress.Commands.add("verifyAuthenticated", () => {
-  // Try to visit dashboard - should succeed if authenticated
-  cy.visit("/dashboard");
-  cy.url({ timeout: 5000 }).should("include", "/dashboard");
-  cy.url().should("not.include", "/login");
-});
-
-/**
- * Verify user is NOT authenticated by checking redirects
- */
-Cypress.Commands.add("verifyNotAuthenticated", () => {
-  // Try to visit dashboard - should redirect to login if not authenticated
-  cy.visit("/dashboard");
-  cy.url({ timeout: 5000 }).should("include", "/login");
 });
 
 /**
@@ -425,22 +252,168 @@ Cypress.Commands.add("assertUpgradePromptShown", (featureSlug: string) => {
     .and("have.attr", "data-feature", featureSlug);
 });
 
+// Type for the test helpers exposed on window
+interface ConvexTestHelpers {
+  resetTestUser: () => Promise<{
+    success: boolean;
+    message: string;
+    deleted: {
+      profile: boolean;
+      memberships: number;
+      households: number;
+      familyUnits: number;
+      familyMembers: number;
+      documents: number;
+      categories: number;
+      preferences: number;
+      invitations: number;
+      activityLogs: number;
+      wisdomEntries: number;
+      letters: number;
+      coreBeliefs: number;
+      legacyPlans: number;
+      keyContacts: number;
+      financialAccounts: number;
+      properties: number;
+      insurancePolicies: number;
+      userSuggestions: number;
+      notifications: number;
+      subscriptions: number;
+      userRoles: number;
+    };
+  }>;
+  isCleanState: () => Promise<{
+    isClean: boolean;
+    hasProfile: boolean;
+    hasMemberships: boolean;
+    hasHouseholds: boolean;
+  }>;
+}
+
+// Result types for test commands
+type ResetTestUserResult = {
+  success: boolean;
+  message: string;
+  deleted: {
+    profile: boolean;
+    memberships: number;
+    households: number;
+    familyUnits: number;
+    familyMembers: number;
+    documents: number;
+    categories: number;
+    preferences: number;
+    invitations: number;
+    activityLogs: number;
+    wisdomEntries: number;
+    letters: number;
+    coreBeliefs: number;
+    legacyPlans: number;
+    keyContacts: number;
+    financialAccounts: number;
+    properties: number;
+    insurancePolicies: number;
+    userSuggestions: number;
+    notifications: number;
+    subscriptions: number;
+    userRoles: number;
+  };
+};
+
+type IsCleanStateResult = {
+  isClean: boolean;
+  hasProfile: boolean;
+  hasMemberships: boolean;
+  hasHouseholds: boolean;
+};
+
 /**
- * Login and mock a specific plan for feature testing
- * Combines authentication with plan mocking
+ * Reset test user to clean state
+ * Calls the Convex testing.resetTestUser mutation through the window's test helpers.
+ * Must be signed in first and on a page with the Convex client loaded.
  */
-Cypress.Commands.add("loginWithPlan", (plan: "foundations" | "heritage" | "legacy") => {
-  // First mock the OTP flow
-  cy.mockOtpFlow();
+Cypress.Commands.add("resetTestUser", (): Cypress.Chainable<ResetTestUserResult> => {
+  cy.log("**Resetting test user to clean state**");
 
-  // Then set up the plan mocking
-  cy.mockUserWithPlan(plan);
+  return cy
+    .window({ timeout: 30000 })
+    .then((win): ResetTestUserResult | Cypress.Chainable<ResetTestUserResult> => {
+      // Access the test helpers exposed by ConvexClientProvider
+      const testHelpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+        .__CONVEX_TEST_HELPERS__;
 
-  // Now login
-  const email = Cypress.env("RETURNING_USER_EMAIL") || "returning@test.pathible.com";
-  const otp = Cypress.env("TEST_OTP") || "123456";
+      if (!testHelpers) {
+        // Cannot call cy.log here as it mixes async/sync code
+        console.error(
+          "Convex test helpers not found on window. Make sure you're on a page with Convex loaded.",
+        );
+        return {
+          success: false,
+          message: "Convex test helpers not available",
+          deleted: {
+            profile: false,
+            memberships: 0,
+            households: 0,
+            familyUnits: 0,
+            familyMembers: 0,
+            documents: 0,
+            categories: 0,
+            preferences: 0,
+            invitations: 0,
+            activityLogs: 0,
+            wisdomEntries: 0,
+            letters: 0,
+            coreBeliefs: 0,
+            legacyPlans: 0,
+            keyContacts: 0,
+            financialAccounts: 0,
+            properties: 0,
+            insurancePolicies: 0,
+            userSuggestions: 0,
+            notifications: 0,
+            subscriptions: 0,
+            userRoles: 0,
+          },
+        };
+      }
 
-  cy.loginWithOtp(email, otp);
+      // Call the reset mutation - use console.log instead of cy.log to avoid async/sync mix
+      return cy.wrap(testHelpers.resetTestUser(), { timeout: 30000 }).then((result) => {
+        console.log("Reset result:", result);
+        return result as ResetTestUserResult;
+      });
+    }) as Cypress.Chainable<ResetTestUserResult>;
+});
+
+/**
+ * Check if test user is in clean state
+ * Calls the Convex testing.isCleanState mutation through the window's test helpers.
+ * Must be signed in first and on a page with the Convex client loaded.
+ */
+Cypress.Commands.add("isTestUserClean", (): Cypress.Chainable<IsCleanStateResult> => {
+  cy.log("**Checking if test user is in clean state**");
+
+  return cy
+    .window({ timeout: 30000 })
+    .then((win): IsCleanStateResult | Cypress.Chainable<IsCleanStateResult> => {
+      const testHelpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+        .__CONVEX_TEST_HELPERS__;
+
+      if (!testHelpers) {
+        console.error("Convex test helpers not found on window.");
+        return {
+          isClean: false,
+          hasProfile: false,
+          hasMemberships: false,
+          hasHouseholds: false,
+        };
+      }
+
+      return cy.wrap(testHelpers.isCleanState(), { timeout: 30000 }).then((result) => {
+        console.log("Clean state check:", result);
+        return result as IsCleanStateResult;
+      });
+    }) as Cypress.Chainable<IsCleanStateResult>;
 });
 
 // Export to make TypeScript happy

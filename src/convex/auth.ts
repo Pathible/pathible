@@ -792,3 +792,94 @@ export const getDocumentWithAccessInternal = internalQuery({
     };
   },
 });
+
+// ============================================================================
+// ONBOARDING STATUS CHECK (for server-side route protection)
+// ============================================================================
+
+/**
+ * Query: Get onboarding status for route protection
+ *
+ * Used by server-side code (middleware, layouts) to determine if
+ * a user can access protected routes.
+ *
+ * Returns detailed status for routing decisions:
+ * - hasProfile: true if user has a profile record
+ * - onboardingComplete: true if onboarding workflow is finished
+ * - hasHousehold: true if user belongs to at least one household
+ * - needsOnboarding: true if user should be redirected to /onboarding
+ *
+ * Returns null if user is not authenticated.
+ */
+export const getOnboardingStatus = query({
+  args: {},
+  returns: v.union(
+    v.object({
+      hasProfile: v.boolean(),
+      onboardingComplete: v.boolean(),
+      hasHousehold: v.boolean(),
+      needsOnboarding: v.boolean(),
+      onboardingStatus: v.optional(
+        v.union(
+          v.literal("not_started"),
+          v.literal("profile_complete"),
+          v.literal("household_complete"),
+          v.literal("preferences_complete"),
+          v.literal("complete"),
+        ),
+      ),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx) => {
+    // Get user identity from Clerk JWT
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    const userId = identity.subject;
+
+    // Look up profile by Clerk user ID
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+
+    // No profile means user needs to complete onboarding
+    if (!profile || profile.deletedAt) {
+      return {
+        hasProfile: false,
+        onboardingComplete: false,
+        hasHousehold: false,
+        needsOnboarding: true,
+        onboardingStatus: undefined,
+      };
+    }
+
+    // Check if user has a household membership
+    const membership = await ctx.db
+      .query("householdMemberships")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .first();
+
+    const hasHousehold = membership !== null && membership.status === "active";
+
+    // Check onboarding completion status
+    const onboardingStatus = profile.onboardingStatus || "not_started";
+    const onboardingComplete = onboardingStatus === "complete";
+
+    // User needs onboarding if:
+    // 1. Profile exists but onboarding is not complete, OR
+    // 2. Profile exists but has no household
+    const needsOnboarding = !onboardingComplete || !hasHousehold;
+
+    return {
+      hasProfile: true,
+      onboardingComplete,
+      hasHousehold,
+      needsOnboarding,
+      onboardingStatus,
+    };
+  },
+});

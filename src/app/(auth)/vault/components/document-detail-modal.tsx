@@ -171,7 +171,10 @@ export function DocumentDetailModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto"
+          data-testid="document-detail-modal"
+        >
           <DialogHeader>
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -216,10 +219,11 @@ export function DocumentDetailModal({
             <div className="space-y-2">
               <Label>Categories</Label>
               {isEditing ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2" data-testid="document-edit-categories">
                   {categories.map((category) => (
                     <Badge
                       key={category._id}
+                      data-testid={`document-edit-category-${category.name.toLowerCase().replace(/\s+/g, "-")}`}
                       variant={selectedCategories.includes(category.name) ? "default" : "outline"}
                       className="cursor-pointer hover:bg-primary/90"
                       onClick={() => handleCategoryToggle(category.name)}
@@ -300,10 +304,19 @@ export function DocumentDetailModal({
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                  data-testid="document-edit-cancel"
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleSave} disabled={isSaving || !name.trim()}>
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || !name.trim()}
+                  data-testid="document-edit-save"
+                >
                   {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
               </>
@@ -313,15 +326,20 @@ export function DocumentDetailModal({
                   variant="destructive"
                   onClick={() => setDeleteDialogOpen(true)}
                   className="sm:mr-auto"
+                  data-testid="document-delete-button"
                 >
                   <Trash2 className="h-4 w-4" />
                   Delete
                 </Button>
-                <Button variant="outline" onClick={onDownload}>
+                <Button
+                  variant="outline"
+                  onClick={onDownload}
+                  data-testid="document-download-button"
+                >
                   <Download className="h-4 w-4" />
                   Download
                 </Button>
-                <Button onClick={() => setIsEditing(true)}>
+                <Button onClick={() => setIsEditing(true)} data-testid="document-edit-button">
                   <Edit2 className="h-4 w-4" />
                   Edit
                 </Button>
@@ -333,7 +351,7 @@ export function DocumentDetailModal({
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent data-testid="document-delete-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -342,8 +360,12 @@ export function DocumentDetailModal({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white">
+            <AlertDialogCancel data-testid="document-delete-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-white"
+              data-testid="document-delete-confirm"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

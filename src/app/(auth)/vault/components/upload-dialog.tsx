@@ -87,7 +87,7 @@ export function UploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px]" data-testid="upload-dialog">
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
@@ -97,7 +97,10 @@ export function UploadDialog({
 
         <div className="space-y-4 py-4">
           {/* File Info */}
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+          <div
+            className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
+            data-testid="upload-file-info"
+          >
             <FileText className="h-8 w-8 text-primary" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{file.name}</p>
@@ -112,6 +115,7 @@ export function UploadDialog({
             <Label htmlFor="name">Document Name *</Label>
             <Input
               id="name"
+              data-testid="upload-name-input"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter document name"
@@ -124,6 +128,7 @@ export function UploadDialog({
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
+              data-testid="upload-description-input"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add a description (optional)"
@@ -135,7 +140,7 @@ export function UploadDialog({
           {/* Categories */}
           <div className="space-y-2">
             <Label>Categories</Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2" data-testid="upload-categories">
               {categories.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No categories yet. Create some in the Category Manager.
@@ -144,6 +149,7 @@ export function UploadDialog({
                 categories.map((category) => (
                   <Badge
                     key={category._id}
+                    data-testid={`upload-category-${category.name.toLowerCase().replace(/\s+/g, "-")}`}
                     variant={selectedCategories.includes(category.name) ? "default" : "outline"}
                     className="cursor-pointer hover:bg-primary/90"
                     onClick={() => handleCategoryToggle(category.name)}
@@ -198,10 +204,19 @@ export function UploadDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isUploading}
+            data-testid="upload-cancel-button"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isUploading || !name.trim()}>
+          <Button
+            onClick={handleSubmit}
+            disabled={isUploading || !name.trim()}
+            data-testid="upload-submit-button"
+          >
             {isUploading ? "Uploading..." : "Upload Document"}
           </Button>
         </DialogFooter>

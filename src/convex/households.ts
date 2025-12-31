@@ -131,6 +131,8 @@ export const list = query({
           v.literal("executor"),
         ),
         memberCount: v.number(),
+        familyUnitCount: v.optional(v.number()),
+        storageUsedBytes: v.optional(v.number()),
       }),
     ),
     v.null(),
@@ -371,7 +373,8 @@ export const create = mutation({
     await logActivity(ctx, {
       householdId,
       userId: profile._id,
-      actionType: "other",
+      module: "household",
+      actionType: "household_created",
       entityType: "household",
       entityId: householdId,
       description: "Created household",
@@ -437,7 +440,8 @@ export const update = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
-      actionType: "other",
+      module: "household",
+      actionType: "household_updated",
       entityType: "household",
       entityId: args.householdId,
       description: "Updated household",
@@ -511,6 +515,7 @@ export const inviteMember = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
+      module: "household",
       actionType: "member_invited",
       entityType: "household",
       entityId: args.householdId,
@@ -619,6 +624,7 @@ export const acceptInvitation = mutation({
     await logActivity(ctx, {
       householdId: invitation.householdId,
       userId: profile._id,
+      module: "household",
       actionType: "member_joined",
       entityType: "household",
       entityId: invitation.householdId,
@@ -712,7 +718,8 @@ export const removeMember = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
-      actionType: "other",
+      module: "household",
+      actionType: "member_removed",
       entityType: "household",
       entityId: args.householdId,
       description,
@@ -803,7 +810,8 @@ export const updateMemberRole = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
-      actionType: "other",
+      module: "household",
+      actionType: "member_role_updated",
       entityType: "household",
       entityId: args.householdId,
       description,
