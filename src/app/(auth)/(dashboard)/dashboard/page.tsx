@@ -1,4 +1,4 @@
-import { DashboardContent } from "@/app/(auth)/dashboard/components/dashboard-content";
+import { DashboardContent } from "@/app/(auth)/(dashboard)/dashboard/components/dashboard-content";
 
 export default async function DashboardPage() {
   return (
