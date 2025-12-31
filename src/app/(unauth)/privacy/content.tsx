@@ -1431,49 +1431,49 @@ export function PrivacyPolicyContent() {
         </p>
         <ul className="space-y-2 text-muted-foreground">
           <li className="flex items-start gap-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 shrink-0" />
             <span>
               <Strong>We collect:</Strong> Account information, documents you upload, usage data,
               and cookies
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 shrink-0" />
             <span>
               <Strong>We use your data to:</Strong> Provide our Service, analyze documents with AI,
               improve our platform, and communicate with you
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 shrink-0" />
             <span>
               <Strong>We share data with:</Strong> Service providers (cloud hosting, AI, payment
               processors) and as required by law
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 shrink-0" />
             <span>
               <Strong>We do NOT:</Strong> Sell your personal information or use it to provide
               financial/legal advice
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 shrink-0" />
             <span>
               <Strong>Your rights:</Strong> Access, correct, delete, export your data; opt out of
               marketing; file complaints with regulators
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 shrink-0" />
             <span>
               <Strong>Security:</Strong> We encrypt data, use secure infrastructure, and implement
               comprehensive security measures
             </span>
           </li>
           <li className="flex items-start gap-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-pathible-forest mt-2 shrink-0" />
             <span>
               <Strong>Contact:</Strong> privacy@pathible.com for any privacy questions or to
               exercise your rights
