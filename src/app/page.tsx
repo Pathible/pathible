@@ -36,9 +36,9 @@ function HeroSection() {
       {/* Organic background shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Large soft gradient blob - top right */}
-        <div className="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-pathible-sage/20 via-pathible-forest/10 to-transparent blur-3xl" />
+        <div className="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full bg-linear-to-br from-pathible-sage/20 via-pathible-forest/10 to-transparent blur-3xl" />
         {/* Smaller accent blob - bottom left */}
-        <div className="absolute -bottom-48 -left-32 w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-pathible-gold/15 via-pathible-sand to-transparent blur-3xl" />
+        <div className="absolute -bottom-48 -left-32 w-[400px] h-[400px] rounded-full bg-linear-to-tr from-pathible-gold/15 via-pathible-sand to-transparent blur-3xl" />
         {/* Subtle texture overlay */}
         <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.015]" />
       </div>
@@ -157,7 +157,7 @@ function ValuePillars() {
   return (
     <section className="relative py-24 sm:py-32 overflow-hidden">
       {/* Background decoration */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-gradient-to-br from-pathible-sage/5 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-linear-to-br from-pathible-sage/5 to-transparent blur-3xl pointer-events-none" />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-20">
@@ -176,12 +176,12 @@ function ValuePillars() {
           {pillars.map((p, index) => (
             <Card
               key={p.title}
-              className="group relative overflow-hidden rounded-3xl border-0 shadow-lg shadow-black/[0.03] hover:shadow-xl hover:shadow-black/[0.08] hover:-translate-y-1 transition-all duration-500"
+              className="group relative overflow-hidden rounded-3xl border-0 shadow-lg shadow-black/3 hover:shadow-xl hover:shadow-black/8 hover:-translate-y-1 transition-all duration-500"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Gradient background */}
               <div
-                className={`absolute inset-0 bg-gradient-to-br ${p.accent} opacity-60 group-hover:opacity-100 transition-opacity duration-500`}
+                className={`absolute inset-0 bg-linear-to-br ${p.accent} opacity-60 group-hover:opacity-100 transition-opacity duration-500`}
               />
 
               {/* Card content */}
@@ -198,7 +198,7 @@ function ValuePillars() {
               </div>
 
               {/* Decorative corner accent */}
-              <div className="absolute -bottom-4 -right-4 w-24 h-24 rounded-full bg-gradient-to-br from-pathible-forest/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute -bottom-4 -right-4 w-24 h-24 rounded-full bg-linear-to-br from-pathible-forest/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </Card>
           ))}
         </div>
@@ -230,7 +230,7 @@ function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="relative py-24 sm:py-32 bg-gradient-to-b from-pathible-sand to-card/30 overflow-hidden"
+      className="relative py-24 sm:py-32 bg-linear-to-b from-pathible-sand to-card/30 overflow-hidden"
     >
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-20">
@@ -248,7 +248,7 @@ function HowItWorks() {
         {/* Steps with connecting line */}
         <div className="relative">
           {/* Connecting line (desktop) */}
-          <div className="absolute top-24 left-[16.67%] right-[16.67%] h-px bg-gradient-to-r from-pathible-forest/20 via-pathible-gold/40 to-pathible-forest/20 hidden lg:block" />
+          <div className="absolute top-24 left-[16.67%] right-[16.67%] h-px bg-linear-to-r from-pathible-forest/20 via-pathible-gold/40 to-pathible-forest/20 hidden lg:block" />
 
           <div className="grid gap-8 lg:gap-12 sm:grid-cols-3">
             {steps.map((s, i) => (
@@ -347,7 +347,7 @@ function ModulesPreview() {
           {modules.map((m, index) => (
             <Card
               key={m.title}
-              className="group relative overflow-hidden rounded-3xl border border-pathible-sage/20 bg-gradient-to-br from-white to-pathible-sand/30 shadow-sm hover:shadow-lg hover:shadow-pathible-forest/5 hover:-translate-y-1 transition-all duration-500"
+              className="group relative overflow-hidden rounded-3xl border border-pathible-sage/20 bg-linear-to-br from-white to-pathible-sand/30 shadow-sm hover:shadow-lg hover:shadow-pathible-forest/5 hover:-translate-y-1 transition-all duration-500"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="p-8 lg:p-10">
@@ -363,7 +363,7 @@ function ModulesPreview() {
                   <ul className="space-y-4">
                     {m.lines.map((l) => (
                       <li key={l} className="flex items-start gap-4">
-                        <div className="mt-1 flex-shrink-0 w-6 h-6 rounded-full bg-pathible-forest/10 flex items-center justify-center">
+                        <div className="mt-1 shrink-0 w-6 h-6 rounded-full bg-pathible-forest/10 flex items-center justify-center">
                           <Check className="h-3.5 w-3.5 text-pathible-forest" />
                         </div>
                         <span className="text-muted-foreground text-lg leading-relaxed">{l}</span>
@@ -374,7 +374,7 @@ function ModulesPreview() {
               </div>
 
               {/* Hover accent line */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-pathible-forest via-pathible-sage to-pathible-gold scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-linear-to-r from-pathible-forest via-pathible-sage to-pathible-gold scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
             </Card>
           ))}
         </div>
@@ -386,7 +386,7 @@ function ModulesPreview() {
 // ---------------------- Testimonial ----------------------
 function Testimonial() {
   return (
-    <section className="relative py-24 sm:py-32 bg-gradient-to-b from-card/30 via-pathible-sand to-background overflow-hidden">
+    <section className="relative py-24 sm:py-32 bg-linear-to-b from-card/30 via-pathible-sand to-background overflow-hidden">
       {/* Decorative quotes */}
       <div className="absolute top-12 left-1/4 text-pathible-forest/5 font-crimson text-[200px] leading-none pointer-events-none hidden lg:block">
         "
@@ -395,8 +395,8 @@ function Testimonial() {
       <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <Card className="relative overflow-hidden rounded-[2.5rem] p-12 sm:p-16 lg:p-20 text-center bg-white border-0 shadow-2xl shadow-pathible-forest/10">
           {/* Decorative gradient orbs */}
-          <div className="absolute -top-20 -left-20 w-40 h-40 rounded-full bg-gradient-to-br from-pathible-sage/20 to-transparent blur-3xl" />
-          <div className="absolute -bottom-20 -right-20 w-40 h-40 rounded-full bg-gradient-to-br from-pathible-gold/20 to-transparent blur-3xl" />
+          <div className="absolute -top-20 -left-20 w-40 h-40 rounded-full bg-linear-to-br from-pathible-sage/20 to-transparent blur-3xl" />
+          <div className="absolute -bottom-20 -right-20 w-40 h-40 rounded-full bg-linear-to-br from-pathible-gold/20 to-transparent blur-3xl" />
 
           <div className="relative">
             <p className="font-crimson text-3xl sm:text-4xl lg:text-5xl leading-relaxed text-foreground italic">
@@ -404,7 +404,7 @@ function Testimonial() {
               them to remember."
             </p>
             <div className="mt-10 flex items-center justify-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pathible-forest to-pathible-sage flex items-center justify-center text-white font-crimson text-xl">
+              <div className="w-12 h-12 rounded-full bg-linear-to-br from-pathible-forest to-pathible-sage flex items-center justify-center text-white font-crimson text-xl">
                 P
               </div>
               <div className="text-left">
@@ -424,7 +424,7 @@ function CTASection() {
   return (
     <section className="relative py-24 sm:py-32 overflow-hidden">
       {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-pathible-forest via-pathible-green-hover to-pathible-forest" />
+      <div className="absolute inset-0 bg-linear-to-br from-pathible-forest via-pathible-green-hover to-pathible-forest" />
 
       {/* Subtle pattern overlay */}
       <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.04]" />
