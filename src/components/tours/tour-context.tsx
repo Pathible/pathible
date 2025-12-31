@@ -128,15 +128,16 @@ export function TourProvider({
       const currentStep = prev.activeTour.steps[prev.currentStepIndex];
       const nextIndex = prev.currentStepIndex + 1;
       const isLastStep = nextIndex >= prev.activeTour.steps.length;
+      const tourId = prev.activeTour.id;
 
-      // Mark current step as complete
+      // Defer callback calls to avoid setState-during-render error
       if (currentStep) {
-        onStepComplete?.(prev.activeTour.id, currentStep.stepKey);
+        queueMicrotask(() => onStepComplete?.(tourId, currentStep.stepKey));
       }
 
       if (isLastStep) {
-        // Tour complete
-        onTourComplete?.(prev.activeTour.id);
+        // Tour complete - defer callback
+        queueMicrotask(() => onTourComplete?.(tourId));
         return {
           ...prev,
           isActive: false,
@@ -171,7 +172,9 @@ export function TourProvider({
   const skipTour = useCallback(() => {
     setState((prev) => {
       if (prev.activeTour) {
-        onTourDismiss?.(prev.activeTour.id);
+        const tourId = prev.activeTour.id;
+        // Defer callback to avoid setState-during-render error
+        queueMicrotask(() => onTourDismiss?.(tourId));
       }
       return {
         ...prev,
@@ -188,7 +191,9 @@ export function TourProvider({
   const completeTour = useCallback(() => {
     setState((prev) => {
       if (prev.activeTour) {
-        onTourComplete?.(prev.activeTour.id);
+        const tourId = prev.activeTour.id;
+        // Defer callback to avoid setState-during-render error
+        queueMicrotask(() => onTourComplete?.(tourId));
       }
       return {
         ...prev,
