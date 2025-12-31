@@ -807,7 +807,7 @@ export const seedWelcomeTour = mutation({
       updatedAt: now,
     });
 
-    // Define the tour steps
+    // Define the tour steps (9 steps covering dashboard and all navigation)
     const steps = [
       {
         stepKey: "welcome-stats",
@@ -831,11 +831,32 @@ export const seedWelcomeTour = mutation({
         body: "Start each day with wisdom and reflection. These curated quotes help you stay connected to your values and purpose.",
       },
       {
+        stepKey: "welcome-nav-dashboard",
+        route: "/dashboard",
+        anchorKey: "nav-dashboard",
+        title: "Your Dashboard",
+        body: "This is your home base. Return here anytime to see your progress and get personalized recommendations for your next steps.",
+      },
+      {
         stepKey: "welcome-nav-vault",
         route: "/dashboard",
         anchorKey: "nav-vault",
         title: "Heritage Vault",
         body: "Securely store important documents like wills, insurance policies, and family records. Everything your loved ones will need, organized in one place.",
+      },
+      {
+        stepKey: "welcome-nav-financial",
+        route: "/dashboard",
+        anchorKey: "nav-financial",
+        title: "Financial Intelligence",
+        body: "Track your accounts, insurance policies, and property in one place. Get a clear picture of your financial legacy.",
+      },
+      {
+        stepKey: "welcome-nav-family",
+        route: "/dashboard",
+        anchorKey: "nav-family",
+        title: "Family Ecosystem",
+        body: "Connect with your family members and manage roles and permissions. Decide who can access what when the time comes.",
       },
       {
         stepKey: "welcome-nav-wisdom",
@@ -872,5 +893,253 @@ export const seedWelcomeTour = mutation({
     }
 
     return tourId;
+  },
+});
+
+/**
+ * Seed Feature Tours (admin only)
+ * Creates tours for each major feature module: Vault, Wisdom, Family, Financial, Legacy
+ */
+export const seedFeatureTours = mutation({
+  args: {},
+  returns: v.object({
+    vaultTourId: v.id("tours"),
+    wisdomTourId: v.id("tours"),
+    familyTourId: v.id("tours"),
+    financialTourId: v.id("tours"),
+    legacyTourId: v.id("tours"),
+  }),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const now = Date.now();
+
+    // Helper function to create a tour if it doesn't exist
+    const createTourIfNotExists = async (
+      key: string,
+      name: string,
+      description: string,
+      priority: number,
+    ) => {
+      const existing = await ctx.db
+        .query("tours")
+        .withIndex("by_key", (q) => q.eq("key", key))
+        .unique();
+
+      if (existing && existing.status !== "archived") {
+        return existing._id;
+      }
+
+      const tourKey = existing ? `${key}-${Date.now()}` : key;
+
+      return await ctx.db.insert("tours", {
+        key: tourKey,
+        name,
+        description,
+        status: "published",
+        version: 1,
+        priority,
+        createdBy: identity.subject,
+        createdAt: now,
+        updatedAt: now,
+      });
+    };
+
+    // Helper function to create a step if it doesn't exist
+    const createStepIfNotExists = async (
+      tourId: typeof vaultTourId,
+      stepKey: string,
+      order: number,
+      route: string,
+      anchorKey: string,
+      title: string,
+      body: string,
+    ) => {
+      const existing = await ctx.db
+        .query("tourSteps")
+        .withIndex("by_tour_and_stepKey", (q) => q.eq("tourId", tourId).eq("stepKey", stepKey))
+        .unique();
+
+      if (existing) {
+        return existing._id;
+      }
+
+      return await ctx.db.insert("tourSteps", {
+        tourId,
+        stepKey,
+        order,
+        route,
+        anchorKey,
+        title,
+        body,
+        enabled: true,
+        versionIntroduced: 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+    };
+
+    // ========== VAULT TOUR ==========
+    const vaultTourId = await createTourIfNotExists(
+      "vault-tour",
+      "Heritage Vault Tour",
+      "Learn how to securely store and organize important documents for your family.",
+      20,
+    );
+
+    await createStepIfNotExists(
+      vaultTourId,
+      "vault-upload",
+      0,
+      "/vault",
+      "vault-upload-btn",
+      "Upload Documents",
+      "Click here to securely upload important documents. Your files are encrypted and stored safely for your family.",
+    );
+
+    await createStepIfNotExists(
+      vaultTourId,
+      "vault-categories",
+      1,
+      "/vault",
+      "vault-manage-categories",
+      "Organize with Categories",
+      "Create and manage categories to keep your documents organized. Add custom categories like 'Wills', 'Insurance', or 'Medical Records'.",
+    );
+
+    // ========== WISDOM TOUR ==========
+    const wisdomTourId = await createTourIfNotExists(
+      "wisdom-tour",
+      "Wisdom & Education Tour",
+      "Discover how to capture and share life lessons, stories, and values with future generations.",
+      30,
+    );
+
+    await createStepIfNotExists(
+      wisdomTourId,
+      "wisdom-create",
+      0,
+      "/wisdom",
+      "wisdom-create-entry",
+      "Share Your Wisdom",
+      "Create a new wisdom entry to capture life lessons, family stories, or advice for future generations. Our guided prompts make it easy.",
+    );
+
+    await createStepIfNotExists(
+      wisdomTourId,
+      "wisdom-library",
+      1,
+      "/wisdom",
+      "wisdom-library",
+      "Your Wisdom Library",
+      "Access all your saved wisdom entries here. Review, edit, and choose which entries to share with your family.",
+    );
+
+    await createStepIfNotExists(
+      wisdomTourId,
+      "wisdom-beliefs",
+      2,
+      "/wisdom",
+      "wisdom-core-beliefs",
+      "Define Core Beliefs",
+      "Document the fundamental beliefs and values that guide your life. These become a lasting foundation for future generations.",
+    );
+
+    // ========== FAMILY TOUR ==========
+    const familyTourId = await createTourIfNotExists(
+      "family-tour",
+      "Family Ecosystem Tour",
+      "Learn how to connect with family members and manage your extended family network.",
+      40,
+    );
+
+    await createStepIfNotExists(
+      familyTourId,
+      "family-invite",
+      0,
+      "/family",
+      "family-invite-member",
+      "Invite Family Members",
+      "Add family members to your primary family unit. They'll be able to access shared documents and wisdom based on permissions you set.",
+    );
+
+    await createStepIfNotExists(
+      familyTourId,
+      "family-add-unit",
+      1,
+      "/family",
+      "family-add-unit",
+      "Add Extended Family",
+      "Create additional family units to organize your extended family network. Group in-laws, cousins, or other branches of your family tree.",
+    );
+
+    // ========== FINANCIAL TOUR ==========
+    const financialTourId = await createTourIfNotExists(
+      "financial-tour",
+      "Financial Intelligence Tour",
+      "Learn how to track your financial accounts, properties, and insurance in one secure place.",
+      50,
+    );
+
+    await createStepIfNotExists(
+      financialTourId,
+      "financial-account",
+      0,
+      "/financial",
+      "financial-add-account",
+      "Track Financial Accounts",
+      "Add your bank accounts, investments, and retirement funds. Keep all your financial information organized for your family's future reference.",
+    );
+
+    await createStepIfNotExists(
+      financialTourId,
+      "financial-property",
+      1,
+      "/financial",
+      "financial-add-property",
+      "Record Properties",
+      "Document your real estate holdings including your home, rental properties, or land. Track values and important details.",
+    );
+
+    await createStepIfNotExists(
+      financialTourId,
+      "financial-insurance",
+      2,
+      "/financial",
+      "financial-add-policy",
+      "Manage Insurance Policies",
+      "Keep track of your insurance policies including life, health, home, and auto. Your family will know exactly what coverage exists.",
+    );
+
+    // ========== LEGACY TOUR ==========
+    const legacyTourId = await createTourIfNotExists(
+      "legacy-tour",
+      "Legacy Planning Tour",
+      "Create your lasting legacy with guided questions about your wishes, values, and final messages.",
+      60,
+    );
+
+    await createStepIfNotExists(
+      legacyTourId,
+      "legacy-wizard",
+      0,
+      "/legacy",
+      "legacy-wizard",
+      "Your Legacy Journey",
+      "This guided wizard helps you document important decisions: trusted contacts, guardianship wishes, memorial preferences, and heartfelt messages to loved ones.",
+    );
+
+    return {
+      vaultTourId,
+      wisdomTourId,
+      familyTourId,
+      financialTourId,
+      legacyTourId,
+    };
   },
 });
