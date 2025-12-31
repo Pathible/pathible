@@ -6,8 +6,8 @@
  * Creates a ~250KB PDF file suitable for vault upload tests
  */
 
-const fs = require("fs");
-const path = require("path");
+const fs = require("node:fs");
+const path = require("node:path");
 
 // Minimal PDF structure with content to reach ~250KB
 function generateTestPDF() {

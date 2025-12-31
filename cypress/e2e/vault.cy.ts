@@ -20,10 +20,11 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  */
 
 // Test constants
-const TEST_DOCUMENT_NAME = `E2E Test Document ${Date.now()}`;
-const TEST_DESCRIPTION = "This is an automated test document for E2E testing";
+// Note: Some constants are prefixed with _ as they're reserved for future tests
+const _TEST_DOCUMENT_NAME = `E2E Test Document ${Date.now()}`;
+const _TEST_DESCRIPTION = "This is an automated test document for E2E testing";
 const TEST_CATEGORY_NAME = `Test Category ${Date.now()}`;
-const TEST_SEARCH_TERM = "E2E Test";
+const _TEST_SEARCH_TERM = "E2E Test";
 
 /**
  * Helper to ensure user is fully onboarded before accessing vault
@@ -79,9 +80,9 @@ function ensureUserOnboarded() {
 }
 
 describe("Heritage Vault - Complete E2E Test Suite", () => {
-  // Store initial counts to verify changes
-  let initialDocumentCount: number;
-  let initialCategoryCount: number;
+  // Store initial counts to verify changes (reserved for future tests)
+  let _initialDocumentCount: number;
+  let _initialCategoryCount: number;
 
   beforeEach(() => {
     // Clear state before each test
