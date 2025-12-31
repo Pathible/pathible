@@ -192,7 +192,7 @@ export function InsuranceManager({ insurance, householdId, isLoading }: Insuranc
           </CardTitle>
           <CardDescription>Manage your insurance coverage</CardDescription>
           <CardAction>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button onClick={() => handleOpenDialog()} data-tour="financial-add-policy">
               <Plus className="h-4 w-4" />
               Add Policy
             </Button>

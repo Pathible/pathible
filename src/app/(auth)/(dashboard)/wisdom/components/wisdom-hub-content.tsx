@@ -128,26 +128,32 @@ export function WisdomHubContent() {
 
       {/* Navigation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <NavCard
-          href="/wisdom/create-entry"
-          icon={<BookOpen className="h-5 w-5" />}
-          title="Create Wisdom Entry"
-          description="Capture a life lesson, memory, or insight to preserve for generations"
-        />
+        <div data-tour="wisdom-create-entry">
+          <NavCard
+            href="/wisdom/create-entry"
+            icon={<BookOpen className="h-5 w-5" />}
+            title="Create Wisdom Entry"
+            description="Capture a life lesson, memory, or insight to preserve for generations"
+          />
+        </div>
 
-        <NavCard
-          href="/wisdom/library"
-          icon={<BookMarked className="h-5 w-5" />}
-          title="Wisdom Library"
-          description="View and manage all your saved wisdom entries"
-        />
+        <div data-tour="wisdom-library">
+          <NavCard
+            href="/wisdom/library"
+            icon={<BookMarked className="h-5 w-5" />}
+            title="Wisdom Library"
+            description="View and manage all your saved wisdom entries"
+          />
+        </div>
 
-        <NavCard
-          href="/wisdom/core-beliefs"
-          icon={<Heart className="h-5 w-5" />}
-          title="Core Beliefs"
-          description="Define the fundamental beliefs and values that guide your life"
-        />
+        <div data-tour="wisdom-core-beliefs">
+          <NavCard
+            href="/wisdom/core-beliefs"
+            icon={<Heart className="h-5 w-5" />}
+            title="Core Beliefs"
+            description="Define the fundamental beliefs and values that guide your life"
+          />
+        </div>
       </div>
 
       {/* Stats */}

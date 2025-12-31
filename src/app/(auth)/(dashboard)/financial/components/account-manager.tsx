@@ -165,7 +165,7 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
           </CardTitle>
           <CardDescription>Manage your bank accounts and investments</CardDescription>
           <CardAction>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button onClick={() => handleOpenDialog()} data-tour="financial-add-account">
               <Plus className="h-4 w-4" />
               Add Account
             </Button>

@@ -162,11 +162,19 @@ export function VaultContent() {
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
+          <Button
+            variant="outline"
+            onClick={() => setCategoryManagerOpen(true)}
+            data-tour="vault-manage-categories"
+          >
             <Settings className="h-4 w-4" />
             Manage Categories
           </Button>
-          <UploadButton householdId={householdId} categories={categories || []} />
+          <UploadButton
+            householdId={householdId}
+            categories={categories || []}
+            data-tour="vault-upload"
+          />
         </div>
       </div>
 

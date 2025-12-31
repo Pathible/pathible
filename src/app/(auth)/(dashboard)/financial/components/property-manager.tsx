@@ -166,7 +166,7 @@ export function PropertyManager({ properties, householdId, isLoading }: Property
           </CardTitle>
           <CardDescription>Track your real estate holdings</CardDescription>
           <CardAction>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button onClick={() => handleOpenDialog()} data-tour="financial-add-property">
               <Plus className="h-4 w-4" />
               Add Property
             </Button>

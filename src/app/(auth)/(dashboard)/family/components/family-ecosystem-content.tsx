@@ -251,11 +251,15 @@ export function FamilyEcosystemContent() {
               <h1 className="text-4xl font-bold">Family Ecosystem</h1>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowInviteMemberDialog(true)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowInviteMemberDialog(true)}
+                data-tour="family-invite-member"
+              >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Invite Member
               </Button>
-              <Button onClick={() => setShowAddFamilyDialog(true)}>
+              <Button onClick={() => setShowAddFamilyDialog(true)} data-tour="family-add-unit">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Family
               </Button>

@@ -144,6 +144,7 @@ export function UploadButton({ householdId, categories, className }: UploadButto
         onClick={() => fileInputRef.current?.click()}
         disabled={isUploading}
         className={cn("gap-2", className)}
+        data-tour="vault-upload-btn"
       >
         {isUploading ? (
           <>

@@ -178,7 +178,7 @@ export function LegacyWizard({ householdId, legacyPlan, onCreatePlan }: LegacyWi
   const Icon = currentQuestion.icon;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tour="legacy-wizard">
       {/* Progress Card */}
       <Card>
         <CardContent>
