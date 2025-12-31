@@ -1,9 +1,19 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { MoreVertical, Pencil, Plus, Shield, Trash } from "lucide-react";
+import { Pencil, Plus, Shield, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,12 +31,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -66,6 +70,12 @@ interface InsuranceManagerProps {
 export function InsuranceManager({ insurance, householdId, isLoading }: InsuranceManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingInsurance, setEditingInsurance] = useState<Insurance | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [policyToDelete, setPolicyToDelete] = useState<{
+    id: Id<"insurancePolicies">;
+    name: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
     type: "life" as Insurance["type"],
     provider: "",
@@ -137,14 +147,24 @@ export function InsuranceManager({ insurance, householdId, isLoading }: Insuranc
     }
   };
 
-  const handleDelete = async (policyId: Id<"insurancePolicies">) => {
-    if (!confirm("Are you sure you want to delete this insurance policy?")) return;
+  const openDeleteConfirm = (policyId: Id<"insurancePolicies">, policyType: Insurance["type"]) => {
+    setPolicyToDelete({ id: policyId, name: `${getInsuranceTypeLabel(policyType)} Insurance` });
+    setDeleteDialogOpen(true);
+  };
 
+  const handleDelete = async () => {
+    if (!policyToDelete) return;
+
+    setIsDeleting(true);
     try {
-      await deleteInsurance({ policyId });
+      await deleteInsurance({ policyId: policyToDelete.id });
       toast.success("Insurance policy deleted successfully");
+      setDeleteDialogOpen(false);
+      setPolicyToDelete(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete insurance policy");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -249,26 +269,28 @@ export function InsuranceManager({ insurance, householdId, isLoading }: Insuranc
                         </div>
                       )}
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleOpenDialog(ins)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(ins._id)}
-                          className="text-destructive"
-                        >
-                          <Trash className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleOpenDialog(ins)}
+                        title="Edit policy"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => openDeleteConfirm(ins._id, ins.type)}
+                        title="Delete policy"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -390,6 +412,27 @@ export function InsuranceManager({ insurance, householdId, isLoading }: Insuranc
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Insurance Policy</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {policyToDelete?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Mail, MapPin, Phone } from "lucide-react";
+import { Calendar, Mail, MapPin, Pencil, Phone, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ interface FamilyMember {
     | "other";
   roles: string[];
   avatarUrl?: string;
+  status?: "active" | "pending_invite" | "inactive";
 }
 
 interface MemberCardProps {
@@ -73,12 +74,16 @@ export function MemberCard({ member, onEdit, onRemove }: MemberCardProps) {
     return null;
   };
 
+  const isPending = member.status === "pending_invite";
+
   return (
     <div className="border rounded-lg p-4 hover:bg-accent/50 transition-colors">
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <Avatar className="h-12 w-12">
-          <AvatarFallback className={`${getAvatarColor(member.gender)} text-white font-medium`}>
+          <AvatarFallback
+            className={`${getAvatarColor(member.gender)} text-white font-medium ${isPending ? "opacity-60" : ""}`}
+          >
             {getInitials(member.firstName, member.lastName)}
           </AvatarFallback>
         </Avatar>
@@ -87,14 +92,24 @@ export function MemberCard({ member, onEdit, onRemove }: MemberCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="min-w-0">
-              <h4 className="font-semibold text-base truncate">
+              <h4
+                className={`font-semibold text-base truncate ${isPending ? "text-muted-foreground" : ""}`}
+              >
                 {member.firstName} {member.lastName}
               </h4>
               <p className="text-sm text-muted-foreground">
                 {formatRelationship(member.relationshipType)}
               </p>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              {isPending && (
+                <Badge
+                  variant="outline"
+                  className="text-xs text-amber-600 border-amber-300 bg-amber-50"
+                >
+                  Pending Invite
+                </Badge>
+              )}
               {member.roles.length > 0 && (
                 <Badge variant="secondary" className="text-xs">
                   {member.roles.length === 1 ? member.roles[0] : `${member.roles.length} Roles`}
@@ -133,12 +148,26 @@ export function MemberCard({ member, onEdit, onRemove }: MemberCardProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            Edit
+        <div className="flex gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={onEdit}
+            title="Edit member"
+          >
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Edit</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={onRemove}>
-            Remove
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            onClick={onRemove}
+            title="Remove member"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Remove</span>
           </Button>
         </div>
       </div>

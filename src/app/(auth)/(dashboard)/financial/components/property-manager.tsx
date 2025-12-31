@@ -1,9 +1,19 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { Home, MoreVertical, Pencil, Plus, Trash } from "lucide-react";
+import { Home, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,12 +31,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -58,6 +62,12 @@ interface PropertyManagerProps {
 export function PropertyManager({ properties, householdId, isLoading }: PropertyManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<{
+    id: Id<"properties">;
+    name: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     type: "primary_residence" as Property["type"],
@@ -124,14 +134,24 @@ export function PropertyManager({ properties, householdId, isLoading }: Property
     }
   };
 
-  const handleDelete = async (propertyId: Id<"properties">) => {
-    if (!confirm("Are you sure you want to delete this property?")) return;
+  const openDeleteConfirm = (propertyId: Id<"properties">, propertyName: string) => {
+    setPropertyToDelete({ id: propertyId, name: propertyName });
+    setDeleteDialogOpen(true);
+  };
 
+  const handleDelete = async () => {
+    if (!propertyToDelete) return;
+
+    setIsDeleting(true);
     try {
-      await deleteProperty({ propertyId });
+      await deleteProperty({ propertyId: propertyToDelete.id });
       toast.success("Property deleted successfully");
+      setDeleteDialogOpen(false);
+      setPropertyToDelete(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete property");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -213,26 +233,28 @@ export function PropertyManager({ properties, householdId, isLoading }: Property
                         <p className="font-semibold">{formatCurrency(property.estimatedValue)}</p>
                       </div>
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleOpenDialog(property)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(property._id)}
-                          className="text-destructive"
-                        >
-                          <Trash className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleOpenDialog(property)}
+                        title="Edit property"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => openDeleteConfirm(property._id, property.name)}
+                        title="Delete property"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -322,6 +344,28 @@ export function PropertyManager({ properties, householdId, isLoading }: Property
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Property</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {propertyToDelete?.name}? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
