@@ -1,4 +1,4 @@
-import { LegacyContent } from "@/app/(auth)/legacy/components/legacy-content";
+import { LegacyContent } from "@/app/(auth)/(dashboard)/legacy/components/legacy-content";
 
 export default async function LegacyPlanningPage() {
   return (

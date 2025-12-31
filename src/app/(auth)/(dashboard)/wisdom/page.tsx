@@ -1,4 +1,4 @@
-import { WisdomHubContent } from "@/app/(auth)/wisdom/components/wisdom-hub-content";
+import { WisdomHubContent } from "@/app/(auth)/(dashboard)/wisdom/components/wisdom-hub-content";
 
 export default function WisdomPage() {
   return (

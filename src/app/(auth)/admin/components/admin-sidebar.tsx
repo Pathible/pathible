@@ -85,8 +85,10 @@ export function AdminSidebar() {
     <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
       <SidebarHeader className="px-4 py-4">
         <Link href="/admin" className="flex items-center gap-2">
-          <Shield className="h-6 w-6 text-primary" />
-          <span className="font-crimson text-xl font-semibold">Admin</span>
+          <Shield className="h-6 w-6 shrink-0 text-primary" />
+          <span className="font-crimson text-xl font-semibold group-data-[collapsible=icon]:hidden">
+            Admin
+          </span>
         </Link>
       </SidebarHeader>
 

@@ -4,7 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { ArrowRight, FileText, Heart, Loader2, Shield, Sparkles, Users } from "lucide-react";
 import Link from "next/link";
-import { DashboardStatCard } from "@/app/(auth)/dashboard/components/dashboard-stat-card";
+import { DashboardStatCard } from "@/app/(auth)/(dashboard)/dashboard/components/dashboard-stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
 

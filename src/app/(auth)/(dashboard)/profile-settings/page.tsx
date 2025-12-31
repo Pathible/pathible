@@ -1,4 +1,4 @@
-import { ProfileSettingsContent } from "@/app/(auth)/profile-settings/components/profile-settings-content";
+import { ProfileSettingsContent } from "@/app/(auth)/(dashboard)/profile-settings/components/profile-settings-content";
 
 export default async function ProfileSettingsPage() {
   return (

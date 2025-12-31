@@ -1,4 +1,4 @@
-import { VaultContent } from "@/app/(auth)/vault/components/vault-content";
+import { VaultContent } from "@/app/(auth)/(dashboard)/vault/components/vault-content";
 
 export default async function VaultPage() {
   return (

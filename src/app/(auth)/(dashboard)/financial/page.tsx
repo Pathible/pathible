@@ -1,4 +1,4 @@
-import { FinancialContent } from "@/app/(auth)/financial/components/financial-content";
+import { FinancialContent } from "@/app/(auth)/(dashboard)/financial/components/financial-content";
 
 export default async function FinancialPage() {
   return (

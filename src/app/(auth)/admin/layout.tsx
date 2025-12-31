@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
@@ -10,27 +9,15 @@ import { AdminLayout as AdminLayoutComponent } from "./components/admin-layout";
 /**
  * Admin Layout - Wraps all admin routes
  *
- * Checks:
- * 1. User is authenticated (redirect to login if not)
- * 2. User has admin role (redirect to dashboard if not)
+ * Checks that user has admin role (redirects to dashboard if not).
+ *
+ * Note: Authentication is handled by the parent (auth) layout.
+ * This layout only verifies admin role for access control.
  */
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn } = useAuth();
+  const myRole = useQuery(api.roles.getMyRole);
 
-  // Skip query until auth is loaded and user is signed in
-  const myRole = useQuery(api.roles.getMyRole, isLoaded && isSignedIn ? {} : "skip");
-
-  // Wait for auth to load
-  if (!isLoaded) {
-    return <AdminLoadingState />;
-  }
-
-  // Redirect if not signed in
-  if (!isSignedIn) {
-    redirect("/login?redirect=/admin");
-  }
-
-  // Wait for role to load (query was skipped until now, so check again)
+  // Wait for role to load
   if (myRole === undefined) {
     return <AdminLoadingState />;
   }
