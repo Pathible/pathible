@@ -18,10 +18,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
 
   // Skip query until auth is loaded and user is signed in
-  const myRole = useQuery(
-    api.roles.getMyRole,
-    isLoaded && isSignedIn ? {} : "skip"
-  );
+  const myRole = useQuery(api.roles.getMyRole, isLoaded && isSignedIn ? {} : "skip");
 
   // Wait for auth to load
   if (!isLoaded) {

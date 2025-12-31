@@ -95,6 +95,10 @@ export const getStatus = query({
 /**
  * Update user profile with additional information
  * Step 1 of onboarding
+ *
+ * NOTE: This mutation handles BOTH new users (creates profile) and
+ * existing users (updates profile). New Clerk users don't have a
+ * profile until they complete this step.
  */
 export const updateProfile = mutation({
   args: {
@@ -106,9 +110,15 @@ export const updateProfile = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { profile } = await requireAuth(ctx);
+    // Get identity directly - don't use requireAuth since profile may not exist
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
 
-    // Validate inputs
+    const userId = identity.subject; // Clerk user ID
+
+    // Validate inputs - firstName and lastName are required for new profiles
     if (args.firstName !== undefined && !args.firstName.trim()) {
       throw new Error("First name cannot be empty");
     }
@@ -122,29 +132,57 @@ export const updateProfile = mutation({
       throw new Error("Invalid phone number format");
     }
 
-    // Build update object
-    const updates: {
-      updatedAt: number;
-      onboardingStatus: "profile_complete";
-      onboardingStep: number;
-      firstName?: string;
-      lastName?: string;
-      phone?: string;
-      dateOfBirth?: number;
-      avatarUrl?: string;
-    } = {
-      updatedAt: Date.now(),
-      onboardingStatus: "profile_complete",
-      onboardingStep: 2,
-    };
+    // Check if profile already exists
+    const existingProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
 
-    if (args.firstName !== undefined) updates.firstName = args.firstName.trim();
-    if (args.lastName !== undefined) updates.lastName = args.lastName.trim();
-    if (args.phone !== undefined) updates.phone = args.phone;
-    if (args.dateOfBirth !== undefined) updates.dateOfBirth = args.dateOfBirth;
-    if (args.avatarUrl !== undefined) updates.avatarUrl = args.avatarUrl;
+    if (existingProfile) {
+      // Update existing profile
+      const updates: {
+        updatedAt: number;
+        onboardingStatus: "profile_complete";
+        onboardingStep: number;
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        dateOfBirth?: number;
+        avatarUrl?: string;
+      } = {
+        updatedAt: Date.now(),
+        onboardingStatus: "profile_complete",
+        onboardingStep: 2,
+      };
 
-    await ctx.db.patch(profile._id, updates);
+      if (args.firstName !== undefined) updates.firstName = args.firstName.trim();
+      if (args.lastName !== undefined) updates.lastName = args.lastName.trim();
+      if (args.phone !== undefined) updates.phone = args.phone;
+      if (args.dateOfBirth !== undefined) updates.dateOfBirth = args.dateOfBirth;
+      if (args.avatarUrl !== undefined) updates.avatarUrl = args.avatarUrl;
+
+      await ctx.db.patch(existingProfile._id, updates);
+    } else {
+      // Create new profile for first-time users
+      // firstName and lastName are required for new profiles
+      if (!args.firstName?.trim() || !args.lastName?.trim()) {
+        throw new Error("First name and last name are required");
+      }
+
+      await ctx.db.insert("profiles", {
+        userId,
+        firstName: args.firstName.trim(),
+        lastName: args.lastName.trim(),
+        phone: args.phone,
+        dateOfBirth: args.dateOfBirth,
+        avatarUrl: args.avatarUrl,
+        onboardingStatus: "profile_complete",
+        onboardingStep: 2,
+        updatedAt: Date.now(),
+      });
+
+      console.log(`[Onboarding] Created profile for user ${userId}`);
+    }
 
     return null;
   },
@@ -254,7 +292,8 @@ export const createFirstHousehold = mutation({
     await logActivity(ctx, {
       householdId,
       userId: profile._id,
-      actionType: "other",
+      module: "household",
+      actionType: "household_created",
       entityType: "household",
       entityId: householdId,
       description: `Created household "${args.name.trim()}"`,
@@ -470,6 +509,7 @@ export const sendInvitations = mutation({
     await logActivity(ctx, {
       householdId: household._id,
       userId: profile._id,
+      module: "household",
       actionType: "member_invited",
       entityType: "household",
       entityId: household._id,

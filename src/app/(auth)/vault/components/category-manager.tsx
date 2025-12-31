@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { FolderOpen, Pencil, Plus, Settings, Trash2 } from "lucide-react";
+import { FolderOpen, Loader2, Pencil, Plus, RefreshCw, Settings, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -53,9 +53,12 @@ export function CategoryManager({
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editName, setEditName] = useState("");
 
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
   const createCategory = useMutation(api.vault.createCategory);
   const updateCategory = useMutation(api.vault.updateCategory);
   const deleteCategory = useMutation(api.vault.deleteCategory);
+  const recalculateCounts = useMutation(api.vault.recalculateCategoryCounts);
 
   const handleCreate = async () => {
     if (!newCategoryName.trim()) {
@@ -116,6 +119,24 @@ export function CategoryManager({
     setEditName("");
   };
 
+  const handleRecalculateCounts = async () => {
+    setIsRecalculating(true);
+    try {
+      const result = await recalculateCounts({ householdId });
+      const changed = result.results.filter((r) => r.previousCount !== r.calculatedCount);
+      if (changed.length > 0) {
+        toast.success(`Fixed ${changed.length} category count${changed.length === 1 ? "" : "s"}`);
+      } else {
+        toast.success("All category counts are correct");
+      }
+    } catch (error) {
+      console.error("Failed to recalculate counts:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to recalculate counts");
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -158,7 +179,24 @@ export function CategoryManager({
 
             {/* Existing Categories */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Existing Categories</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Existing Categories</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRecalculateCounts}
+                  disabled={isRecalculating}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  data-testid="recalculate-counts-button"
+                >
+                  {isRecalculating ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3 w-3" />
+                  )}
+                  {isRecalculating ? "Recalculating..." : "Fix Counts"}
+                </Button>
+              </div>
               {categories.length === 0 ? (
                 <div className="border border-dashed rounded-lg p-8 flex flex-col items-center justify-center">
                   <FolderOpen className="h-12 w-12 text-muted-foreground mb-3" />

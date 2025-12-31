@@ -521,8 +521,9 @@ export const createAccount = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "financial",
+      actionType: "asset_created",
+      entityType: "financial_account",
       entityId: accountId,
       description: `Added financial account: ${args.name}`,
     });
@@ -607,8 +608,9 @@ export const updateAccount = mutation({
     await logActivity(ctx, {
       householdId: account.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "financial",
+      actionType: "asset_updated",
+      entityType: "financial_account",
       entityId: args.accountId,
       description: `Updated financial account: ${updates.name || account.name}`,
     });
@@ -645,8 +647,9 @@ export const deleteAccount = mutation({
     await logActivity(ctx, {
       householdId: account.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "financial",
+      actionType: "asset_deleted",
+      entityType: "financial_account",
       entityId: args.accountId,
       description: `Deleted financial account: ${account.name}`,
     });
@@ -713,8 +716,9 @@ export const createProperty = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "financial",
+      actionType: "asset_created",
+      entityType: "property",
       entityId: propertyId,
       description: `Added property: ${args.name}`,
     });
@@ -795,8 +799,9 @@ export const updateProperty = mutation({
     await logActivity(ctx, {
       householdId: property.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "financial",
+      actionType: "asset_updated",
+      entityType: "property",
       entityId: args.propertyId,
       description: `Updated property: ${updates.name || property.name}`,
     });
@@ -832,8 +837,9 @@ export const deleteProperty = mutation({
     await logActivity(ctx, {
       householdId: property.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "financial",
+      actionType: "asset_deleted",
+      entityType: "property",
       entityId: args.propertyId,
       description: `Deleted property: ${property.name}`,
     });
@@ -909,8 +915,9 @@ export const createInsurancePolicy = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "financial",
+      actionType: "policy_created",
+      entityType: "insurance_policy",
       entityId: policyId,
       description: `Added ${args.type} insurance policy from ${args.provider}`,
     });
@@ -1004,8 +1011,9 @@ export const updateInsurancePolicy = mutation({
     await logActivity(ctx, {
       householdId: policy.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "financial",
+      actionType: "policy_updated",
+      entityType: "insurance_policy",
       entityId: args.policyId,
       description: `Updated ${updates.type || policy.type} insurance policy`,
     });
@@ -1042,8 +1050,9 @@ export const deleteInsurancePolicy = mutation({
     await logActivity(ctx, {
       householdId: policy.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "financial",
+      actionType: "policy_deleted",
+      entityType: "insurance_policy",
       entityId: args.policyId,
       description: `Deleted ${policy.type} insurance policy from ${policy.provider}`,
     });
@@ -1131,8 +1140,9 @@ export const completeSuggestion = mutation({
     await logActivity(ctx, {
       householdId: suggestion.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "suggestion",
+      actionType: "suggestion_completed",
+      entityType: "suggestion",
       entityId: args.suggestionId,
       description: "Completed a smart suggestion",
     });

@@ -306,8 +306,9 @@ async function createFamilyMemberInternal(
   await logActivity(ctx, {
     householdId: options.householdId,
     userId: options.createdBy,
-    actionType: options.actionType ?? "other",
-    entityType: "other",
+    module: "family",
+    actionType: options.actionType ?? "family_member_created",
+    entityType: "family_member",
     entityId: memberId,
     description: options.activityDescription,
   });
@@ -646,8 +647,9 @@ export const createFamilyUnit = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "family",
+      actionType: "family_unit_created",
+      entityType: "family_unit",
       entityId: familyUnitId,
       description: `Created family unit: ${args.name}`,
     });
@@ -722,8 +724,9 @@ export const updateFamilyUnit = mutation({
     await logActivity(ctx, {
       householdId: familyUnit.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "family",
+      actionType: "family_unit_updated",
+      entityType: "family_unit",
       entityId: args.familyUnitId,
       description: `Updated family unit: ${updates.name || familyUnit.name}`,
     });
@@ -772,8 +775,9 @@ export const deleteFamilyUnit = mutation({
     await logActivity(ctx, {
       householdId: familyUnit.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "family",
+      actionType: "family_unit_deleted",
+      entityType: "family_unit",
       entityId: args.familyUnitId,
       description: `Deleted family unit: ${familyUnit.name} (${members.length} members removed)`,
     });
@@ -914,8 +918,9 @@ export const updateFamilyMember = mutation({
     await logActivity(ctx, {
       householdId: member.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "family",
+      actionType: "family_member_updated",
+      entityType: "family_member",
       entityId: args.memberId,
       description: `Updated family member: ${updates.firstName || member.firstName} ${
         updates.lastName || member.lastName
@@ -955,8 +960,9 @@ export const removeFamilyMember = mutation({
     await logActivity(ctx, {
       householdId: member.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "family",
+      actionType: "family_member_deleted",
+      entityType: "family_member",
       entityId: args.memberId,
       description: `Removed family member: ${member.firstName} ${member.lastName}`,
     });

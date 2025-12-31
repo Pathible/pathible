@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireAuth, requireHouseholdAccess } from "./auth";
+import { logActivity } from "./shared/activity";
 
 /**
  * Wisdom & Education - Wisdom Entries Module
@@ -244,11 +245,12 @@ export const create = mutation({
     });
 
     // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
+      module: "wisdom",
       actionType: "wisdom_created",
-      entityType: "wisdom",
+      entityType: "wisdom_entry",
       entityId: entryId,
       description: `Created wisdom entry: ${args.title}`,
     });
@@ -324,11 +326,12 @@ export const update = mutation({
     await ctx.db.patch(args.entryId, updates);
 
     // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId: entry.householdId,
       userId: profile._id,
+      module: "wisdom",
       actionType: "wisdom_updated",
-      entityType: "wisdom",
+      entityType: "wisdom_entry",
       entityId: args.entryId,
       description: `Updated wisdom entry: ${updates.title || entry.title}`,
     });
@@ -367,11 +370,12 @@ export const remove = mutation({
     await ctx.db.delete(args.entryId);
 
     // Log activity
-    await ctx.db.insert("activityLog", {
+    await logActivity(ctx, {
       householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "wisdom",
+      module: "wisdom",
+      actionType: "wisdom_deleted",
+      entityType: "wisdom_entry",
       entityId: args.entryId,
       description: `Deleted wisdom entry: ${title}`,
     });

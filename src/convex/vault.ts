@@ -504,6 +504,7 @@ export const create = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
+      module: "vault",
       actionType: "document_uploaded",
       entityType: "document",
       entityId: documentId,
@@ -618,7 +619,8 @@ export const update = mutation({
     await logActivity(ctx, {
       householdId: document.householdId,
       userId: profile._id,
-      actionType: "other",
+      module: "vault",
+      actionType: "document_updated",
       entityType: "document",
       entityId: args.documentId,
       description: `Updated document: ${updates.name || document.name}`,
@@ -679,6 +681,7 @@ export const remove = mutation({
     await logActivity(ctx, {
       householdId: document.householdId,
       userId: profile._id,
+      module: "vault",
       actionType: "document_deleted",
       entityType: "document",
       entityId: args.documentId,
@@ -731,18 +734,20 @@ export const createCategory = mutation({
       throw new Error("A category with this name already exists");
     }
 
-    // Create category
+    // Create category with initialized document count
     const categoryId = await ctx.db.insert("vaultCategories", {
       householdId: args.householdId,
       name: validatedName,
       description: validatedDescription,
+      documentCount: 0,
     });
 
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "vault",
+      actionType: "category_created",
+      entityType: "category",
       entityId: categoryId,
       description: `Created category: ${args.name}`,
     });
@@ -835,8 +840,9 @@ export const updateCategory = mutation({
     await logActivity(ctx, {
       householdId: category.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "vault",
+      actionType: "category_updated",
+      entityType: "category",
       entityId: args.categoryId,
       description: `Updated category: ${updates.name || category.name}`,
     });
@@ -894,8 +900,9 @@ export const deleteCategory = mutation({
     await logActivity(ctx, {
       householdId: category.householdId,
       userId: profile._id,
-      actionType: "other",
-      entityType: "other",
+      module: "vault",
+      actionType: "category_deleted",
+      entityType: "category",
       entityId: args.categoryId,
       description: `Deleted category: ${categoryName}`,
     });
@@ -942,6 +949,9 @@ const DEFAULT_CATEGORIES = [
 /**
  * Initialize default categories for a household
  * Creates standard categories if none exist
+ *
+ * Also counts any existing documents that match the default category names,
+ * ensuring the documentCount counters are accurate from the start.
  */
 export const initializeDefaultCategories = mutation({
   args: {
@@ -962,13 +972,29 @@ export const initializeDefaultCategories = mutation({
       return 0;
     }
 
-    // Create default categories
+    // Get existing documents to count category assignments
+    const documents = await ctx.db
+      .query("vaultDocuments")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+
+    // Build a map of category name -> document count
+    const categoryCountMap = new Map<string, number>();
+    for (const doc of documents) {
+      for (const categoryName of doc.categories) {
+        categoryCountMap.set(categoryName, (categoryCountMap.get(categoryName) ?? 0) + 1);
+      }
+    }
+
+    // Create default categories with accurate document counts
     let created = 0;
     for (const category of DEFAULT_CATEGORIES) {
+      const documentCount = categoryCountMap.get(category.name) ?? 0;
       await ctx.db.insert("vaultCategories", {
         householdId: args.householdId,
         name: category.name,
         description: category.description,
+        documentCount,
       });
       created++;
     }

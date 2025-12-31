@@ -13,7 +13,14 @@
 // https://on.cypress.io/configuration
 // ***********************************************************
 
-// Import commands.js using ES2015 syntax:
+// Import Clerk testing commands for E2E auth testing
+// This adds cy.clerkSignIn() and cy.clerkSignOut() commands
+import { addClerkCommands } from "@clerk/testing/cypress";
+
+// Register Clerk commands with Cypress
+addClerkCommands({ Cypress, cy });
+
+// Import custom commands
 import "./commands";
 
 // Alternatively you can use CommonJS syntax:

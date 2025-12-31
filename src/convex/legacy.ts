@@ -215,6 +215,7 @@ export const create = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
+      module: "legacy",
       actionType: "plan_updated",
       entityType: "plan",
       entityId: planId,
@@ -357,6 +358,7 @@ export const markComplete = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
+      module: "legacy",
       actionType: "plan_updated",
       entityType: "plan",
       entityId: plan._id,
@@ -479,6 +481,7 @@ export const addKeyContact = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
+      module: "legacy",
       actionType: "plan_updated",
       entityType: "plan",
       entityId: args.legacyPlanId,
@@ -571,6 +574,7 @@ export const updateKeyContact = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
+      module: "legacy",
       actionType: "plan_updated",
       entityType: "plan",
       entityId: contact.legacyPlanId,
@@ -622,6 +626,7 @@ export const deleteKeyContact = mutation({
     await logActivity(ctx, {
       householdId: args.householdId,
       userId: profile._id,
+      module: "legacy",
       actionType: "plan_updated",
       entityType: "plan",
       entityId: legacyPlanId,

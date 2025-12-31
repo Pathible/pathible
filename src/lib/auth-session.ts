@@ -1,4 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
 
 /**
  * Get the current authenticated user session on the server
@@ -62,4 +64,72 @@ export async function requireServerAuth() {
   }
 
   return session;
+}
+
+/**
+ * Onboarding status type returned from Convex
+ */
+export interface OnboardingStatus {
+  hasProfile: boolean;
+  onboardingComplete: boolean;
+  hasHousehold: boolean;
+  needsOnboarding: boolean;
+  onboardingStatus?:
+    | "not_started"
+    | "profile_complete"
+    | "household_complete"
+    | "preferences_complete"
+    | "complete";
+}
+
+/**
+ * Get the user's onboarding status from Convex
+ *
+ * This function queries Convex to check:
+ * - Whether the user has a profile
+ * - Whether onboarding is complete
+ * - Whether the user has a household
+ *
+ * Used by server-side code (layouts) to determine if the user
+ * should be redirected to onboarding.
+ *
+ * Returns null if:
+ * - User is not authenticated
+ * - Convex URL is not configured
+ * - Query fails (fail-open for reliability)
+ */
+export async function getOnboardingStatus(): Promise<OnboardingStatus | null> {
+  try {
+    // Get the Clerk auth token for Convex
+    const { getToken, userId } = await auth();
+
+    if (!userId) {
+      return null;
+    }
+
+    const token = await getToken({ template: "convex" });
+    if (!token) {
+      console.warn("[Auth] No Convex token available");
+      return null;
+    }
+
+    // Setup Convex HTTP client
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!convexUrl) {
+      console.error("[Auth] NEXT_PUBLIC_CONVEX_URL not configured");
+      return null;
+    }
+
+    const convexClient = new ConvexHttpClient(convexUrl);
+    convexClient.setAuth(token);
+
+    // Query onboarding status from Convex
+    const status = await convexClient.query(api.auth.getOnboardingStatus);
+
+    return status;
+  } catch (error) {
+    // Log error but fail open - don't block users on transient errors
+    console.error("[Auth] Failed to get onboarding status:", error);
+    return null;
+  }
 }
