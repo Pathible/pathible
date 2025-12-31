@@ -36,7 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -200,32 +199,7 @@ export function InsuranceManager({ insurance, householdId, isLoading }: Insuranc
           </CardAction>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-36" />
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right space-y-2">
-                      <div className="space-y-1">
-                        <Skeleton className="h-3 w-16" />
-                        <Skeleton className="h-5 w-20" />
-                      </div>
-                      <div className="space-y-1">
-                        <Skeleton className="h-3 w-16" />
-                        <Skeleton className="h-4 w-24" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-9 w-9 rounded-md" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : insurance.length === 0 ? (
+          {isLoading ? null : insurance.length === 0 ? (
             <div className="text-center py-12">
               <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No insurance policies yet</h3>

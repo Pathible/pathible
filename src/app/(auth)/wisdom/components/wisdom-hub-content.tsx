@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { ArrowRight, BookOpen, Heart, Loader2 } from "lucide-react";
+import { ArrowRight, BookMarked, BookOpen, Heart, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
@@ -114,7 +114,12 @@ export function WisdomHubContent() {
     <>
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Wisdom & Education</h1>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <BookOpen className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-4xl font-bold">Wisdom & Education</h1>
+        </div>
         <p className="text-muted-foreground text-lg max-w-2xl">
           A sacred space to capture the lessons, beliefs, and heartfelt words that form the
           foundation of your legacy.
@@ -132,7 +137,7 @@ export function WisdomHubContent() {
 
         <NavCard
           href="/wisdom/library"
-          icon={<Heart className="h-5 w-5" />}
+          icon={<BookMarked className="h-5 w-5" />}
           title="Wisdom Library"
           description="View and manage all your saved wisdom entries"
         />

@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -83,33 +82,7 @@ export function SuggestionsList({ suggestions, isLoading }: SuggestionsListProps
   };
 
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <Skeleton className="h-8 w-8 rounded" />
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-5 w-48" />
-                      <Skeleton className="h-5 w-16 rounded-full" />
-                    </div>
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-                </div>
-                <Skeleton className="h-9 w-9 rounded-md" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-10 w-full rounded-md" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
+    return null;
   }
 
   if (suggestions.length === 0) {

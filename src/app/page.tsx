@@ -4,7 +4,6 @@ import {
   Check,
   FileText,
   FolderLock,
-  Lightbulb,
   Lock,
   PiggyBank,
   ScrollText,
@@ -142,7 +141,7 @@ function ValuePillars() {
       accent: "from-pathible-forest/10 to-pathible-sage/10",
     },
     {
-      icon: Lightbulb,
+      icon: BookOpen,
       title: "Wisdom & Education",
       body: "Share your stories, beliefs, and letters with the people you love. Give them something to return to for years to come.",
       accent: "from-pathible-gold/10 to-amber-100/50",

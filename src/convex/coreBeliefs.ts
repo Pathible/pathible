@@ -17,6 +17,32 @@ import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./au
 const MAX_CORE_BELIEFS = 5;
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Validate belief statement and reflection inputs
+ */
+function validateBeliefInput(args: { statement?: string; reflection?: string }): void {
+  if (args.statement !== undefined) {
+    if (!args.statement.trim()) {
+      throw new Error("Belief statement is required");
+    }
+    if (args.statement.length > 200) {
+      throw new Error("Statement is too long (max 200 characters)");
+    }
+  }
+  if (args.reflection !== undefined) {
+    if (!args.reflection.trim()) {
+      throw new Error("Reflection is required");
+    }
+    if (args.reflection.length > 5000) {
+      throw new Error("Reflection is too long (max 5,000 characters)");
+    }
+  }
+}
+
+// ============================================================================
 // VALIDATORS
 // ============================================================================
 
@@ -35,8 +61,8 @@ const coreBeliefReturnValidator = v.object({
   householdId: v.id("households"),
   createdBy: v.id("profiles"),
   createdByName: v.string(),
-  title: v.string(),
-  content: v.string(),
+  statement: v.string(),
+  reflection: v.string(),
   category: categoryValidator,
   orderIndex: v.number(),
   updatedAt: v.number(),
@@ -129,8 +155,8 @@ export const get = query({
 export const create = mutation({
   args: {
     householdId: v.id("households"),
-    title: v.string(),
-    content: v.string(),
+    statement: v.string(),
+    reflection: v.string(),
     category: categoryValidator,
   },
   returns: v.id("coreBeliefs"),
@@ -152,18 +178,7 @@ export const create = mutation({
     }
 
     // Validate inputs
-    if (!args.title.trim()) {
-      throw new Error("Title is required");
-    }
-    if (args.title.length > 200) {
-      throw new Error("Title is too long (max 200 characters)");
-    }
-    if (!args.content.trim()) {
-      throw new Error("Content is required");
-    }
-    if (args.content.length > 5000) {
-      throw new Error("Content is too long (max 5,000 characters)");
-    }
+    validateBeliefInput({ statement: args.statement, reflection: args.reflection });
 
     // Calculate next orderIndex
     const maxOrderIndex = existingBeliefs.reduce((max, b) => Math.max(max, b.orderIndex), -1);
@@ -172,8 +187,8 @@ export const create = mutation({
     const beliefId = await ctx.db.insert("coreBeliefs", {
       householdId: args.householdId,
       createdBy: profile._id,
-      title: args.title.trim(),
-      content: args.content.trim(),
+      statement: args.statement.trim(),
+      reflection: args.reflection.trim(),
       category: args.category,
       orderIndex: maxOrderIndex + 1,
       updatedAt: Date.now(),
@@ -186,7 +201,7 @@ export const create = mutation({
       actionType: "other",
       entityType: "other",
       entityId: beliefId,
-      description: `Added core belief: ${args.title}`,
+      description: `Added core belief: ${args.statement}`,
     });
 
     return beliefId;
@@ -200,8 +215,8 @@ export const create = mutation({
 export const update = mutation({
   args: {
     beliefId: v.id("coreBeliefs"),
-    title: v.optional(v.string()),
-    content: v.optional(v.string()),
+    statement: v.optional(v.string()),
+    reflection: v.optional(v.string()),
     category: v.optional(categoryValidator),
   },
   returns: v.id("coreBeliefs"),
@@ -216,33 +231,18 @@ export const update = mutation({
     const { profile } = await requireAuth(ctx);
 
     // Validate inputs
-    if (args.title !== undefined) {
-      if (!args.title.trim()) {
-        throw new Error("Title cannot be empty");
-      }
-      if (args.title.length > 200) {
-        throw new Error("Title is too long (max 200 characters)");
-      }
-    }
-    if (args.content !== undefined) {
-      if (!args.content.trim()) {
-        throw new Error("Content cannot be empty");
-      }
-      if (args.content.length > 5000) {
-        throw new Error("Content is too long (max 5,000 characters)");
-      }
-    }
+    validateBeliefInput({ statement: args.statement, reflection: args.reflection });
 
     // Build update object
     const updates: Partial<Doc<"coreBeliefs">> = {
       updatedAt: Date.now(),
     };
 
-    if (args.title !== undefined) {
-      updates.title = args.title.trim();
+    if (args.statement !== undefined) {
+      updates.statement = args.statement.trim();
     }
-    if (args.content !== undefined) {
-      updates.content = args.content.trim();
+    if (args.reflection !== undefined) {
+      updates.reflection = args.reflection.trim();
     }
     if (args.category !== undefined) {
       updates.category = args.category;
@@ -258,7 +258,7 @@ export const update = mutation({
       actionType: "other",
       entityType: "other",
       entityId: args.beliefId,
-      description: `Updated core belief: ${updates.title || belief.title}`,
+      description: `Updated core belief: ${updates.statement || belief.statement}`,
     });
 
     return args.beliefId;
@@ -284,7 +284,7 @@ export const remove = mutation({
     await requireHouseholdAdmin(ctx, belief.householdId);
     const { profile } = await requireAuth(ctx);
 
-    const title = belief.title;
+    const statement = belief.statement;
     const householdId = belief.householdId;
 
     // Delete the belief
@@ -297,7 +297,7 @@ export const remove = mutation({
       actionType: "other",
       entityType: "other",
       entityId: args.beliefId,
-      description: `Deleted core belief: ${title}`,
+      description: `Deleted core belief: ${statement}`,
     });
 
     return null;
