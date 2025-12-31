@@ -193,9 +193,123 @@ $ARGUMENTS
 
 The filename becomes the command name: `my-command.md` → `/my-command`
 
+---
+
+### `/debug-auth`
+
+Diagnose authentication issues by checking user state, sessions, and profiles.
+
+**Usage:**
+
+```bash
+/debug-auth                   # Show database overview
+/debug-auth user@example.com  # Look up specific user
+/debug-auth --sessions        # List active sessions
+/debug-auth --profiles        # Find orphaned profiles
+```
+
+**What it does:**
+
+1. Checks Clerk user existence
+2. Verifies Convex profile exists
+3. Validates household membership
+4. Reports subscription status
+5. Provides fix recommendations
+
+---
+
+### `/test-setup`
+
+Verify and configure the Cypress E2E test environment.
+
+**Usage:**
+
+```bash
+/test-setup           # Check prerequisites
+/test-setup --fix     # Auto-fix missing dependencies
+/test-setup --ci      # Generate CI/CD configuration
+```
+
+**What it does:**
+
+1. Checks Node.js, pnpm, Cypress versions
+2. Verifies environment variables
+3. Tests server accessibility
+4. Optionally fixes issues automatically
+5. Generates GitHub Actions config
+
+---
+
+### `/schema-check`
+
+Validate schema entities against implementation and roadmap.
+
+**Usage:**
+
+```bash
+/schema-check              # Quick health summary
+/schema-check profiles     # Check specific table
+/schema-check --unused     # Find tables without implementation
+/schema-check --roadmap    # Compare against SCHEMA_ROADMAP.md
+/schema-check --full       # Complete audit
+```
+
+**What it does:**
+
+1. Parses schema.ts for all table definitions
+2. Searches for usage across Convex modules
+3. Cross-references with SCHEMA_ROADMAP.md
+4. Reports coverage and discrepancies
+
+---
+
+### `/security-audit`
+
+Run security checks against current branch before merge.
+
+**Usage:**
+
+```bash
+/security-audit              # Audit changed files
+/security-audit vault        # Audit specific module
+/security-audit --full       # Complete security audit
+/security-audit --quick      # Fast common vulnerability check
+/security-audit --log        # Append to SECURITY_AUDIT_LOG.md
+```
+
+**What it does:**
+
+1. Verifies authentication checks on mutations
+2. Validates authorization (household access, roles)
+3. Checks subscription enforcement
+4. Reviews input validation
+5. Identifies data exposure risks
+6. Generates remediation report
+
+---
+
+## All Commands at a Glance
+
+| Command | Purpose |
+|---------|---------|
+| `/create-pr` | Create pull request with auto-description |
+| `/code-review` | Comprehensive code review with agents |
+| `/fix-plan` | Create remediation plan from review |
+| `/fix-issues` | Auto-fix issues from plan |
+| `/review` | Quick PR review |
+| `/commit` | Create commit with conventional message |
+| `/debug-auth` | Diagnose authentication issues |
+| `/test-setup` | Verify test environment |
+| `/schema-check` | Validate schema implementation |
+| `/security-audit` | Security vulnerability check |
+
+---
+
 ## Tips
 
 - **Chain commands**: Run `/code-review`, then `/fix-plan --post-to-pr` for full workflow
 - **Iterate**: Use `/fix-issues #1` to fix one issue at a time
 - **Skip tests**: Use `--no-tests` when reviewing non-test changes only
 - **Team visibility**: Use `--post-to-pr` to share fix plans on PRs
+- **Before merge**: Run `/security-audit` to catch vulnerabilities
+- **Schema changes**: Run `/schema-check --roadmap` to keep docs in sync
