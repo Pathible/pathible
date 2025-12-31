@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
@@ -15,9 +16,24 @@ import { AdminLayout as AdminLayoutComponent } from "./components/admin-layout";
  * This layout only verifies admin role for access control.
  */
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const myRole = useQuery(api.roles.getMyRole);
+  const { isLoaded, isSignedIn } = useAuth();
 
-  // Wait for role to load
+  // Skip query until Clerk auth is loaded and user is signed in
+  // This prevents the query from running before Convex has the auth token
+  const myRole = useQuery(api.roles.getMyRole, isLoaded && isSignedIn ? {} : "skip");
+
+  // Wait for Clerk auth to load
+  if (!isLoaded) {
+    return <AdminLoadingState />;
+  }
+
+  // This shouldn't happen since parent (auth) layout checks auth,
+  // but handle it defensively
+  if (!isSignedIn) {
+    redirect("/login?redirect=/admin");
+  }
+
+  // Wait for role query to complete
   if (myRole === undefined) {
     return <AdminLoadingState />;
   }
