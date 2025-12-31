@@ -98,7 +98,11 @@ export function DashboardContent() {
       </div>
 
       {/* Progress Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" data-testid="dashboard-stats">
+      <div
+        className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+        data-testid="dashboard-stats"
+        data-tour="dashboard-stats"
+      >
         <DashboardStatCard
           href="/vault"
           icon="shield"
@@ -125,7 +129,7 @@ export function DashboardContent() {
       </div>
 
       {/* Next Step CTA */}
-      <Link href={nextStep.route} className="block mb-8">
+      <Link href={nextStep.route} className="block mb-8" data-tour="next-step-cta">
         <Card className="bg-primary/5 border-primary/20 cursor-pointer hover:shadow-lg transition-all hover:bg-primary/10">
           <CardContent>
             <div className="flex items-start gap-4">
@@ -146,7 +150,7 @@ export function DashboardContent() {
       </Link>
 
       {/* Daily Devotional/Quote */}
-      <Card className="mb-8 border-l-4 border-l-primary">
+      <Card className="mb-8 border-l-4 border-l-primary" data-tour="daily-reflection">
         <CardContent>
           <div className="flex items-start gap-4">
             <div className="p-3 rounded-lg bg-primary/10">

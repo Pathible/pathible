@@ -86,6 +86,69 @@ export const listPublished = query({
 });
 
 /**
+ * List published tours with their enabled steps (for TourManager)
+ * Returns tours ordered by priority with their enabled steps
+ */
+export const listPublishedWithSteps = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      ...tourValidator.fields,
+      steps: v.array(
+        v.object({
+          _id: v.id("tourSteps"),
+          stepKey: v.string(),
+          order: v.number(),
+          route: v.string(),
+          anchorKey: v.string(),
+          title: v.string(),
+          body: v.string(),
+          versionIntroduced: v.number(),
+        }),
+      ),
+    }),
+  ),
+  handler: async (ctx) => {
+    await requireAuth(ctx);
+
+    const tours = await ctx.db
+      .query("tours")
+      .withIndex("by_status_and_priority", (q) => q.eq("status", "published"))
+      .collect();
+
+    // Fetch enabled steps for each tour
+    const toursWithSteps = await Promise.all(
+      tours.map(async (tour) => {
+        const steps = await ctx.db
+          .query("tourSteps")
+          .withIndex("by_tour_and_order", (q) => q.eq("tourId", tour._id))
+          .collect();
+
+        const enabledSteps = steps
+          .filter((step) => step.enabled)
+          .map((step) => ({
+            _id: step._id,
+            stepKey: step.stepKey,
+            order: step.order,
+            route: step.route,
+            anchorKey: step.anchorKey,
+            title: step.title,
+            body: step.body,
+            versionIntroduced: step.versionIntroduced,
+          }));
+
+        return {
+          ...tour,
+          steps: enabledSteps,
+        };
+      }),
+    );
+
+    return toursWithSteps;
+  },
+});
+
+/**
  * Get a single tour by ID (admin only)
  */
 export const get = query({
@@ -692,5 +755,122 @@ export const resetTourState = mutation({
     }
 
     return null;
+  },
+});
+
+// ============================================================================
+// SEED DATA (Admin only - for initial setup)
+// ============================================================================
+
+/**
+ * Seed the Welcome Tour (admin only)
+ * Creates a published tour with steps that guide new users through the dashboard
+ */
+export const seedWelcomeTour = mutation({
+  args: {},
+  returns: v.id("tours"),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Check if welcome tour already exists (ignore archived tours)
+    const existing = await ctx.db
+      .query("tours")
+      .withIndex("by_key", (q) => q.eq("key", "welcome-tour"))
+      .unique();
+
+    if (existing && existing.status !== "archived") {
+      throw new Error(
+        "Welcome Tour already exists. Archive it first or use the editor to modify it.",
+      );
+    }
+
+    // If archived version exists, we'll create a new one with a different key
+    const tourKey = existing ? `welcome-tour-${Date.now()}` : "welcome-tour";
+
+    const now = Date.now();
+
+    // Create the tour
+    const tourId = await ctx.db.insert("tours", {
+      key: tourKey,
+      name: "Welcome to Pathible",
+      description: "A quick tour to help you get started with your legacy planning journey.",
+      status: "published",
+      version: 1,
+      priority: 10, // High priority so it shows first
+      createdBy: identity.subject,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Define the tour steps
+    const steps = [
+      {
+        stepKey: "welcome-stats",
+        route: "/dashboard",
+        anchorKey: "dashboard-stats",
+        title: "Your Legacy at a Glance",
+        body: "These cards show your progress across all areas of Pathible. Track your vault documents, wisdom entries, and legacy plan completion here.",
+      },
+      {
+        stepKey: "welcome-next-step",
+        route: "/dashboard",
+        anchorKey: "next-step-cta",
+        title: "Personalized Guidance",
+        body: "Based on your progress, we suggest the best next action to take. Click here anytime to continue building your legacy.",
+      },
+      {
+        stepKey: "welcome-reflection",
+        route: "/dashboard",
+        anchorKey: "daily-reflection",
+        title: "Daily Inspiration",
+        body: "Start each day with wisdom and reflection. These curated quotes help you stay connected to your values and purpose.",
+      },
+      {
+        stepKey: "welcome-nav-vault",
+        route: "/dashboard",
+        anchorKey: "nav-vault",
+        title: "Heritage Vault",
+        body: "Securely store important documents like wills, insurance policies, and family records. Everything your loved ones will need, organized in one place.",
+      },
+      {
+        stepKey: "welcome-nav-wisdom",
+        route: "/dashboard",
+        anchorKey: "nav-wisdom",
+        title: "Wisdom & Education",
+        body: "Capture life lessons, stories, and values to pass down to future generations. This is your space to share what matters most.",
+      },
+      {
+        stepKey: "welcome-nav-legacy",
+        route: "/dashboard",
+        anchorKey: "nav-legacy",
+        title: "Legacy Planning",
+        body: "Document your final wishes, write letters to loved ones, and ensure your story is preserved. This is the heart of Pathible.",
+      },
+    ];
+
+    // Create each step
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      await ctx.db.insert("tourSteps", {
+        tourId,
+        stepKey: step.stepKey,
+        order: i,
+        route: step.route,
+        anchorKey: step.anchorKey,
+        title: step.title,
+        body: step.body,
+        enabled: true,
+        versionIntroduced: 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return tourId;
   },
 });

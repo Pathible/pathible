@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Eye,
   GripVertical,
+  MousePointer2,
   Pencil,
   Plus,
   RefreshCw,
@@ -94,6 +95,46 @@ export function TourEditor({ tourId }: TourEditorProps) {
   const [stepBody, setStepBody] = useState("");
   const [stepEnabled, setStepEnabled] = useState(true);
   const [stepActivationKey, setStepActivationKey] = useState("");
+  const [isSelectingElement, setIsSelectingElement] = useState(false);
+
+  // Listen for element selection from visual builder
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from same origin
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data?.type === "TOUR_ELEMENT_SELECTED") {
+        const { route, computedKey, selector } = event.data.payload;
+        setStepRoute(route);
+        setStepAnchorKey(selector);
+        // Auto-generate step key from computed key if not editing
+        if (!editingStep && !stepKey) {
+          setStepKey(computedKey.toLowerCase().replace(/[^a-z0-9-]/g, "-"));
+        }
+        setIsSelectingElement(false);
+        toast.success("Element Selected", {
+          description: `Selected element on ${route}`,
+        });
+      } else if (event.data?.type === "TOUR_SELECTION_CANCELLED") {
+        setIsSelectingElement(false);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [editingStep, stepKey]);
+
+  const openVisualSelector = () => {
+    setIsSelectingElement(true);
+    // Open the app in a new window with tour_builder mode
+    const baseUrl = window.location.origin;
+    const targetRoute = stepRoute || "/dashboard";
+    window.open(
+      `${baseUrl}${targetRoute}?tour_builder=1`,
+      "tour_builder",
+      "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no",
+    );
+  };
 
   // Initialize form when tour loads
   useEffect(() => {
@@ -574,6 +615,32 @@ export function TourEditor({ tourId }: TourEditorProps) {
                 : "Add a new step to this tour. It will be added at the end."}
             </DialogDescription>
           </DialogHeader>
+          {/* Visual Element Selector */}
+          <div className="rounded-lg border border-dashed border-primary/50 bg-primary/5 p-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-primary/10 p-2">
+                <MousePointer2 className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-foreground">Visual Element Selector</h4>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Click the button below to open the app and visually select an element. The route
+                  and anchor will be filled automatically.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={openVisualSelector}
+                  disabled={isSelectingElement}
+                >
+                  <MousePointer2 className="mr-2 h-4 w-4" />
+                  {isSelectingElement ? "Waiting for selection..." : "Select Element Visually"}
+                </Button>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-4 py-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="step-key">Step Key</Label>
@@ -597,19 +664,20 @@ export function TourEditor({ tourId }: TourEditorProps) {
                 onChange={(e) => setStepRoute(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Page where this step appears (e.g., /dashboard)
+                Page where this step appears (auto-filled by visual selector)
               </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="step-anchor">Anchor Key</Label>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="step-anchor">Element Selector</Label>
               <Input
                 id="step-anchor"
-                placeholder="sidebar-nav"
+                placeholder="[data-testid='dashboard-stats']"
                 value={stepAnchorKey}
                 onChange={(e) => setStepAnchorKey(e.target.value)}
+                className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                data-tour attribute value to anchor to
+                CSS selector for the target element (auto-filled by visual selector)
               </p>
             </div>
             <div className="space-y-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { Archive, Compass, Edit, MoreHorizontal, Plus } from "lucide-react";
+import { Archive, Compass, Edit, MoreHorizontal, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -71,6 +71,7 @@ export function ToursList() {
   const tours = useQuery(api.tours.listAll);
   const createTour = useMutation(api.tours.create);
   const archiveTour = useMutation(api.tours.archive);
+  const seedWelcomeTour = useMutation(api.tours.seedWelcomeTour);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -149,6 +150,22 @@ export function ToursList() {
     setArchiveDialogOpen(true);
   };
 
+  const handleSeedWelcomeTour = async () => {
+    setIsSubmitting(true);
+    try {
+      await seedWelcomeTour({});
+      toast.success("Welcome Tour Created", {
+        description: "The Welcome Tour has been seeded with 6 steps and published.",
+      });
+    } catch (error) {
+      toast.error("Error", {
+        description: error instanceof Error ? error.message : "Failed to seed Welcome Tour",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (tours === undefined) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -167,10 +184,16 @@ export function ToursList() {
             Manage onboarding tours that guide users through the app
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Tour
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleSeedWelcomeTour} disabled={isSubmitting}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Seed Welcome Tour
+          </Button>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Tour
+          </Button>
+        </div>
       </div>
 
       {/* Tours Table */}
