@@ -232,33 +232,6 @@ export default defineSchema({
     .index("by_familyUnit_and_profileId", ["familyUnitId", "profileId"]),
 
   // ============================================================================
-  // SUBSCRIPTIONS & BILLING
-  // ============================================================================
-
-  /**
-   * Subscriptions - Stripe subscription management
-   */
-  subscriptions: defineTable({
-    householdId: v.id("households"),
-    stripeCustomerId: v.string(),
-    stripeSubscriptionId: v.string(),
-    tier: v.union(v.literal("foundations"), v.literal("heritage"), v.literal("legacy")),
-    status: v.union(
-      v.literal("active"),
-      v.literal("inactive"),
-      v.literal("cancelled"),
-      v.literal("past_due"),
-      v.literal("trialing"),
-    ),
-    currentPeriodStart: v.number(), // Unix timestamp
-    currentPeriodEnd: v.number(), // Unix timestamp
-    cancelAtPeriodEnd: v.boolean(),
-  })
-    .index("by_household", ["householdId"])
-    .index("by_stripeCustomerId", ["stripeCustomerId"])
-    .index("by_stripeSubscriptionId", ["stripeSubscriptionId"]),
-
-  // ============================================================================
   // HERITAGE VAULT
   // ============================================================================
 
@@ -649,6 +622,69 @@ export default defineSchema({
     variables: v.array(v.string()), // Available template variables
     updatedAt: v.number(),
   }).index("by_name", ["name"]),
+
+  // ============================================================================
+  // GUIDED TOURS
+  // ============================================================================
+
+  /**
+   * Tours - admin-managed onboarding tours that guide users through features
+   */
+  tours: defineTable({
+    key: v.string(), // Stable unique identifier (e.g., "welcome", "vault-intro")
+    name: v.string(), // Display name
+    description: v.optional(v.string()),
+    status: v.union(v.literal("draft"), v.literal("published"), v.literal("archived")),
+    version: v.number(), // Incremented when tour is updated
+    priority: v.number(), // Lower number = higher priority
+    minTier: v.optional(
+      v.union(v.literal("foundations"), v.literal("heritage"), v.literal("legacy")),
+    ), // Reserved for tier-gating tours
+    createdBy: v.string(), // Better Auth user ID (admin)
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_key", ["key"])
+    .index("by_status", ["status"])
+    .index("by_status_and_priority", ["status", "priority"]),
+
+  /**
+   * Tour steps - individual steps within a tour
+   */
+  tourSteps: defineTable({
+    tourId: v.id("tours"),
+    stepKey: v.string(), // Stable identifier within the tour
+    order: v.number(), // Display order (0-indexed)
+    route: v.string(), // Route where this step appears (e.g., "/dashboard")
+    anchorKey: v.string(), // data-tour attribute value to anchor to
+    title: v.string(),
+    body: v.string(), // Rich text/markdown content
+    enabled: v.boolean(),
+    activationKey: v.optional(v.string()), // Optional key to trigger step programmatically
+    versionIntroduced: v.number(), // Tour version when this step was added
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tour", ["tourId"])
+    .index("by_tour_and_order", ["tourId", "order"])
+    .index("by_tour_and_stepKey", ["tourId", "stepKey"]),
+
+  /**
+   * User tour state - tracks user progress through tours
+   */
+  userTourState: defineTable({
+    userId: v.id("profiles"),
+    tourId: v.id("tours"),
+    lastSeenVersion: v.number(), // Last tour version the user saw
+    dismissed: v.boolean(), // Whether user dismissed the tour
+    dismissedAt: v.optional(v.number()), // Unix timestamp
+    completedStepKeys: v.array(v.string()), // Steps the user has completed
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_tour", ["tourId"])
+    .index("by_user_and_tour", ["userId", "tourId"]),
 
   // ============================================================================
   // ACTIVITY & NOTIFICATIONS

@@ -1,0 +1,696 @@
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+import { requireAdmin, requireAuth } from "./auth";
+
+// ============================================================================
+// VALIDATORS
+// ============================================================================
+
+const tourStatusValidator = v.union(
+  v.literal("draft"),
+  v.literal("published"),
+  v.literal("archived"),
+);
+
+const tourValidator = v.object({
+  _id: v.id("tours"),
+  _creationTime: v.number(),
+  key: v.string(),
+  name: v.string(),
+  description: v.optional(v.string()),
+  status: tourStatusValidator,
+  version: v.number(),
+  priority: v.number(),
+  minTier: v.optional(
+    v.union(v.literal("foundations"), v.literal("heritage"), v.literal("legacy")),
+  ),
+  createdBy: v.string(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+const tourStepValidator = v.object({
+  _id: v.id("tourSteps"),
+  _creationTime: v.number(),
+  tourId: v.id("tours"),
+  stepKey: v.string(),
+  order: v.number(),
+  route: v.string(),
+  anchorKey: v.string(),
+  title: v.string(),
+  body: v.string(),
+  enabled: v.boolean(),
+  activationKey: v.optional(v.string()),
+  versionIntroduced: v.number(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+// ============================================================================
+// TOUR QUERIES
+// ============================================================================
+
+/**
+ * List all tours (admin only)
+ * Returns all tours regardless of status
+ */
+export const listAll = query({
+  args: {},
+  returns: v.array(tourValidator),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    const tours = await ctx.db.query("tours").withIndex("by_status_and_priority").collect();
+
+    return tours;
+  },
+});
+
+/**
+ * List published tours (for regular users)
+ * Only returns published tours, ordered by priority
+ */
+export const listPublished = query({
+  args: {},
+  returns: v.array(tourValidator),
+  handler: async (ctx) => {
+    await requireAuth(ctx);
+
+    const tours = await ctx.db
+      .query("tours")
+      .withIndex("by_status_and_priority", (q) => q.eq("status", "published"))
+      .collect();
+
+    return tours;
+  },
+});
+
+/**
+ * Get a single tour by ID (admin only)
+ */
+export const get = query({
+  args: { tourId: v.id("tours") },
+  returns: v.union(tourValidator, v.null()),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    return await ctx.db.get(args.tourId);
+  },
+});
+
+/**
+ * Get a tour by key (for regular users, only if published)
+ */
+export const getByKey = query({
+  args: { key: v.string() },
+  returns: v.union(tourValidator, v.null()),
+  handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
+    const tour = await ctx.db
+      .query("tours")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+
+    // Only return if published
+    if (tour && tour.status === "published") {
+      return tour;
+    }
+
+    return null;
+  },
+});
+
+// ============================================================================
+// TOUR MUTATIONS
+// ============================================================================
+
+/**
+ * Create a new tour (admin only)
+ * Tours start as drafts with version 1
+ */
+export const create = mutation({
+  args: {
+    key: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    priority: v.optional(v.number()),
+  },
+  returns: v.id("tours"),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    // Get the admin's user ID
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Check if key already exists
+    const existing = await ctx.db
+      .query("tours")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+
+    if (existing) {
+      throw new Error(`Tour with key "${args.key}" already exists`);
+    }
+
+    const now = Date.now();
+
+    const tourId = await ctx.db.insert("tours", {
+      key: args.key,
+      name: args.name,
+      description: args.description,
+      status: "draft",
+      version: 1,
+      priority: args.priority ?? 100,
+      createdBy: identity.subject,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return tourId;
+  },
+});
+
+/**
+ * Update tour settings (admin only)
+ * Does not affect version - use bumpVersion for that
+ */
+export const update = mutation({
+  args: {
+    tourId: v.id("tours"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    status: v.optional(tourStatusValidator),
+    priority: v.optional(v.number()),
+    minTier: v.optional(
+      v.union(v.literal("foundations"), v.literal("heritage"), v.literal("legacy")),
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const tour = await ctx.db.get(args.tourId);
+    if (!tour) {
+      throw new Error("Tour not found");
+    }
+
+    const updates: Record<string, unknown> = {
+      updatedAt: Date.now(),
+    };
+
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.description !== undefined) updates.description = args.description;
+    if (args.status !== undefined) updates.status = args.status;
+    if (args.priority !== undefined) updates.priority = args.priority;
+    if (args.minTier !== undefined) updates.minTier = args.minTier;
+
+    await ctx.db.patch(args.tourId, updates);
+
+    return null;
+  },
+});
+
+/**
+ * Archive a tour (admin only)
+ * Sets status to archived
+ */
+export const archive = mutation({
+  args: { tourId: v.id("tours") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const tour = await ctx.db.get(args.tourId);
+    if (!tour) {
+      throw new Error("Tour not found");
+    }
+
+    await ctx.db.patch(args.tourId, {
+      status: "archived",
+      updatedAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Bump tour version (admin only)
+ * Increments version by 1
+ * New steps added after this will get the new versionIntroduced
+ */
+export const bumpVersion = mutation({
+  args: { tourId: v.id("tours") },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const tour = await ctx.db.get(args.tourId);
+    if (!tour) {
+      throw new Error("Tour not found");
+    }
+
+    const newVersion = tour.version + 1;
+
+    await ctx.db.patch(args.tourId, {
+      version: newVersion,
+      updatedAt: Date.now(),
+    });
+
+    return newVersion;
+  },
+});
+
+// ============================================================================
+// TOUR STEPS QUERIES
+// ============================================================================
+
+/**
+ * List all steps for a tour (admin only)
+ */
+export const listSteps = query({
+  args: { tourId: v.id("tours") },
+  returns: v.array(tourStepValidator),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const steps = await ctx.db
+      .query("tourSteps")
+      .withIndex("by_tour_and_order", (q) => q.eq("tourId", args.tourId))
+      .collect();
+
+    return steps;
+  },
+});
+
+/**
+ * List enabled steps for a tour (for regular users)
+ * Only returns enabled steps from published tours
+ */
+export const listEnabledSteps = query({
+  args: { tourKey: v.string() },
+  returns: v.array(tourStepValidator),
+  handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
+    // Get the published tour
+    const tour = await ctx.db
+      .query("tours")
+      .withIndex("by_key", (q) => q.eq("key", args.tourKey))
+      .unique();
+
+    if (!tour || tour.status !== "published") {
+      return [];
+    }
+
+    // Get all steps and filter for enabled
+    const steps = await ctx.db
+      .query("tourSteps")
+      .withIndex("by_tour_and_order", (q) => q.eq("tourId", tour._id))
+      .collect();
+
+    return steps.filter((step) => step.enabled);
+  },
+});
+
+// ============================================================================
+// TOUR STEPS MUTATIONS
+// ============================================================================
+
+/**
+ * Create a new tour step (admin only)
+ * versionIntroduced is set to the current tour version
+ */
+export const createStep = mutation({
+  args: {
+    tourId: v.id("tours"),
+    stepKey: v.string(),
+    route: v.string(),
+    anchorKey: v.string(),
+    title: v.string(),
+    body: v.string(),
+    enabled: v.optional(v.boolean()),
+    activationKey: v.optional(v.string()),
+  },
+  returns: v.id("tourSteps"),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const tour = await ctx.db.get(args.tourId);
+    if (!tour) {
+      throw new Error("Tour not found");
+    }
+
+    // Check if stepKey already exists in this tour
+    const existingStep = await ctx.db
+      .query("tourSteps")
+      .withIndex("by_tour_and_stepKey", (q) =>
+        q.eq("tourId", args.tourId).eq("stepKey", args.stepKey),
+      )
+      .unique();
+
+    if (existingStep) {
+      throw new Error(`Step with key "${args.stepKey}" already exists in this tour`);
+    }
+
+    // Get the current max order for this tour
+    const existingSteps = await ctx.db
+      .query("tourSteps")
+      .withIndex("by_tour_and_order", (q) => q.eq("tourId", args.tourId))
+      .collect();
+
+    const maxOrder = existingSteps.reduce((max, step) => Math.max(max, step.order), -1);
+
+    const now = Date.now();
+
+    const stepId = await ctx.db.insert("tourSteps", {
+      tourId: args.tourId,
+      stepKey: args.stepKey,
+      order: maxOrder + 1,
+      route: args.route,
+      anchorKey: args.anchorKey,
+      title: args.title,
+      body: args.body,
+      enabled: args.enabled ?? true,
+      activationKey: args.activationKey,
+      versionIntroduced: tour.version,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Update tour's updatedAt
+    await ctx.db.patch(args.tourId, { updatedAt: now });
+
+    return stepId;
+  },
+});
+
+/**
+ * Update a tour step (admin only)
+ * Note: versionIntroduced is read-only after creation
+ */
+export const updateStep = mutation({
+  args: {
+    stepId: v.id("tourSteps"),
+    route: v.optional(v.string()),
+    anchorKey: v.optional(v.string()),
+    title: v.optional(v.string()),
+    body: v.optional(v.string()),
+    enabled: v.optional(v.boolean()),
+    activationKey: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const step = await ctx.db.get(args.stepId);
+    if (!step) {
+      throw new Error("Step not found");
+    }
+
+    const now = Date.now();
+
+    const updates: Record<string, unknown> = {
+      updatedAt: now,
+    };
+
+    if (args.route !== undefined) updates.route = args.route;
+    if (args.anchorKey !== undefined) updates.anchorKey = args.anchorKey;
+    if (args.title !== undefined) updates.title = args.title;
+    if (args.body !== undefined) updates.body = args.body;
+    if (args.enabled !== undefined) updates.enabled = args.enabled;
+    if (args.activationKey !== undefined) updates.activationKey = args.activationKey;
+
+    await ctx.db.patch(args.stepId, updates);
+
+    // Update tour's updatedAt
+    await ctx.db.patch(step.tourId, { updatedAt: now });
+
+    return null;
+  },
+});
+
+/**
+ * Delete a tour step (admin only)
+ */
+export const deleteStep = mutation({
+  args: { stepId: v.id("tourSteps") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const step = await ctx.db.get(args.stepId);
+    if (!step) {
+      throw new Error("Step not found");
+    }
+
+    const tourId = step.tourId;
+
+    await ctx.db.delete(args.stepId);
+
+    // Reorder remaining steps to maintain contiguous order
+    const remainingSteps = await ctx.db
+      .query("tourSteps")
+      .withIndex("by_tour_and_order", (q) => q.eq("tourId", tourId))
+      .collect();
+
+    // Sort by current order and reassign
+    remainingSteps.sort((a, b) => a.order - b.order);
+    for (let i = 0; i < remainingSteps.length; i++) {
+      if (remainingSteps[i].order !== i) {
+        await ctx.db.patch(remainingSteps[i]._id, { order: i });
+      }
+    }
+
+    // Update tour's updatedAt
+    await ctx.db.patch(tourId, { updatedAt: Date.now() });
+
+    return null;
+  },
+});
+
+/**
+ * Reorder tour steps (admin only)
+ * Takes an array of step IDs in the new order
+ */
+export const reorderSteps = mutation({
+  args: {
+    tourId: v.id("tours"),
+    stepIds: v.array(v.id("tourSteps")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const tour = await ctx.db.get(args.tourId);
+    if (!tour) {
+      throw new Error("Tour not found");
+    }
+
+    const now = Date.now();
+
+    // Update each step's order based on its position in the array
+    for (let i = 0; i < args.stepIds.length; i++) {
+      const step = await ctx.db.get(args.stepIds[i]);
+      if (!step) {
+        throw new Error(`Step ${args.stepIds[i]} not found`);
+      }
+      if (step.tourId !== args.tourId) {
+        throw new Error(`Step ${args.stepIds[i]} does not belong to this tour`);
+      }
+
+      if (step.order !== i) {
+        await ctx.db.patch(args.stepIds[i], {
+          order: i,
+          updatedAt: now,
+        });
+      }
+    }
+
+    // Update tour's updatedAt
+    await ctx.db.patch(args.tourId, { updatedAt: now });
+
+    return null;
+  },
+});
+
+// ============================================================================
+// USER TOUR STATE
+// ============================================================================
+
+const userTourStateValidator = v.object({
+  _id: v.id("userTourState"),
+  _creationTime: v.number(),
+  userId: v.id("profiles"),
+  tourId: v.id("tours"),
+  lastSeenVersion: v.number(),
+  dismissed: v.boolean(),
+  dismissedAt: v.optional(v.number()),
+  completedStepKeys: v.array(v.string()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+/**
+ * Get user's state for a specific tour
+ */
+export const getUserTourState = query({
+  args: { tourId: v.id("tours") },
+  returns: v.union(userTourStateValidator, v.null()),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+
+    const state = await ctx.db
+      .query("userTourState")
+      .withIndex("by_user_and_tour", (q) => q.eq("userId", profile._id).eq("tourId", args.tourId))
+      .unique();
+
+    return state;
+  },
+});
+
+/**
+ * Get all tour states for the current user
+ */
+export const getUserTourStates = query({
+  args: {},
+  returns: v.array(userTourStateValidator),
+  handler: async (ctx) => {
+    const { profile } = await requireAuth(ctx);
+
+    const states = await ctx.db
+      .query("userTourState")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .collect();
+
+    return states;
+  },
+});
+
+/**
+ * Mark a step as completed
+ */
+export const completeStep = mutation({
+  args: {
+    tourId: v.id("tours"),
+    stepKey: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+
+    const tour = await ctx.db.get(args.tourId);
+    if (!tour) {
+      throw new Error("Tour not found");
+    }
+
+    const now = Date.now();
+
+    // Get or create user tour state
+    const state = await ctx.db
+      .query("userTourState")
+      .withIndex("by_user_and_tour", (q) => q.eq("userId", profile._id).eq("tourId", args.tourId))
+      .unique();
+
+    if (!state) {
+      await ctx.db.insert("userTourState", {
+        userId: profile._id,
+        tourId: args.tourId,
+        lastSeenVersion: tour.version,
+        dismissed: false,
+        completedStepKeys: [args.stepKey],
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else {
+      // Add step key if not already completed
+      const completedKeys = state.completedStepKeys.includes(args.stepKey)
+        ? state.completedStepKeys
+        : [...state.completedStepKeys, args.stepKey];
+
+      await ctx.db.patch(state._id, {
+        completedStepKeys: completedKeys,
+        lastSeenVersion: tour.version,
+        updatedAt: now,
+      });
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Dismiss a tour
+ */
+export const dismissTour = mutation({
+  args: { tourId: v.id("tours") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+
+    const tour = await ctx.db.get(args.tourId);
+    if (!tour) {
+      throw new Error("Tour not found");
+    }
+
+    const now = Date.now();
+
+    // Get or create user tour state
+    const state = await ctx.db
+      .query("userTourState")
+      .withIndex("by_user_and_tour", (q) => q.eq("userId", profile._id).eq("tourId", args.tourId))
+      .unique();
+
+    if (!state) {
+      await ctx.db.insert("userTourState", {
+        userId: profile._id,
+        tourId: args.tourId,
+        lastSeenVersion: tour.version,
+        dismissed: true,
+        dismissedAt: now,
+        completedStepKeys: [],
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else {
+      await ctx.db.patch(state._id, {
+        dismissed: true,
+        dismissedAt: now,
+        lastSeenVersion: tour.version,
+        updatedAt: now,
+      });
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Reset tour state (allows re-taking a tour)
+ */
+export const resetTourState = mutation({
+  args: { tourId: v.id("tours") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+
+    const state = await ctx.db
+      .query("userTourState")
+      .withIndex("by_user_and_tour", (q) => q.eq("userId", profile._id).eq("tourId", args.tourId))
+      .unique();
+
+    if (state) {
+      await ctx.db.patch(state._id, {
+        dismissed: false,
+        dismissedAt: undefined,
+        completedStepKeys: [],
+        updatedAt: Date.now(),
+      });
+    }
+
+    return null;
+  },
+});
