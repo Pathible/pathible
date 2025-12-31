@@ -16,7 +16,12 @@ import { AdminLayout as AdminLayoutComponent } from "./components/admin-layout";
  */
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
-  const myRole = useQuery(api.roles.getMyRole);
+
+  // Skip query until auth is loaded and user is signed in
+  const myRole = useQuery(
+    api.roles.getMyRole,
+    isLoaded && isSignedIn ? {} : "skip"
+  );
 
   // Wait for auth to load
   if (!isLoaded) {
@@ -28,7 +33,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     redirect("/login?redirect=/admin");
   }
 
-  // Wait for role to load
+  // Wait for role to load (query was skipped until now, so check again)
   if (myRole === undefined) {
     return <AdminLoadingState />;
   }
