@@ -4,6 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { AlertCircle, Lightbulb, TrendingUp, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ComingSoonBadge } from "@/components/coming-soon";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
@@ -143,11 +144,15 @@ export function FinancialContent() {
             <TrendingUp className="h-4 w-4 mr-2" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="suggestions">
-            <Lightbulb className="h-4 w-4 mr-2" />
+          <TabsTrigger value="suggestions" className="gap-2">
+            <Lightbulb className="h-4 w-4" />
             Smart Suggestions
+            <ComingSoonBadge size="sm" />
           </TabsTrigger>
-          <TabsTrigger value="learning">Faith & Finances</TabsTrigger>
+          <TabsTrigger value="learning" className="gap-2">
+            Faith & Finances
+            <ComingSoonBadge size="sm" />
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">

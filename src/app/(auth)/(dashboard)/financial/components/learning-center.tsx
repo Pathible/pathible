@@ -1,6 +1,7 @@
 "use client";
 
 import { BookOpen, Heart, TrendingUp } from "lucide-react";
+import { ComingSoonBadge } from "@/components/coming-soon";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function LearningCenter() {
@@ -66,9 +67,11 @@ export function LearningCenter() {
           <div className="flex items-center gap-3 mb-2">
             <Heart className="h-6 w-6 text-primary" />
             <CardTitle className="text-2xl">Faith & Finances</CardTitle>
+            <ComingSoonBadge size="sm" />
           </div>
           <CardDescription className="text-base">
-            Explore biblical principles for managing money and building a legacy of faith
+            Explore biblical principles for managing money and building a legacy of faith. Full
+            articles and resources are coming soon.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -81,10 +84,7 @@ export function LearningCenter() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {articles.map((article) => (
-            <Card
-              key={article.title}
-              className="hover:bg-accent/50 transition-colors cursor-pointer"
-            >
+            <Card key={article.title} className="opacity-75">
               <CardHeader>
                 <div className="text-xs text-primary font-medium mb-2">{article.category}</div>
                 <CardTitle className="text-lg">{article.title}</CardTitle>

@@ -3,6 +3,7 @@
 import { useMutation } from "convex/react";
 import { CheckCircle, Lightbulb, X } from "lucide-react";
 import { toast } from "sonner";
+import { ComingSoonBadge } from "@/components/coming-soon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,10 +91,13 @@ export function SuggestionsList({ suggestions, isLoading }: SuggestionsListProps
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16">
           <Lightbulb className="h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No suggestions yet</h3>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-xl font-semibold">Smart Suggestions</h3>
+            <ComingSoonBadge size="sm" />
+          </div>
           <p className="text-sm text-muted-foreground text-center max-w-md">
-            Our AI will analyze your financial profile and provide personalized suggestions to help
-            you optimize your financial planning.
+            AI-powered financial suggestions are coming soon. We&apos;ll analyze your financial
+            profile and provide personalized recommendations to help optimize your planning.
           </p>
         </CardContent>
       </Card>
