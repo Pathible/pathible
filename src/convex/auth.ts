@@ -20,11 +20,15 @@ import { checkDocumentAccess } from "./vaultHelpers";
 
 /**
  * Subscription tier hierarchy (higher number = more features)
+ *
+ * Founders tier: Special launch offer (first 7 days of 2025).
+ * Matches Legacy features forever, with priority support instead of concierge.
  */
 export const TIER_LEVELS = {
   foundations: 1,
   heritage: 2,
   legacy: 3,
+  founders: 3, // Same level as Legacy - full feature access
 } as const;
 
 export type SubscriptionTier = keyof typeof TIER_LEVELS;
@@ -51,6 +55,12 @@ export const PLAN_LIMITS = {
     familyMembersMax: Number.MAX_SAFE_INTEGER, // Unlimited
     familyUnitsMax: Number.MAX_SAFE_INTEGER, // Unlimited
   },
+  founders: {
+    // Same as Legacy - exclusive launch offer
+    storageBytesMax: Number.MAX_SAFE_INTEGER, // Unlimited
+    familyMembersMax: Number.MAX_SAFE_INTEGER, // Unlimited
+    familyUnitsMax: Number.MAX_SAFE_INTEGER, // Unlimited
+  },
 } as const;
 
 /**
@@ -58,32 +68,31 @@ export const PLAN_LIMITS = {
  *
  * Defines which subscription tier is required for each feature.
  * Used by requireFeatureAccess() for server-side enforcement.
+ *
+ * IMPORTANT: These slugs MUST match exactly what's configured in Clerk Dashboard.
+ * See /api/debug/clerk-billing to verify the current Clerk configuration.
  */
 export const FEATURE_TIERS = {
-  // Heritage Vault - All tiers have basic vault, higher tiers get more storage
-  vault_storage_basic: "foundations",
-  vault_storage_advanced: "heritage",
-  vault_storage_unlimited: "legacy",
-  vault_photos_videos: "foundations",
+  // Heritage Vault
+  vault_document_storage: "foundations",
+  vault_photo_video: "foundations",
   vault_folders: "foundations",
   vault_tags_collections: "heritage",
-  vault_voice_recordings: "heritage",
+  vault_voice_uploads: "heritage",
   vault_guided_organization: "heritage",
 
   // Financial Intelligence
   financial_overview: "foundations",
   financial_summaries: "heritage",
-  financial_insights_basic: "heritage",
-  financial_insights_advanced: "legacy",
+  financial_insights: "heritage",
+  financial_spending_categories: "legacy",
   financial_trends: "legacy",
 
   // Family Network
-  family_members_1: "foundations",
-  family_members_3: "heritage",
-  family_members_unlimited: "legacy",
+  family_members: "foundations",
   family_profiles: "heritage",
-  family_relationships: "legacy",
   family_messaging: "heritage",
+  family_relationships: "legacy",
 
   // Legacy Builder - Premium only
   legacy_questionnaires: "legacy",
@@ -94,13 +103,12 @@ export const FEATURE_TIERS = {
   wisdom_shared_pages: "legacy",
 
   // Support
-  support_standard: "foundations",
+  standard_support: "foundations",
   support_priority: "heritage",
   support_concierge: "legacy",
 
   // Early Access
-  early_access_some: "heritage",
-  early_access_all: "legacy",
+  early_access_features: "heritage",
 } as const satisfies Record<string, SubscriptionTier>;
 
 export type FeatureSlug = keyof typeof FEATURE_TIERS;

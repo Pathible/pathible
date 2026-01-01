@@ -47,6 +47,7 @@ export const get = query({
         v.literal("foundations"),
         v.literal("heritage"),
         v.literal("legacy"),
+        v.literal("founders"),
       ),
       subscriptionStatus: v.union(
         v.literal("active"),
@@ -118,6 +119,7 @@ export const list = query({
           v.literal("foundations"),
           v.literal("heritage"),
           v.literal("legacy"),
+          v.literal("founders"),
         ),
         subscriptionStatus: v.union(
           v.literal("active"),

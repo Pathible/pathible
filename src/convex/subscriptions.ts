@@ -27,7 +27,12 @@ export const getCurrentSubscription = query({
   args: {},
   returns: v.union(
     v.object({
-      tier: v.union(v.literal("foundations"), v.literal("heritage"), v.literal("legacy")),
+      tier: v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+        v.literal("founders"),
+      ),
       status: v.union(
         v.literal("active"),
         v.literal("inactive"),
