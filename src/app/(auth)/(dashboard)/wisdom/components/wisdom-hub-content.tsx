@@ -4,6 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { ArrowRight, BookMarked, BookOpen, Heart, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { ComingSoonBadge } from "@/components/coming-soon";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
 
@@ -32,11 +33,7 @@ function NavCard({ href, icon, title, description, disabled, comingSoon }: NavCa
             <div>
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 {title}
-                {comingSoon && (
-                  <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                    Coming Soon
-                  </span>
-                )}
+                {comingSoon && <ComingSoonBadge size="sm" />}
               </h3>
               <p className="text-muted-foreground text-sm mt-1">{description}</p>
             </div>

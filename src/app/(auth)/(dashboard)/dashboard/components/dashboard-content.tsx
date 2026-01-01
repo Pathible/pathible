@@ -41,8 +41,8 @@ export function DashboardContent() {
     legacyPlanCompletion: 0, // TODO: Connect to legacy plan query
   };
 
-  // Get user's first name for greeting
-  const userName = user?.firstName || "there";
+  // Check if profile already exists
+  const profile = useQuery(api.profiles.get, isUserLoaded && user ? {} : "skip");
 
   // Determine next step based on progress
   const getNextStep = () => {
@@ -93,7 +93,7 @@ export function DashboardContent() {
     <>
       {/* Greeting */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Welcome back, {userName}.</h1>
+        <h1 className="text-4xl font-bold mb-2">Welcome back, {profile?.firstName} .</h1>
         <p className="text-muted-foreground text-lg">Here&apos;s your legacy journey at a glance</p>
       </div>
 

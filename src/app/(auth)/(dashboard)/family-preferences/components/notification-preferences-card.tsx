@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ComingSoonBadge } from "@/components/coming-soon";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -34,9 +35,12 @@ export function NotificationPreferencesCard({ canEdit }: NotificationPreferences
           />
         </div>
 
-        <p className="mt-4 text-xs text-muted-foreground">
-          Notification preferences are coming soon. This setting is currently for preview only.
-        </p>
+        <div className="mt-4 flex items-center gap-2">
+          <ComingSoonBadge size="sm" />
+          <p className="text-xs text-muted-foreground">
+            This setting is currently for preview only.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

@@ -4,6 +4,7 @@ import { useMutation } from "convex/react";
 import { Loader2, Save, Upload } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { ComingSoonBadge } from "@/components/coming-soon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -107,7 +108,7 @@ export function FamilyInformationCard({ household, canEdit }: FamilyInformationC
                 <Upload className="mr-2 h-4 w-4" />
                 Upload Image
               </Button>
-              <span className="text-sm text-muted-foreground">Coming soon</span>
+              <ComingSoonBadge size="sm" />
             </div>
           </div>
 

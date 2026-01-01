@@ -5,6 +5,7 @@ import { ArrowLeft, MessageCircle, Plus, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ComingSoonBadge } from "@/components/coming-soon";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -239,13 +240,15 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
               )}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline">
+              <Button variant="outline" disabled className="opacity-60">
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Message
+                <ComingSoonBadge size="sm" className="ml-2" />
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" disabled className="opacity-60">
                 <Share2 className="h-4 w-4 mr-2" />
-                Share Items
+                Share
+                <ComingSoonBadge size="sm" className="ml-2" />
               </Button>
             </div>
           </div>
@@ -297,17 +300,27 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
           </TabsContent>
 
           <TabsContent value="shared">
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <p>Shared items feature coming soon</p>
+            <Card className="border-dashed border-amber-300">
+              <CardContent className="py-12 text-center">
+                <Share2 className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+                <h3 className="font-semibold text-lg mb-2">Shared Items</h3>
+                <p className="text-muted-foreground mb-4">
+                  Share documents and photos with this family unit.
+                </p>
+                <ComingSoonBadge />
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="activity">
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <p>Activity feed coming soon</p>
+            <Card className="border-dashed border-amber-300">
+              <CardContent className="py-12 text-center">
+                <MessageCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+                <h3 className="font-semibold text-lg mb-2">Activity Feed</h3>
+                <p className="text-muted-foreground mb-4">
+                  See recent activity and updates from this family unit.
+                </p>
+                <ComingSoonBadge />
               </CardContent>
             </Card>
           </TabsContent>
