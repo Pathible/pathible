@@ -1,7 +1,12 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import { requireAuth, requireHouseholdAccess } from "./auth";
+import {
+  requireActiveSubscription,
+  requireAuth,
+  requireFeatureAccess,
+  requireHouseholdAccess,
+} from "./auth";
 import { logActivity } from "./shared/activity";
 
 /**
@@ -214,6 +219,8 @@ export const create = mutation({
   returns: v.id("wisdomEntries"),
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
+    await requireActiveSubscription(ctx, args.householdId);
+    await requireFeatureAccess(ctx, args.householdId, "wisdom_entries");
     const { profile } = await requireAuth(ctx);
 
     // Validate inputs
@@ -279,6 +286,8 @@ export const update = mutation({
     }
 
     await requireHouseholdAccess(ctx, entry.householdId);
+    await requireActiveSubscription(ctx, entry.householdId);
+    await requireFeatureAccess(ctx, entry.householdId, "wisdom_entries");
     const { profile } = await requireAuth(ctx);
 
     // Only author can edit
@@ -356,6 +365,8 @@ export const remove = mutation({
     }
 
     await requireHouseholdAccess(ctx, entry.householdId);
+    await requireActiveSubscription(ctx, entry.householdId);
+    await requireFeatureAccess(ctx, entry.householdId, "wisdom_entries");
     const { profile } = await requireAuth(ctx);
 
     // Only author can delete
