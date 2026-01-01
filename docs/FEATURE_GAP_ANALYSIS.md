@@ -13,8 +13,8 @@
 | Financial Intelligence | 1/5 | 1/5 | 3/5 | Partial |
 | Family Network | 1/4 | 1/4 | 2/4 | Partial |
 | Legacy Builder | 1/2 | 0/2 | 1/2 | Partial |
-| Wisdom & Education | 2/2 | 0/2 | 0/2 | Ready |
-| Support | 0/3 | 3/3 | 0/3 | Not Ready |
+| Wisdom & Education | 2/2 | 0/2 | 0/2 | **Ready** |
+| Support | 2/3 | 1/3 | 0/3 | **Ready** |
 | Early Access | 0/1 | 1/1 | 0/1 | Partial |
 | **Plan Limits** | 3/3 | 0/3 | 0/3 | **Ready** |
 
@@ -142,19 +142,18 @@
 
 | Feature | Tier | Status | Details |
 |---------|------|--------|---------|
-| `standard_support` | Foundations | **PARTIAL** | Email only (support@pathible.com in legal pages) |
-| `support_priority` | Heritage | **PARTIAL** | Description says "live chat" but not implemented |
-| `support_concierge` | Legacy | **PARTIAL** | No concierge assignment system |
+| `standard_support` | Foundations | **COMPLETE** | Email + Crisp live chat + Help Center |
+| `support_priority` | Heritage | **COMPLETE** | Crisp live chat with faster response commitment |
+| `support_concierge` | Legacy | **PARTIAL** | No dedicated concierge rep assignment system |
 
 **What Works:**
-- Email address exists in terms/privacy pages
+- Email address (support@pathible.com)
+- Crisp live chat widget (site-wide)
+- Help Center page (/help) with FAQ
+- Ticket management via Crisp dashboard
 
 **What's Missing:**
-- In-app contact form
-- Help center / FAQ / Knowledge base
-- Ticket/case management system
-- Live chat widget
-- Concierge rep assignment
+- Dedicated concierge rep assignment for Legacy tier
 
 ---
 
@@ -195,10 +194,12 @@
 
 ### P0 - Critical for Launch (Must Have)
 
-| Feature | Area | Effort | Notes |
-|---------|------|--------|-------|
-| Support contact form | Support | Low | Simple form → email; buy or build |
-| Help center / FAQ page | Support | Medium | Self-service reduces support load |
+| Feature | Area | Effort | Status |
+|---------|------|--------|--------|
+| ~~Support contact form~~ | Support | Low | **DONE** - Crisp live chat integrated |
+| ~~Help center / FAQ page~~ | Support | Medium | **DONE** - /help page with FAQ |
+| ~~Hide SubscriptionDebug~~ | System | Low | **DONE** - Hidden in production |
+| ~~Coming Soon component~~ | UI | Low | **DONE** - Component ready for use |
 
 ### P1 - High Priority (Should Have for Launch)
 
@@ -260,8 +261,8 @@
 - `wisdom_entries` - Full functionality
 
 **Must build before launch:**
-1. Support contact mechanism (form or third-party)
-2. Help/FAQ page with common questions
+1. ~~Support contact mechanism~~ - **DONE** (Crisp live chat)
+2. ~~Help/FAQ page~~ - **DONE** (/help)
 
 ---
 
@@ -295,13 +296,14 @@ Tables that need to be created for missing features:
 ## Next Steps
 
 1. **Immediate (Pre-Launch):**
-   - [ ] Implement support contact form
-   - [ ] Create help/FAQ page
-   - [ ] Add "Coming Soon" UI component
-   - [ ] Gate unfinished features with Coming Soon state
+   - [x] Implement support contact form - **DONE** (Crisp)
+   - [x] Create help/FAQ page - **DONE** (/help)
+   - [x] Add "Coming Soon" UI component - **DONE**
+   - [x] Hide SubscriptionDebug in production - **DONE**
+   - [ ] Apply Coming Soon badges to unfinished features (optional)
 
 2. **Week 1 Post-Launch:**
-   - [ ] Monitor support volume
+   - [ ] Monitor support volume via Crisp dashboard
    - [ ] Gather user feedback on missing features
    - [ ] Begin Plaid integration planning
 
