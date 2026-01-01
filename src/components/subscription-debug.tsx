@@ -16,6 +16,8 @@ import { FEATURE_METADATA, FEATURES, type FeatureSlug } from "@/lib/feature-acce
  * import { SubscriptionDebug } from "@/components/subscription-debug";
  * <SubscriptionDebug />
  * ```
+ *
+ * NOTE: This component is hidden in production builds.
  */
 export function SubscriptionDebug() {
   const { user, isLoaded: userLoaded } = useUser();
@@ -29,6 +31,11 @@ export function SubscriptionDebug() {
     hasAnyPlan,
     isLoaded: subLoaded,
   } = useSubscription();
+
+  // Hide in production - this is a development-only debug tool
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
 
   const isLoaded = userLoaded && authLoaded && subLoaded;
 
