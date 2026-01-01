@@ -189,9 +189,9 @@ export function FamilyEcosystemContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Signed In</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Please sign in to access Family Ecosystem.
+            Sign in to see your family and who has access to your legacy.
           </p>
         </CardContent>
       </Card>
@@ -213,9 +213,9 @@ export function FamilyEcosystemContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Connection Issue</h3>
+          <h3 className="text-lg font-semibold mb-2">Having Trouble Connecting</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-            Unable to load your family data. Please refresh the page or try again later.
+            We&apos;re having trouble reaching your family&apos;s data. Mind giving it another try?
           </p>
         </CardContent>
       </Card>
@@ -228,10 +228,9 @@ export function FamilyEcosystemContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Household Found</h3>
+          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Set Up</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            You need to be part of a household to access Family Ecosystem. Please complete your
-            onboarding or contact support.
+            Complete your profile to start adding the people who matter most.
           </p>
         </CardContent>
       </Card>
@@ -266,7 +265,7 @@ export function FamilyEcosystemContent() {
             </div>
           </div>
           <p className="text-muted-foreground text-lg">
-            View and manage your extended family network
+            Your family at a glance, and who has access to what
           </p>
         </div>
 
@@ -275,9 +274,9 @@ export function FamilyEcosystemContent() {
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Users className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Family Units Yet</h3>
+              <h3 className="text-lg font-semibold mb-2">Your Family Tree Starts Here</h3>
               <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-                Create your first family unit to start organizing your extended family network.
+                Add the people who matter most. They&apos;re the reason you&apos;re doing this.
               </p>
               <Button onClick={() => setShowAddFamilyDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -302,9 +301,10 @@ export function FamilyEcosystemContent() {
       <Dialog open={showAddFamilyDialog} onOpenChange={setShowAddFamilyDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Family Unit</DialogTitle>
+            <DialogTitle>Add a Family Group</DialogTitle>
             <DialogDescription>
-              Create a new family unit to organize your extended family network.
+              Group your family members together, like &quot;The Johnsons&quot; or &quot;Mom&apos;s
+              Side&quot;
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddFamily} className="space-y-4">
@@ -357,8 +357,10 @@ export function FamilyEcosystemContent() {
       <Dialog open={showInviteMemberDialog} onOpenChange={setShowInviteMemberDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Family Member</DialogTitle>
-            <DialogDescription>Add a new member to your primary family unit.</DialogDescription>
+            <DialogTitle>Add Someone to Your Family</DialogTitle>
+            <DialogDescription>
+              Bring someone into the circle. They&apos;ll be able to see what you&apos;ve shared.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleInviteMember} className="space-y-4">
             <div className="space-y-2">
