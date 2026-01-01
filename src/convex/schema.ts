@@ -98,7 +98,12 @@ export default defineSchema({
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     primaryContactId: v.id("profiles"),
-    subscriptionTier: v.union(v.literal("foundations"), v.literal("heritage"), v.literal("legacy")),
+    subscriptionTier: v.union(
+      v.literal("foundations"),
+      v.literal("heritage"),
+      v.literal("legacy"),
+      v.literal("founders"),
+    ),
     subscriptionStatus: v.union(
       v.literal("active"),
       v.literal("inactive"),

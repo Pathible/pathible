@@ -1,7 +1,13 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import { requireAuth, requireHouseholdAccess, requireHouseholdAdmin } from "./auth";
+import {
+  requireActiveSubscription,
+  requireAuth,
+  requireFeatureAccess,
+  requireHouseholdAccess,
+  requireHouseholdAdmin,
+} from "./auth";
 import { logActivity } from "./shared/activity";
 
 /**
@@ -164,6 +170,8 @@ export const create = mutation({
   handler: async (ctx, args) => {
     // Only admins can manage core beliefs
     await requireHouseholdAdmin(ctx, args.householdId);
+    await requireActiveSubscription(ctx, args.householdId);
+    await requireFeatureAccess(ctx, args.householdId, "wisdom_entries");
     const { profile } = await requireAuth(ctx);
 
     // Check limit
@@ -230,6 +238,8 @@ export const update = mutation({
 
     // Only admins can manage core beliefs
     await requireHouseholdAdmin(ctx, belief.householdId);
+    await requireActiveSubscription(ctx, belief.householdId);
+    await requireFeatureAccess(ctx, belief.householdId, "wisdom_entries");
     const { profile } = await requireAuth(ctx);
 
     // Validate inputs
@@ -285,6 +295,8 @@ export const remove = mutation({
 
     // Only admins can manage core beliefs
     await requireHouseholdAdmin(ctx, belief.householdId);
+    await requireActiveSubscription(ctx, belief.householdId);
+    await requireFeatureAccess(ctx, belief.householdId, "wisdom_entries");
     const { profile } = await requireAuth(ctx);
 
     const statement = belief.statement;
@@ -322,6 +334,8 @@ export const reorder = mutation({
   handler: async (ctx, args) => {
     // Only admins can manage core beliefs
     await requireHouseholdAdmin(ctx, args.householdId);
+    await requireActiveSubscription(ctx, args.householdId);
+    await requireFeatureAccess(ctx, args.householdId, "wisdom_entries");
 
     // Verify all IDs belong to this household
     for (const beliefId of args.orderedIds) {

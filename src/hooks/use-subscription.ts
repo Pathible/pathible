@@ -38,6 +38,7 @@ export function useSubscription() {
       hasFoundations: false,
       hasHeritage: false,
       hasLegacy: false,
+      hasFounders: false,
       hasAnyPlan: false,
     };
   }
@@ -50,6 +51,7 @@ export function useSubscription() {
   const hasFoundations = has?.({ plan: "foundations" }) ?? false;
   const hasHeritage = has?.({ plan: "heritage" }) ?? false;
   const hasLegacy = has?.({ plan: "legacy" }) ?? false;
+  const hasFounders = has?.({ plan: "founders" }) ?? false;
 
   return {
     isLoaded: true,
@@ -57,6 +59,7 @@ export function useSubscription() {
     hasFoundations,
     hasHeritage,
     hasLegacy,
+    hasFounders,
     hasAnyPlan,
   };
 }

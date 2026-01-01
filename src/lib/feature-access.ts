@@ -4,85 +4,116 @@
  * Single source of truth for feature identifiers and access checking.
  * Uses Clerk Billing's has() method for feature-based access control.
  *
+ * IMPORTANT: These slugs must match exactly what's configured in Clerk Dashboard.
+ * Run /api/debug/clerk-billing to verify the current Clerk configuration.
+ *
  * @see https://clerk.com/docs/nextjs/guides/billing/for-b2c#control-access-with-features-and-plans
  */
 
 import { useAuth } from "@clerk/nextjs";
 
 /**
- * Feature slugs from plans-features-schema.md
- * These must match the feature slugs configured in Clerk Dashboard
+ * Feature slugs from Clerk Dashboard
+ * These MUST match the exact slugs configured in Clerk Billing
+ *
+ * Plan hierarchy:
+ * - Foundations: Base features
+ * - Heritage: Foundations + advanced features
+ * - Legacy: Heritage + premium features
  */
 export const FEATURES = {
-  // Heritage Vault Features
-  VAULT_STORAGE_BASIC: "vault_storage_basic",
-  VAULT_STORAGE_ADVANCED: "vault_storage_advanced",
-  VAULT_STORAGE_UNLIMITED: "vault_storage_unlimited",
-  VAULT_PHOTOS_VIDEOS: "vault_photos_videos",
+  // ============================================================================
+  // HERITAGE VAULT FEATURES
+  // ============================================================================
+  /** Secure document storage with encryption (Foundations+) */
+  VAULT_DOCUMENT_STORAGE: "vault_document_storage",
+  /** Photo and video uploads (Foundations+) */
+  VAULT_PHOTO_VIDEO: "vault_photo_video",
+  /** Folder organization (Foundations+) */
   VAULT_FOLDERS: "vault_folders",
+  /** Tags and collections for organization (Heritage+) */
   VAULT_TAGS_COLLECTIONS: "vault_tags_collections",
-  VAULT_VOICE_RECORDINGS: "vault_voice_recordings",
+  /** Voice memo and oral history uploads (Heritage+) */
+  VAULT_VOICE_UPLOADS: "vault_voice_uploads",
+  /** Guided organization wizards (Heritage+) */
   VAULT_GUIDED_ORGANIZATION: "vault_guided_organization",
 
-  // Financial Intelligence Features
+  // ============================================================================
+  // FINANCIAL INTELLIGENCE FEATURES
+  // ============================================================================
+  /** Financial account overview (Foundations+) */
   FINANCIAL_OVERVIEW: "financial_overview",
+  /** Detailed account summaries (Heritage+) */
   FINANCIAL_SUMMARIES: "financial_summaries",
-  FINANCIAL_INSIGHTS_BASIC: "financial_insights_basic",
-  FINANCIAL_INSIGHTS_ADVANCED: "financial_insights_advanced",
+  /** AI-powered financial insights (Heritage+) */
+  FINANCIAL_INSIGHTS: "financial_insights",
+  /** Spending categorization (Legacy) */
+  FINANCIAL_SPENDING_CATEGORIES: "financial_spending_categories",
+  /** Trend analysis over time (Legacy) */
   FINANCIAL_TRENDS: "financial_trends",
 
-  // Family Network Features
-  FAMILY_MEMBERS_1: "family_members_1",
-  FAMILY_MEMBERS_3: "family_members_3",
-  FAMILY_MEMBERS_UNLIMITED: "family_members_unlimited",
+  // ============================================================================
+  // FAMILY NETWORK FEATURES
+  // ============================================================================
+  /** Add family members to household (Foundations+) */
+  FAMILY_MEMBERS: "family_members",
+  /** Rich member profiles (Heritage+) */
   FAMILY_PROFILES: "family_profiles",
-  FAMILY_RELATIONSHIPS: "family_relationships",
+  /** Family messaging (Heritage+) */
   FAMILY_MESSAGING: "family_messaging",
+  /** Relationship mapping and family tree (Legacy) */
+  FAMILY_RELATIONSHIPS: "family_relationships",
 
-  // Legacy Builder Features
+  // ============================================================================
+  // LEGACY BUILDER FEATURES
+  // ============================================================================
+  /** Guided questionnaires for life story (Legacy) */
   LEGACY_QUESTIONNAIRES: "legacy_questionnaires",
+  /** Story templates for legacy documents (Legacy) */
   LEGACY_STORY_TEMPLATES: "legacy_story_templates",
 
-  // Wisdom Features
+  // ============================================================================
+  // WISDOM & EDUCATION FEATURES
+  // ============================================================================
+  /** Wisdom entries for values and lessons (Heritage+) */
   WISDOM_ENTRIES: "wisdom_entries",
+  /** Shared wisdom pages for collaboration (Legacy) */
   WISDOM_SHARED_PAGES: "wisdom_shared_pages",
 
-  // Support Features
-  SUPPORT_STANDARD: "support_standard",
+  // ============================================================================
+  // SUPPORT FEATURES
+  // ============================================================================
+  /** Standard email support (Foundations) */
+  STANDARD_SUPPORT: "standard_support",
+  /** Priority support with faster response (Heritage) */
   SUPPORT_PRIORITY: "support_priority",
+  /** Concierge support with personal rep (Legacy) */
   SUPPORT_CONCIERGE: "support_concierge",
 
-  // Early Access Features
-  EARLY_ACCESS_SOME: "early_access_some",
-  EARLY_ACCESS_ALL: "early_access_all",
+  // ============================================================================
+  // EARLY ACCESS
+  // ============================================================================
+  /** Early access to new features (Heritage+) */
+  EARLY_ACCESS_FEATURES: "early_access_features",
 } as const;
 
 export type FeatureSlug = (typeof FEATURES)[keyof typeof FEATURES];
 
 /**
  * Feature metadata for UI display
+ * Maps feature slugs to human-readable names and descriptions
  */
 export const FEATURE_METADATA: Record<
   FeatureSlug,
   { name: string; description: string; requiredPlan: string }
 > = {
   // Heritage Vault
-  [FEATURES.VAULT_STORAGE_BASIC]: {
-    name: "Basic Storage (5GB)",
-    description: "Store up to 5GB of important documents with bank-level encryption",
+  [FEATURES.VAULT_DOCUMENT_STORAGE]: {
+    name: "Secure Document Storage",
+    description: "Store important documents with bank-level encryption",
     requiredPlan: "Foundations",
   },
-  [FEATURES.VAULT_STORAGE_ADVANCED]: {
-    name: "Advanced Storage (25GB)",
-    description: "Store up to 25GB of documents, photos, and videos",
-    requiredPlan: "Heritage",
-  },
-  [FEATURES.VAULT_STORAGE_UNLIMITED]: {
-    name: "Unlimited Storage",
-    description: "Store unlimited documents, photos, and videos",
-    requiredPlan: "Legacy",
-  },
-  [FEATURES.VAULT_PHOTOS_VIDEOS]: {
+  [FEATURES.VAULT_PHOTO_VIDEO]: {
     name: "Photo & Video Uploads",
     description: "Preserve family memories with photo and video storage",
     requiredPlan: "Foundations",
@@ -97,7 +128,7 @@ export const FEATURE_METADATA: Record<
     description: "Organize with tags and curated collections",
     requiredPlan: "Heritage",
   },
-  [FEATURES.VAULT_VOICE_RECORDINGS]: {
+  [FEATURES.VAULT_VOICE_UPLOADS]: {
     name: "Voice Recordings",
     description: "Record oral histories and voice memos",
     requiredPlan: "Heritage",
@@ -119,14 +150,14 @@ export const FEATURE_METADATA: Record<
     description: "Detailed summaries for each financial account",
     requiredPlan: "Heritage",
   },
-  [FEATURES.FINANCIAL_INSIGHTS_BASIC]: {
+  [FEATURES.FINANCIAL_INSIGHTS]: {
     name: "Financial Insights",
     description: "AI-powered insights about your financial health",
     requiredPlan: "Heritage",
   },
-  [FEATURES.FINANCIAL_INSIGHTS_ADVANCED]: {
-    name: "Advanced Financial Insights",
-    description: "Comprehensive insights with spending trends",
+  [FEATURES.FINANCIAL_SPENDING_CATEGORIES]: {
+    name: "Spending Categories",
+    description: "Automatic categorization of your spending",
     requiredPlan: "Legacy",
   },
   [FEATURES.FINANCIAL_TRENDS]: {
@@ -136,24 +167,19 @@ export const FEATURE_METADATA: Record<
   },
 
   // Family Network
-  [FEATURES.FAMILY_MEMBERS_1]: {
-    name: "1 Family Viewer",
-    description: "Share read-only access with one trusted family member",
+  [FEATURES.FAMILY_MEMBERS]: {
+    name: "Family Members",
+    description: "Add family members to your household",
     requiredPlan: "Foundations",
-  },
-  [FEATURES.FAMILY_MEMBERS_3]: {
-    name: "3 Family Members",
-    description: "Connect up to 3 family members with custom access",
-    requiredPlan: "Heritage",
-  },
-  [FEATURES.FAMILY_MEMBERS_UNLIMITED]: {
-    name: "Unlimited Family Members",
-    description: "Connect unlimited family members",
-    requiredPlan: "Legacy",
   },
   [FEATURES.FAMILY_PROFILES]: {
     name: "Member Profiles",
     description: "Rich profiles for each family member",
+    requiredPlan: "Heritage",
+  },
+  [FEATURES.FAMILY_MESSAGING]: {
+    name: "Family Messaging",
+    description: "Private messaging within your household",
     requiredPlan: "Heritage",
   },
   [FEATURES.FAMILY_RELATIONSHIPS]: {
@@ -161,16 +187,11 @@ export const FEATURE_METADATA: Record<
     description: "Interactive family tree with relationship visualization",
     requiredPlan: "Legacy",
   },
-  [FEATURES.FAMILY_MESSAGING]: {
-    name: "Family Messaging",
-    description: "Private messaging within your household",
-    requiredPlan: "Heritage",
-  },
 
   // Legacy Builder
   [FEATURES.LEGACY_QUESTIONNAIRES]: {
-    name: "Legacy Questionnaires",
-    description: "Guided prompts to document your life story",
+    name: "Guided Questionnaires",
+    description: "Thoughtful prompts to document your life story",
     requiredPlan: "Legacy",
   },
   [FEATURES.LEGACY_STORY_TEMPLATES]: {
@@ -192,7 +213,7 @@ export const FEATURE_METADATA: Record<
   },
 
   // Support
-  [FEATURES.SUPPORT_STANDARD]: {
+  [FEATURES.STANDARD_SUPPORT]: {
     name: "Standard Support",
     description: "Email support with 48-hour response time",
     requiredPlan: "Foundations",
@@ -209,15 +230,10 @@ export const FEATURE_METADATA: Record<
   },
 
   // Early Access
-  [FEATURES.EARLY_ACCESS_SOME]: {
-    name: "Early Access",
-    description: "Get some new features before general release",
+  [FEATURES.EARLY_ACCESS_FEATURES]: {
+    name: "Early Feature Access",
+    description: "Get new features before general release",
     requiredPlan: "Heritage",
-  },
-  [FEATURES.EARLY_ACCESS_ALL]: {
-    name: "Full Early Access",
-    description: "First access to every new feature",
-    requiredPlan: "Legacy",
   },
 };
 
@@ -270,10 +286,9 @@ export function checkFeatureAccess(
  * @example
  * ```ts
  * const { has } = await auth();
- * const hasAnyStorage = checkAnyFeatureAccess(has, [
- *   FEATURES.VAULT_STORAGE_BASIC,
- *   FEATURES.VAULT_STORAGE_ADVANCED,
- *   FEATURES.VAULT_STORAGE_UNLIMITED,
+ * const hasAnyVaultFeature = checkAnyFeatureAccess(has, [
+ *   FEATURES.VAULT_DOCUMENT_STORAGE,
+ *   FEATURES.VAULT_PHOTO_VIDEO,
  * ]);
  * ```
  */
@@ -318,7 +333,7 @@ export function useFeatureAccess(feature: FeatureSlug) {
  * function VaultSection() {
  *   const { features, isLoaded } = useMultipleFeatureAccess([
  *     FEATURES.VAULT_TAGS_COLLECTIONS,
- *     FEATURES.VAULT_VOICE_RECORDINGS,
+ *     FEATURES.VAULT_VOICE_UPLOADS,
  *   ]);
  *
  *   if (!isLoaded) return <Skeleton />;
@@ -326,7 +341,7 @@ export function useFeatureAccess(feature: FeatureSlug) {
  *   return (
  *     <>
  *       {features.vault_tags_collections && <TagsUI />}
- *       {features.vault_voice_recordings && <VoiceUI />}
+ *       {features.vault_voice_uploads && <VoiceUI />}
  *     </>
  *   );
  * }
