@@ -89,9 +89,9 @@ export function UploadDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]" data-testid="upload-dialog">
         <DialogHeader>
-          <DialogTitle>Upload Document</DialogTitle>
+          <DialogTitle>Add a Document</DialogTitle>
           <DialogDescription>
-            Add details for your document before uploading to the vault.
+            Add a few details so your family can easily find this later.
           </DialogDescription>
         </DialogHeader>
 
@@ -174,15 +174,15 @@ export function UploadDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="household">All Household Members</SelectItem>
-                <SelectItem value="admins">Admins Only (Owners & Stewards)</SelectItem>
-                <SelectItem value="custom">Custom (Select specific members)</SelectItem>
+                <SelectItem value="household">Everyone in My Family</SelectItem>
+                <SelectItem value="admins">Trusted Family Members Only</SelectItem>
+                <SelectItem value="custom">Specific People I Choose</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {accessLevel === "household" && "All household members can view this document"}
-              {accessLevel === "admins" && "Only owners and stewards can view this document"}
-              {accessLevel === "custom" && "You can select specific members after upload"}
+              {accessLevel === "household" && "Everyone in your family can access this"}
+              {accessLevel === "admins" && "Only trusted family members with full access"}
+              {accessLevel === "custom" && "You'll choose specific people after uploading"}
             </p>
           </div>
 

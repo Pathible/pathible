@@ -32,7 +32,7 @@ export function VaultStats({ stats }: VaultStatsProps) {
           </div>
           <div className="mt-1">
             <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
-            <CardDescription className="text-xs">Stored securely</CardDescription>
+            <CardDescription className="text-xs">Safe for your family</CardDescription>
           </div>
         </CardContent>
       </Card>
@@ -46,7 +46,7 @@ export function VaultStats({ stats }: VaultStatsProps) {
           </div>
           <div className="mt-1">
             <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
-            <CardDescription className="text-xs">Total file size</CardDescription>
+            <CardDescription className="text-xs">Your documents at a glance</CardDescription>
           </div>
         </CardContent>
       </Card>
@@ -60,7 +60,7 @@ export function VaultStats({ stats }: VaultStatsProps) {
           </div>
           <div className="mt-1">
             <CardTitle className="text-sm font-medium">Categories</CardTitle>
-            <CardDescription className="text-xs">Organization tags</CardDescription>
+            <CardDescription className="text-xs">Keeping things organized</CardDescription>
           </div>
         </CardContent>
       </Card>
@@ -74,7 +74,7 @@ export function VaultStats({ stats }: VaultStatsProps) {
           </div>
           <div className="mt-1">
             <CardTitle className="text-sm font-medium">Recent Uploads</CardTitle>
-            <CardDescription className="text-xs">Last 30 days</CardDescription>
+            <CardDescription className="text-xs">Added this month</CardDescription>
           </div>
         </CardContent>
       </Card>
