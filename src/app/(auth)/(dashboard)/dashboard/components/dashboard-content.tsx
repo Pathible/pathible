@@ -28,7 +28,7 @@ export function DashboardContent() {
     text: "A good person leaves an inheritance for their children's children, but a sinner's wealth is stored up for the righteous.",
     reference: "Proverbs 13:22",
     reflection:
-      "True legacy transcends material wealth—it's about values, wisdom, and faith passed down through generations.",
+      "The best things we leave behind can't be measured. They can only be felt by those who receive them.",
   };
 
   // Stats with real data
@@ -48,29 +48,29 @@ export function DashboardContent() {
   const getNextStep = () => {
     if (stats.wisdomEntriesCount === 0) {
       return {
-        title: "Add your first Wisdom entry",
-        description: "Share life lessons and values with future generations",
+        title: "Share your first piece of wisdom",
+        description: "Pass down what matters most to those who matter most",
         route: "/wisdom/create-entry",
         icon: Sparkles,
       };
     } else if (stats.vaultItemsCount < 5) {
       return {
-        title: "Secure important documents",
-        description: "Upload essential documents to your Heritage Vault",
+        title: "Organize important documents",
+        description: "Add the documents your family will need someday",
         route: "/vault",
         icon: Shield,
       };
     } else if (stats.legacyPlanCompletion < 50) {
       return {
         title: "Continue your Legacy Plan",
-        description: "Complete your life story and wishes for loved ones",
+        description: "Give your family clarity, not confusion",
         route: "/legacy",
         icon: FileText,
       };
     } else {
       return {
-        title: "Review Family Ecosystem",
-        description: "Update family member roles and permissions",
+        title: "Check on your family",
+        description: "Make sure the right people have access when it matters",
         route: "/family",
         icon: Users,
       };
@@ -93,8 +93,8 @@ export function DashboardContent() {
     <>
       {/* Greeting */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Welcome back, {profile?.firstName} .</h1>
-        <p className="text-muted-foreground text-lg">Here&apos;s your legacy journey at a glance</p>
+        <h1 className="text-4xl font-bold mb-2">Welcome back, {profile?.firstName}!</h1>
+        <p className="text-muted-foreground text-lg">Here&apos;s how your legacy is taking shape</p>
       </div>
 
       {/* Progress Cards */}
@@ -107,16 +107,16 @@ export function DashboardContent() {
           href="/vault"
           icon="shield"
           value={stats.vaultItemsCount}
-          title="Heritage Vault Items"
-          description="Documents secured and protected"
+          title="Heritage Vault"
+          description="Safe and ready for your family someday"
         />
 
         <DashboardStatCard
           href="/wisdom"
           icon="bookOpen"
           value={stats.wisdomEntriesCount}
-          title="Wisdom Entries"
-          description="Life lessons shared with family"
+          title="Wisdom & Stories"
+          description="Passed down to future generations"
         />
 
         <DashboardStatCard
@@ -124,7 +124,7 @@ export function DashboardContent() {
           icon="fileText"
           value={`${stats.legacyPlanCompletion}%`}
           title="Legacy Plan"
-          description="Your story and final wishes"
+          description="Your story, your heart, your intentions"
         />
       </div>
 
@@ -161,7 +161,7 @@ export function DashboardContent() {
               <blockquote className="text-lg italic text-foreground mb-2">
                 &quot;{dailyQuote.text}&quot;
               </blockquote>
-              <p className="text-sm font-medium text-primary mb-3">— {dailyQuote.reference}</p>
+              <p className="text-sm font-medium text-primary mb-3">- {dailyQuote.reference}</p>
               <p className="text-muted-foreground">{dailyQuote.reflection}</p>
             </div>
           </div>
