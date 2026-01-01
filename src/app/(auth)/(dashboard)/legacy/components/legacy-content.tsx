@@ -60,9 +60,9 @@ export function LegacyContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Signed In</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Please sign in to access Legacy Planning.
+            Sign in to start creating your legacy plan.
           </p>
         </CardContent>
       </Card>
@@ -84,9 +84,9 @@ export function LegacyContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Connection Issue</h3>
+          <h3 className="text-lg font-semibold mb-2">Having Trouble Connecting</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-            Unable to load your household data. Please refresh the page or try again later.
+            We&apos;re having trouble reaching your family&apos;s data. Mind giving it another try?
           </p>
         </CardContent>
       </Card>
@@ -99,10 +99,9 @@ export function LegacyContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Household Found</h3>
+          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Set Up</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            You need to be part of a household to access Legacy Planning. Please complete your
-            onboarding or contact support.
+            Complete your profile to start building your legacy plan.
           </p>
         </CardContent>
       </Card>
@@ -136,8 +135,7 @@ export function LegacyContent() {
             <h1 className="text-4xl font-bold">Legacy Planning</h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Turn your values and organization into a living plan that blends legal clarity,
-            financial wisdom, and faith.
+            Give your family clarity, not confusion. A simple way to put your intentions in writing.
           </p>
         </div>
       </div>
@@ -152,8 +150,8 @@ export function LegacyContent() {
       {/* Privacy Note */}
       <div className="p-4 bg-muted/50 rounded-lg">
         <p className="text-base text-foreground/80 text-center font-medium">
-          Your responses are private and secure. This information helps create your personalized
-          legacy plan.
+          Everything you share here is just for you and your family. Take your time, there are no
+          wrong answers.
         </p>
       </div>
     </div>
