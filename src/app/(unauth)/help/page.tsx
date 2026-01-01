@@ -36,37 +36,40 @@ const HELP_CATEGORIES = [
     links: [
       { label: "Create your account", href: "/signup" },
       { label: "Choose a plan", href: "/pricing" },
-      { label: "Set up your household", href: "/login" },
     ],
+    bullets: null,
   },
   {
     title: "Heritage Vault",
     description: "Store and organize your important documents.",
     icon: FileText,
-    links: [
-      { label: "Upload documents", href: "/login" },
-      { label: "Organize by category", href: "/login" },
-      { label: "Share with family", href: "/login" },
+    links: null,
+    bullets: [
+      "Upload documents, photos, and videos securely",
+      "Organize files by category",
+      "Control who can access each document",
     ],
   },
   {
     title: "Family Network",
     description: "Connect and collaborate with family members.",
     icon: Users,
-    links: [
-      { label: "Invite family members", href: "/login" },
-      { label: "Manage permissions", href: "/login" },
-      { label: "Family units", href: "/login" },
+    links: null,
+    bullets: [
+      "Invite family members to your household",
+      "Create family units for different branches",
+      "Manage member roles and permissions",
     ],
   },
   {
     title: "Financial Overview",
     description: "Track accounts, properties, and insurance.",
     icon: Wallet,
-    links: [
-      { label: "Add accounts", href: "/login" },
-      { label: "Track properties", href: "/login" },
-      { label: "Insurance policies", href: "/login" },
+    links: null,
+    bullets: [
+      "Add bank and investment accounts",
+      "Track real estate and property",
+      "Record insurance policies",
     ],
   },
   {
@@ -76,8 +79,8 @@ const HELP_CATEGORIES = [
     links: [
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Terms of Service", href: "/terms" },
-      { label: "Data security", href: "/privacy#security" },
     ],
+    bullets: null,
   },
 ] as const;
 
@@ -126,7 +129,7 @@ export default function HelpPage() {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2">
-                    {category.links.map((link) => (
+                    {category.links?.map((link) => (
                       <li key={link.label}>
                         <Link
                           href={link.href}
@@ -134,6 +137,11 @@ export default function HelpPage() {
                         >
                           {link.label}
                         </Link>
+                      </li>
+                    ))}
+                    {category.bullets?.map((bullet) => (
+                      <li key={bullet} className="text-sm text-muted-foreground">
+                        • {bullet}
                       </li>
                     ))}
                   </ul>
