@@ -2,7 +2,6 @@ import { Heart, Lock, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { MobileNav } from "./MobileNav";
 
 interface PublicPageLayoutProps {
   children: React.ReactNode;
@@ -26,26 +25,25 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
               />
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-2">
+            {/* Navigation */}
+            <div className="flex items-center gap-1 sm:gap-2">
               <Button
                 asChild
                 variant="ghost"
-                className="text-foreground/80 hover:text-foreground hover:bg-pathible-forest/5"
+                size="sm"
+                className="text-foreground/80 hover:text-foreground hover:bg-pathible-forest/5 px-2 sm:px-4"
               >
                 <Link href="/login">Sign in</Link>
               </Button>
 
               <Button
                 asChild
-                className="bg-pathible-forest hover:bg-pathible-green-hover text-white rounded-xl px-6 shadow-sm hover:shadow-md transition-all duration-300"
+                size="sm"
+                className="bg-pathible-forest hover:bg-pathible-green-hover text-white rounded-xl px-3 sm:px-6 shadow-sm hover:shadow-md transition-all duration-300"
               >
                 <Link href="/signup">Get Started</Link>
               </Button>
             </div>
-
-            {/* Mobile Navigation */}
-            <MobileNav />
           </div>
         </div>
       </nav>
