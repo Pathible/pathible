@@ -8,7 +8,7 @@
 /**
  * Available subscription plan tiers
  */
-export const PLAN_TIERS = ["foundations", "heritage", "legacy"] as const;
+export const PLAN_TIERS = ["foundations", "heritage", "legacy", "founders"] as const;
 
 /**
  * Type for valid plan tier names
@@ -22,6 +22,7 @@ export const PLAN_LABELS: Record<PlanTier, string> = {
   foundations: "Foundations",
   heritage: "Heritage",
   legacy: "Legacy",
+  founders: "Founders",
 };
 
 /**
@@ -31,6 +32,7 @@ export const PLAN_DESCRIPTIONS: Record<PlanTier, string> = {
   foundations: "Essential features for getting started",
   heritage: "Advanced features for growing families",
   legacy: "Premium features for comprehensive legacy planning",
+  founders: "Exclusive launch offer with Legacy features forever",
 };
 
 /**
@@ -60,7 +62,8 @@ export function checkHasActivePlan(
 /**
  * Get the user's current plan tier
  *
- * Returns the highest tier the user has access to, or null if no plan
+ * Returns the highest tier the user has access to, or null if no plan.
+ * Founders is checked first as it's equivalent to Legacy but is a distinct plan.
  */
 export function getCurrentPlanTier(
   has: ((params: { plan: string }) => boolean) | undefined,
@@ -68,6 +71,8 @@ export function getCurrentPlanTier(
   if (!has) return null;
 
   // Check in descending order (highest tier first)
+  // Founders is equivalent to Legacy but shown as distinct plan
+  if (has({ plan: "founders" })) return "founders";
   if (has({ plan: "legacy" })) return "legacy";
   if (has({ plan: "heritage" })) return "heritage";
   if (has({ plan: "foundations" })) return "foundations";
