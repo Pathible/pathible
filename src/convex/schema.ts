@@ -535,6 +535,7 @@ export default defineSchema({
       v.literal("insurance"),
       v.literal("digital_legacy"),
       v.literal("end_of_life"),
+      v.literal("faith_stewardship"),
       v.literal("other"),
     ),
     readTimeMinutes: v.number(),

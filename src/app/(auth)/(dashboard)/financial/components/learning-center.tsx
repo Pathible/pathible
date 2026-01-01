@@ -1,30 +1,30 @@
 "use client";
 
-import { BookOpen, Heart, TrendingUp } from "lucide-react";
+import { useQuery } from "convex/react";
+import { BookOpen, Clock, Heart, Loader2, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { ComingSoonBadge } from "@/components/coming-soon";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { api } from "@/convex/_generated/api";
+
+const CATEGORY_LABELS: Record<string, string> = {
+  estate_planning: "Estate Planning",
+  financial_planning: "Financial Planning",
+  family_legacy: "Family Legacy",
+  legal: "Legal",
+  insurance: "Insurance",
+  digital_legacy: "Digital Legacy",
+  end_of_life: "End of Life",
+  faith_stewardship: "Faith & Stewardship",
+  other: "Other",
+};
 
 export function LearningCenter() {
-  const articles = [
-    {
-      title: "Biblical Principles of Stewardship",
-      description: "Understanding God's view of money and possessions through Scripture",
-      category: "Faith & Money",
-      readTime: "5 min read",
-    },
-    {
-      title: "Giving with Purpose",
-      description: "How to create a giving plan that aligns with your faith values",
-      category: "Generosity",
-      readTime: "4 min read",
-    },
-    {
-      title: "Planning for Your Family's Future",
-      description: "Estate planning through the lens of biblical wisdom",
-      category: "Legacy Planning",
-      readTime: "7 min read",
-    },
-  ];
+  // Fetch published articles from the database
+  const articles = useQuery(api.articles.listPublished, {
+    category: "faith_stewardship",
+    limit: 6,
+  });
 
   const principles = [
     {
@@ -59,6 +59,8 @@ export function LearningCenter() {
     },
   ];
 
+  const hasArticles = articles && articles.length > 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -67,11 +69,12 @@ export function LearningCenter() {
           <div className="flex items-center gap-3 mb-2">
             <Heart className="h-6 w-6 text-primary" />
             <CardTitle className="text-2xl">Faith & Finances</CardTitle>
-            <ComingSoonBadge size="sm" />
+            {!hasArticles && <ComingSoonBadge size="sm" />}
           </div>
           <CardDescription className="text-base">
-            Explore biblical principles for managing money and building a legacy of faith. Full
-            articles and resources are coming soon.
+            {hasArticles
+              ? "Explore biblical principles for managing money and building a legacy of faith."
+              : "Explore biblical principles for managing money and building a legacy of faith. Full articles and resources are coming soon."}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -82,20 +85,69 @@ export function LearningCenter() {
           <BookOpen className="h-5 w-5 text-primary" />
           <h2 className="text-xl font-semibold">Learning Resources</h2>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {articles.map((article) => (
-            <Card key={article.title} className="opacity-75">
-              <CardHeader>
-                <div className="text-xs text-primary font-medium mb-2">{article.category}</div>
-                <CardTitle className="text-lg">{article.title}</CardTitle>
-                <CardDescription>{article.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground">{article.readTime}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+
+        {articles === undefined ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : hasArticles ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {articles.map((article) => (
+              <Link key={article._id} href={`/financial/articles/${article.slug}`}>
+                <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
+                  <CardHeader>
+                    <div className="text-xs text-primary font-medium mb-2">
+                      {CATEGORY_LABELS[article.category] || article.category}
+                    </div>
+                    <CardTitle className="text-lg">{article.title}</CardTitle>
+                    <CardDescription>{article.excerpt}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{article.readTimeMinutes} min read</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* Placeholder articles when none exist */}
+            {[
+              {
+                title: "Biblical Principles of Stewardship",
+                description: "Understanding God's view of money and possessions through Scripture",
+                category: "Faith & Money",
+                readTime: "5 min read",
+              },
+              {
+                title: "Giving with Purpose",
+                description: "How to create a giving plan that aligns with your faith values",
+                category: "Generosity",
+                readTime: "4 min read",
+              },
+              {
+                title: "Planning for Your Family's Future",
+                description: "Estate planning through the lens of biblical wisdom",
+                category: "Legacy Planning",
+                readTime: "7 min read",
+              },
+            ].map((article) => (
+              <Card key={article.title} className="opacity-75">
+                <CardHeader>
+                  <div className="text-xs text-primary font-medium mb-2">{article.category}</div>
+                  <CardTitle className="text-lg">{article.title}</CardTitle>
+                  <CardDescription>{article.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">{article.readTime}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Stewardship Principles */}

@@ -33,12 +33,16 @@ export function TourManager({ children }: TourManagerProps) {
   // Check if we're in tour builder mode (element selection popup) - skip tour loading
   const isTourBuilderMode = searchParams.get("tour_builder") === "1";
 
+  // Check if we're in E2E test mode (Cypress) - skip tour loading to prevent overlay interference
+  const isE2EMode =
+    typeof window !== "undefined" && ("Cypress" in window || searchParams.get("e2e") === "1");
+
   // Check if we're in preview mode (showing a single step preview)
   const isPreviewMode = searchParams.get("tour_preview") === "1";
   const previewAnchor = searchParams.get("anchor");
 
-  // Only fetch tours when user is authenticated (skip in builder mode or when not authenticated)
-  const shouldSkipQueries = isTourBuilderMode || !isUserLoaded || !user;
+  // Only fetch tours when user is authenticated (skip in builder mode, E2E mode, or when not authenticated)
+  const shouldSkipQueries = isTourBuilderMode || isE2EMode || !isUserLoaded || !user;
 
   // Fetch published tours with their steps
   const publishedTours = useQuery(
