@@ -67,9 +67,9 @@ export function FinancialContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Signed In</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Please sign in to access Financial Intelligence.
+            Sign in to organize your family&apos;s financial picture.
           </p>
         </CardContent>
       </Card>
@@ -87,9 +87,9 @@ export function FinancialContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Connection Issue</h3>
+          <h3 className="text-lg font-semibold mb-2">Having Trouble Connecting</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-            Unable to load your household data. Please refresh the page or try again later.
+            We&apos;re having trouble reaching your family&apos;s data. Mind giving it another try?
           </p>
         </CardContent>
       </Card>
@@ -102,10 +102,9 @@ export function FinancialContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Household Found</h3>
+          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Set Up</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            You need to be part of a household to access Financial Intelligence. Please complete
-            your onboarding or contact support.
+            Complete your profile to start organizing your family&apos;s financial picture.
           </p>
         </CardContent>
       </Card>
@@ -127,10 +126,10 @@ export function FinancialContent() {
           <div className="p-2 rounded-lg bg-primary/10">
             <Wallet className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-4xl font-bold">Financial Intelligence</h1>
+          <h1 className="text-4xl font-bold">Financial Clarity</h1>
         </div>
         <p className="text-muted-foreground text-lg">
-          Track your financial accounts, properties, and insurance in one place
+          Keep your finances organized so your family knows where to look someday
         </p>
       </div>
 

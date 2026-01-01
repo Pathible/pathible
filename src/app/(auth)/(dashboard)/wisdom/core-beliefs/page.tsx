@@ -102,8 +102,8 @@ function CoreBeliefsContent() {
           <h1 className="text-4xl font-bold">Core Beliefs</h1>
         </div>
         <p className="text-muted-foreground text-lg">
-          Define the fundamental beliefs and values that guide your life. These beliefs will be
-          preserved as part of your legacy and shared with your family.
+          The truths you&apos;ve built your life on, written down for the generations that follow.
+          These become part of your legacy and can be shared with your family.
         </p>
       </div>
 
@@ -117,9 +117,9 @@ function CoreBeliefsContent() {
           <Card className="border-dashed">
             <CardContent className="p-8 text-center">
               <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No core beliefs yet</h3>
+              <h3 className="text-lg font-semibold mb-2">What do you believe?</h3>
               <p className="text-muted-foreground mb-6">
-                Start by adding the beliefs and values that matter most to you.
+                Start with the truths that have shaped who you are.
               </p>
               <Link
                 href="/wisdom/core-beliefs/create"
@@ -180,10 +180,9 @@ function CoreBeliefsContent() {
       <Card className="mt-8 bg-muted/30">
         <CardContent className="p-6">
           <p className="text-sm text-muted-foreground">
-            <strong>About Core Beliefs:</strong> Your core beliefs represent the guiding principles
-            that shape your decisions, relationships, and life purpose. They will be saved to your
-            Heritage Vault and can be shared with family members to help them understand what
-            matters most to you.
+            <strong>Why Core Beliefs Matter:</strong> These are the guiding principles that have
+            shaped your decisions, relationships, and life purpose. They help your family understand
+            not just what you did, but why. And carry those values forward.
           </p>
         </CardContent>
       </Card>
@@ -201,9 +200,10 @@ function CoreBeliefsContent() {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Core Belief?</AlertDialogTitle>
+            <AlertDialogTitle>Remove this core belief?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This belief will be permanently deleted.
+              Once removed, this belief can&apos;t be recovered. Your family won&apos;t be able to
+              see it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -34,8 +34,7 @@ const questions = [
   {
     id: "trustedContacts" as const,
     title: "Who do you trust to handle things?",
-    description:
-      "Identify the people you trust to manage your affairs, make decisions, and carry out your wishes.",
+    description: "Who would you turn to if you needed someone to handle things for your family?",
     icon: Users,
     placeholder:
       "List the people you trust with important decisions and responsibilities. Include their names, relationship to you, and what specific responsibilities you would entrust to them...",
@@ -43,22 +42,22 @@ const questions = [
   {
     id: "guardians" as const,
     title: "Who should care for your children or pets?",
-    description: "Designate guardians for minor children and arrange care for beloved pets.",
+    description: "If something happened to you, who would love them the way you do?",
     icon: Heart,
     placeholder:
       "Describe your wishes for the care of your children and/or pets. Include who you would want as guardians, any backup choices, and specific instructions for their care...",
   },
   {
     id: "memorial" as const,
-    title: "Where would you like to be remembered?",
-    description: "Share your preferences for memorial services, burial, or other arrangements.",
+    title: "How would you like to be celebrated?",
+    description: "How would you like to be celebrated and remembered by those who love you?",
     icon: MapPin,
     placeholder:
       "Describe your memorial preferences and where you'd like to be remembered. Include preferences for services, location, music, readings, or any special requests...",
   },
   {
     id: "finalMessage" as const,
-    title: "What do you want your loved ones to know?",
+    title: "What blessing do you want to leave your family?",
     description: "Leave a message of love, wisdom, or guidance for those you care about.",
     icon: MessageSquare,
     placeholder:
@@ -221,7 +220,7 @@ export function LegacyWizard({ householdId, legacyPlan, onCreatePlan }: LegacyWi
               className="min-h-[200px] resize-none"
             />
             <p className="text-xs text-muted-foreground">
-              Take your time. You can always come back and edit your responses.
+              No rush. You can come back to this anytime. Your words here are a gift.
             </p>
           </div>
 

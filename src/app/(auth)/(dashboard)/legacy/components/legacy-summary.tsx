@@ -81,8 +81,8 @@ export function LegacySummary({ householdId, legacyPlan, stats }: LegacySummaryP
       {/* Header */}
       <div className="text-center mb-8">
         <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-        <h1 className="text-4xl font-bold mb-2">Legacy Plan Complete</h1>
-        <p className="text-muted-foreground">Your wishes and values have been documented</p>
+        <h1 className="text-4xl font-bold mb-2">Your Legacy is Taking Shape</h1>
+        <p className="text-muted-foreground">You&apos;ve given your family a true blessing</p>
         {stats?.lastUpdated && (
           <p className="text-sm text-muted-foreground mt-2">
             Last updated: {formatDate(stats.lastUpdated)}
@@ -100,7 +100,7 @@ export function LegacySummary({ householdId, legacyPlan, stats }: LegacySummaryP
                 <Users className="h-5 w-5 text-primary" />
                 Trusted Contacts
               </CardTitle>
-              <CardDescription>People you trust to handle your affairs</CardDescription>
+              <CardDescription>The people you&apos;re counting on</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
@@ -118,7 +118,7 @@ export function LegacySummary({ householdId, legacyPlan, stats }: LegacySummaryP
                 <Heart className="h-5 w-5 text-primary" />
                 Guardianship Preferences
               </CardTitle>
-              <CardDescription>Care for your children and pets</CardDescription>
+              <CardDescription>Who you&apos;d trust with what matters most</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
@@ -136,7 +136,7 @@ export function LegacySummary({ householdId, legacyPlan, stats }: LegacySummaryP
                 <MapPin className="h-5 w-5 text-primary" />
                 Memorial Preferences
               </CardTitle>
-              <CardDescription>How you want to be remembered</CardDescription>
+              <CardDescription>The celebration of your life</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
@@ -152,9 +152,9 @@ export function LegacySummary({ householdId, legacyPlan, stats }: LegacySummaryP
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-primary" />
-                Final Message
+                Your Blessing
               </CardTitle>
-              <CardDescription>Your message to loved ones</CardDescription>
+              <CardDescription>The words you want them to carry</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
@@ -178,9 +178,7 @@ export function LegacySummary({ householdId, legacyPlan, stats }: LegacySummaryP
               <FileText className="h-5 w-5 text-primary" />
               Document Access Map
             </CardTitle>
-            <CardDescription>
-              Links to your important documents in the Heritage Vault
-            </CardDescription>
+            <CardDescription>Quick links to the documents that matter most</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Link
@@ -223,9 +221,8 @@ export function LegacySummary({ householdId, legacyPlan, stats }: LegacySummaryP
       {/* Disclaimer */}
       <div className="p-4 bg-muted/50 rounded-lg mt-8">
         <p className="text-sm text-muted-foreground text-center">
-          <strong>Important:</strong> Legacy Planning is not legal or financial advice. It is a
-          guided space to help you think through your values, intentions, and hopes. Please consult
-          with qualified professionals for legal and financial matters.
+          <strong>A note:</strong> This is a place to put your heart in writing, not legal or
+          financial advice. For the official stuff, please work with a professional.
         </p>
       </div>
     </div>

@@ -112,9 +112,9 @@ export function DocumentList({ documents, categories, householdId, isLoading }: 
       <Card className="border-dashed" data-testid="vault-documents-empty">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No documents found</h3>
+          <h3 className="text-lg font-semibold mb-2">Your vault is ready</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Upload your first document to get started with the Heritage Vault.
+            Start by adding the documents your family will need someday.
           </p>
         </CardContent>
       </Card>
