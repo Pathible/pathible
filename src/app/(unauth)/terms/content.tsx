@@ -1297,7 +1297,7 @@ export function TermsOfServiceContent() {
       <div className="text-center text-muted-foreground text-sm">
         <p className="mb-2">
           <Strong>Effective Date:</Strong> January 1, 2026 | <Strong>Last Updated:</Strong> December
-          14, 2024 | <Strong>Version:</Strong> 1.0
+          14, 2025 | <Strong>Version:</Strong> 1.0
         </p>
         <p>&copy; 2026 Pathible, Inc. All rights reserved.</p>
       </div>

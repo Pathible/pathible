@@ -13,7 +13,7 @@ export default function TermsOfServicePage() {
     <LegalPageLayout
       title="Terms of Service"
       effectiveDate="January 1, 2026"
-      lastUpdated="December 14, 2024"
+      lastUpdated="December 14, 2025"
       version="1.0"
       type="terms"
     >

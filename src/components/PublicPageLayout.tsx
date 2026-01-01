@@ -1,4 +1,4 @@
-import { Heart, Lock, Shield } from "lucide-react";
+import { Facebook, Heart, Instagram, Lock, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -134,6 +134,26 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
                 >
                   Terms of Service
                 </Link>
+                <div className="flex items-center gap-4 ml-2">
+                  <a
+                    href="https://www.instagram.com/pathible.legacy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Follow Pathible on Instagram"
+                    className="text-muted-foreground hover:text-pathible-forest transition-colors"
+                  >
+                    <Instagram className="w-5 h-5" />
+                  </a>
+                  <a
+                    href="https://www.facebook.com/people/Pathible/61577949614554/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Follow Pathible on Facebook"
+                    className="text-muted-foreground hover:text-pathible-forest transition-colors"
+                  >
+                    <Facebook className="w-5 h-5" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
