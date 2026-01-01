@@ -1,11 +1,11 @@
 "use client";
 
 import { PricingTable, useAuth } from "@clerk/nextjs";
-import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
+import { FullPageLoader } from "@/components/full-page-loader";
 import { Button } from "@/components/ui/button";
 import { checkHasActivePlan } from "@/lib/subscription-plans";
 
@@ -21,13 +21,7 @@ import { checkHasActivePlan } from "@/lib/subscription-plans";
  */
 export default function SelectPlanPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      }
-    >
+    <Suspense fallback={<FullPageLoader />}>
       <SelectPlanContent />
     </Suspense>
   );
@@ -62,20 +56,12 @@ function SelectPlanContent() {
 
   // Show loading state while checking auth
   if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   // If not signed in, show loading (redirect will happen)
   if (!isSignedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   return (
@@ -117,12 +103,10 @@ function SelectPlanContent() {
         {/* Trust Section */}
         <div className="mt-16 pt-12 border-t border-border">
           <div className="text-center max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold mb-4 text-foreground">
-              Trusted by Families Worldwide
-            </h2>
+            <h2 className="text-2xl font-bold mb-4 text-foreground">Trusted by Many Families</h2>
             <p className="text-muted-foreground">
-              Join thousands of families preserving their legacies with Pathible. Our secure
-              platform ensures your memories and documents are protected for generations to come.
+              Join other families preserving their legacies with Pathible. Our secure platform
+              ensures your memories and documents are protected for generations to come.
             </p>
           </div>
         </div>
