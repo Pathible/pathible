@@ -1,4 +1,4 @@
-import { clerkClient } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 /**
@@ -8,10 +8,19 @@ import { NextResponse } from "next/server";
  * Returns the actual plans and features configured in Clerk Dashboard.
  * Use this to verify your feature-access.ts matches Clerk's configuration.
  *
- * IMPORTANT: Remove this endpoint before production!
+ * Requires authentication - only accessible by logged-in users.
  */
 export async function GET() {
   try {
+    // Require authentication
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
     const client = await clerkClient();
 
     // Fetch plans from Clerk's billing API
