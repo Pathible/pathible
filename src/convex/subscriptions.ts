@@ -122,14 +122,16 @@ export const syncFromClerk = mutation({
 
     // Map Clerk plan ID to our tier names
     // Adjust these mappings based on your Clerk plan slugs
-    const tierMap: Record<string, "foundations" | "heritage" | "legacy"> = {
+    const tierMap: Record<string, "foundations" | "heritage" | "legacy" | "founders"> = {
       foundations: "foundations",
       heritage: "heritage",
       legacy: "legacy",
+      founders: "founders",
       // Add any Clerk-specific plan IDs here
       plan_foundations: "foundations",
       plan_heritage: "heritage",
       plan_legacy: "legacy",
+      plan_founders: "founders",
     };
 
     const tier = tierMap[args.planId.toLowerCase()] || "foundations";

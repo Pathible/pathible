@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { requireAdmin } from "./auth";
 
 /**
@@ -266,5 +266,45 @@ export const getIncompleteLegacyPlans = query({
     );
 
     return enrichedPlans;
+  },
+});
+
+// ============================================================================
+// MUTATIONS
+// ============================================================================
+
+/**
+ * Update a household's subscription tier (admin only)
+ * Use this to fix tier mismatches or manually upgrade/downgrade
+ */
+export const updateHouseholdTier = mutation({
+  args: {
+    householdId: v.id("households"),
+    tier: v.union(
+      v.literal("foundations"),
+      v.literal("heritage"),
+      v.literal("legacy"),
+      v.literal("founders"),
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
+
+    await ctx.db.patch(args.householdId, {
+      subscriptionTier: args.tier,
+      updatedAt: Date.now(),
+    });
+
+    console.log(
+      `[Admin] Updated household ${args.householdId} tier from ${household.subscriptionTier} to ${args.tier}`,
+    );
+
+    return null;
   },
 });
