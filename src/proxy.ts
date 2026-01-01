@@ -23,7 +23,13 @@ const isPublicRoute = createRouteMatcher([
   "/login(.*)",
   "/signup(.*)",
   "/pricing(.*)",
+  "/privacy(.*)",
+  "/terms(.*)",
   "/api/webhooks(.*)",
+  // SEO routes - must be accessible to crawlers and social media bots
+  "/sitemap.xml",
+  "/robots.txt",
+  "/opengraph-image(.*)",
 ]);
 
 // Routes that require auth but NOT subscription
