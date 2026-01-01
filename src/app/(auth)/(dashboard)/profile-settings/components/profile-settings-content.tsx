@@ -32,9 +32,9 @@ export function ProfileSettingsContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <User className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Signed In</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Please sign in to access your profile settings.
+            Sign in to view and update your profile.
           </p>
         </CardContent>
       </Card>
@@ -47,9 +47,9 @@ export function ProfileSettingsContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <User className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Profile Not Found</h3>
+          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Set Up</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Please complete your onboarding to set up your profile.
+            Complete your profile to get started with Pathible.
           </p>
         </CardContent>
       </Card>
@@ -65,9 +65,7 @@ export function ProfileSettingsContent() {
         </div>
         <div>
           <h1 className="text-4xl font-bold">Profile Settings</h1>
-          <p className="text-muted-foreground text-lg">
-            Manage your account information and preferences
-          </p>
+          <p className="text-muted-foreground text-lg">Your account details and preferences</p>
         </div>
       </div>
 

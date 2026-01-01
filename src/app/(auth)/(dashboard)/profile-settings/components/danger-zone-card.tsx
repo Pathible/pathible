@@ -79,15 +79,15 @@ export function DangerZoneCard({ profileName }: DangerZoneCardProps) {
             <AlertTriangle className="h-5 w-5" />
             Danger Zone
           </CardTitle>
-          <CardDescription>Irreversible actions for your account</CardDescription>
+          <CardDescription>Actions that can&apos;t be undone</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
             <h4 className="font-medium text-destructive mb-2">Delete Account</h4>
             <p className="text-sm text-muted-foreground mb-4">
-              Once you delete your account, there is no going back. This will permanently delete
-              your profile, remove you from all households, and delete all your associated data
-              including documents in the Heritage Vault.
+              Deleting your account removes everything: your profile, your documents, your wisdom
+              entries, all of it. Your family would lose access to everything you&apos;ve created.
+              This can&apos;t be undone.
             </p>
 
             <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
