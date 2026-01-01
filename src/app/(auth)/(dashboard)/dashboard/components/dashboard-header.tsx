@@ -1,4 +1,4 @@
-import { LogOut, User, Users } from "lucide-react";
+import { HelpCircle, LogOut, User, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,12 @@ export function DashboardHeader({ familyName, userName }: DashboardHeaderProps) 
               <Link href="/family-preferences">
                 <Users className="mr-2 h-4 w-4" />
                 <span>Family Preferences</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/help">
+                <HelpCircle className="mr-2 h-4 w-4" />
+                <span>Help Center</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
