@@ -3,6 +3,7 @@
 import {
   Activity,
   Compass,
+  FileText,
   Key,
   LayoutDashboard,
   Mail,
@@ -30,6 +31,11 @@ const mainNavItems = [
     title: "Dashboard",
     href: "/admin",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Content",
+    href: "/admin/content",
+    icon: FileText,
   },
   {
     title: "Users & Families",
