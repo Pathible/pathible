@@ -96,7 +96,7 @@ export function WisdomHubContent() {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">
-          Please complete your profile setup to access Wisdom & Education.
+          Let&apos;s get you set up so you can start sharing your story.
         </p>
       </div>
     );
@@ -115,11 +115,10 @@ export function WisdomHubContent() {
           <div className="p-2 rounded-lg bg-primary/10">
             <BookOpen className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-4xl font-bold">Wisdom & Education</h1>
+          <h1 className="text-4xl font-bold">Wisdom & Stories</h1>
         </div>
         <p className="text-muted-foreground text-lg max-w-2xl">
-          A sacred space to capture the lessons, beliefs, and heartfelt words that form the
-          foundation of your legacy.
+          Pass down your faith, not just your finances. This is where your heart lives on.
         </p>
       </div>
 
@@ -129,8 +128,8 @@ export function WisdomHubContent() {
           <NavCard
             href="/wisdom/create-entry"
             icon={<BookOpen className="h-5 w-5" />}
-            title="Create Wisdom Entry"
-            description="Capture a life lesson, memory, or insight to preserve for generations"
+            title="Share Your Wisdom"
+            description="Share a piece of your heart that will outlast you"
           />
         </div>
 
@@ -138,8 +137,8 @@ export function WisdomHubContent() {
           <NavCard
             href="/wisdom/library"
             icon={<BookMarked className="h-5 w-5" />}
-            title="Wisdom Library"
-            description="View and manage all your saved wisdom entries"
+            title="Your Wisdom Library"
+            description="Everything you've written for the ones you love"
           />
         </div>
 
@@ -148,7 +147,7 @@ export function WisdomHubContent() {
             href="/wisdom/core-beliefs"
             icon={<Heart className="h-5 w-5" />}
             title="Core Beliefs"
-            description="Define the fundamental beliefs and values that guide your life"
+            description="The truths you've built your life on, written down for generations"
           />
         </div>
       </div>

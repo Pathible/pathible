@@ -152,7 +152,9 @@ export default function WisdomLibraryPage() {
             <BookMarked className="h-8 w-8 text-primary" />
             <h1 className="text-4xl font-bold">Wisdom Library</h1>
           </div>
-          <p className="text-muted-foreground">Your collected wisdom entries</p>
+          <p className="text-muted-foreground">
+            Everything you&apos;ve written for the ones you love
+          </p>
         </div>
         <Button asChild>
           <Link href="/wisdom/create-entry">
@@ -222,9 +224,9 @@ export default function WisdomLibraryPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No entries yet</h3>
+            <h3 className="text-lg font-semibold mb-2">Your library is waiting</h3>
             <p className="text-muted-foreground mb-4">
-              Start capturing your wisdom and life lessons.
+              Start sharing the lessons and stories that matter most.
             </p>
             <Button asChild>
               <Link href="/wisdom/create-entry">Create Your First Entry</Link>
@@ -286,9 +288,10 @@ export default function WisdomLibraryPage() {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Wisdom Entry?</AlertDialogTitle>
+            <AlertDialogTitle>Remove this wisdom entry?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This entry will be permanently deleted.
+              Once removed, this entry can&apos;t be recovered. Your family won&apos;t be able to
+              see it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
