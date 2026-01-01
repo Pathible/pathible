@@ -83,14 +83,6 @@ function HeroSection() {
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </Button>
-            <ScrollButton
-              targetId="how-it-works"
-              size="lg"
-              variant="ghost"
-              className="border-2 border-pathible-charcoal/20 hover:border-pathible-forest hover:bg-pathible-forest/5 font-medium rounded-2xl text-lg px-8 py-4"
-            >
-              See how it works
-            </ScrollButton>
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import Image from "next/image";
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { api } from "@/convex/_generated/api";
+import { checkHasActivePlan } from "@/lib/subscription-plans";
 
 /**
  * Multi-Step Onboarding Wizard
@@ -22,13 +24,20 @@ import { api } from "@/convex/_generated/api";
  * 2. First household creation
  * 3. Goals and preferences
  *
- * After completing all steps, users are redirected to select a subscription plan.
+ * After completing all steps:
+ * - Users WITH an active subscription (subscribed from /pricing) → /dashboard
+ * - Users WITHOUT a subscription → /select-plan
+ *
  * Family invitations can be done later from the dashboard.
  */
 export default function OnboardingPage() {
   const router = useRouter();
+  const { has } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3; // Reduced from 4 - invitations moved to dashboard
+
+  // Check if user already has an active subscription (e.g., subscribed from /pricing)
+  const hasActivePlan = checkHasActivePlan(has);
 
   // Step 1: Profile
   const [firstName, setFirstName] = useState("");
@@ -125,9 +134,15 @@ export default function OnboardingPage() {
           interestedFeatures: [],
         });
 
-        toast.success("Onboarding complete! Now let's select your plan.");
-        // Redirect to subscription selection instead of step 4
-        setTimeout(() => router.push("/select-plan"), 500);
+        // If user already has a plan (subscribed from /pricing), go to dashboard
+        // Otherwise, redirect to plan selection
+        if (hasActivePlan) {
+          toast.success("Onboarding complete! Welcome to Pathible.");
+          setTimeout(() => router.push("/dashboard"), 500);
+        } else {
+          toast.success("Onboarding complete! Now let's select your plan.");
+          setTimeout(() => router.push("/select-plan"), 500);
+        }
       }
     } catch (error) {
       console.error("Error:", error);
