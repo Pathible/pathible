@@ -1,6 +1,7 @@
 # Feature Gap Analysis - Launch Readiness Audit
 
 **Generated:** January 2026
+**Last Updated:** January 2026
 **Purpose:** Identify gaps between Clerk-defined features and actual implementation
 
 ---
@@ -17,6 +18,8 @@
 | Support | 2/3 | 1/3 | 0/3 | **Ready** |
 | Early Access | 0/1 | 1/1 | 0/1 | Partial |
 | **Plan Limits** | 3/3 | 0/3 | 0/3 | **Ready** |
+| **Feature Gating** | 5/5 | 0/5 | 0/5 | **Ready** |
+| **Admin Tools** | 2/2 | 0/2 | 0/2 | **Ready** |
 
 ---
 
@@ -266,14 +269,71 @@
 
 ---
 
+### 9. Feature Gating Infrastructure
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| `FeatureGate` component | **COMPLETE** | Uses Clerk's `Protect` with feature-based access control |
+| Dashboard page gates | **COMPLETE** | All 5 dashboard pages wrapped with appropriate gates |
+| `SubscriptionStatusBanner` | **COMPLETE** | Global banner for expired/inactive subscriptions |
+| `useFeatureAccess` hook | **COMPLETE** | Client-side feature access checking |
+| `useSubscription` hook | **COMPLETE** | Subscription status checking |
+
+**Dashboard Feature Gates:**
+| Page | Feature | Required Plan |
+|------|---------|---------------|
+| `/vault` | `VAULT_DOCUMENT_STORAGE` | Foundations |
+| `/financial` | `FINANCIAL_OVERVIEW` | Foundations |
+| `/family` | `FAMILY_MEMBERS` | Foundations |
+| `/wisdom` | `WISDOM_ENTRIES` | Heritage |
+| `/legacy` | `LEGACY_QUESTIONNAIRES` | Legacy |
+
+**Files:**
+- `src/components/feature-gate.tsx` - FeatureGate component
+- `src/lib/feature-access.ts` - Feature definitions and hooks
+- `src/components/subscription-status-banner.tsx` - Subscription warning banner
+- `src/hooks/use-subscription.ts` - Subscription status hook
+
+---
+
+### 10. Admin Tools
+
+| Feature | Status | Details |
+|---------|--------|---------|
+| Admin Dashboard | **COMPLETE** | Real Convex data, user stats, activity logs |
+| Content Manager | **COMPLETE** | CRUD for Faith & Finances articles |
+| Learning Center Integration | **COMPLETE** | Articles fetched from database |
+| E2E Test Infrastructure | **COMPLETE** | `cy.grantAdminRole()` for admin testing |
+
+**Admin Content Manager:**
+- Create/edit/delete educational articles
+- Category filtering (faith_stewardship, financial_literacy, etc.)
+- Draft/published status workflow
+- View count tracking
+- Learning Center automatically displays published articles
+
+**Files:**
+- `src/convex/articles.ts` - Article CRUD operations
+- `src/app/(auth)/admin/content/` - Content manager pages
+- `src/app/(auth)/(dashboard)/financial/components/learning-center.tsx` - Database integration
+- `cypress/e2e/admin-content.cy.ts` - E2E tests
+
+---
+
 ## Files Modified for Feature Gating
 
-When implementing "Coming Soon" states, update:
+Feature gating is **COMPLETE** for launch. All dashboard pages are wrapped with appropriate `FeatureGate` components.
 
-1. `/src/lib/feature-access.ts` - Feature definitions (already complete)
-2. `/src/convex/auth.ts` - FEATURE_TIERS mapping (already complete)
-3. `/src/components/feature-gate.tsx` - May need "Coming Soon" variant
-4. Individual page files - Wrap with FeatureGate
+**Completed files:**
+1. `/src/lib/feature-access.ts` - Feature definitions ✅
+2. `/src/convex/auth.ts` - FEATURE_TIERS mapping ✅
+3. `/src/components/feature-gate.tsx` - FeatureGate component ✅
+4. `/src/app/(auth)/(dashboard)/vault/page.tsx` - Vault gate ✅
+5. `/src/app/(auth)/(dashboard)/financial/page.tsx` - Financial gate ✅
+6. `/src/app/(auth)/(dashboard)/family/page.tsx` - Family gate ✅
+7. `/src/app/(auth)/(dashboard)/wisdom/page.tsx` - Wisdom gate ✅
+8. `/src/app/(auth)/(dashboard)/legacy/page.tsx` - Legacy gate ✅
+9. `/src/app/(auth)/(dashboard)/layout.tsx` - SubscriptionStatusBanner ✅
 
 ---
 
@@ -300,14 +360,59 @@ Tables that need to be created for missing features:
    - [x] Create help/FAQ page - **DONE** (/help)
    - [x] Add "Coming Soon" UI component - **DONE**
    - [x] Hide SubscriptionDebug in production - **DONE**
+   - [x] Frontend feature gating - **DONE** (all 5 dashboard pages gated)
+   - [x] Subscription status banner - **DONE** (shows warning for inactive subscriptions)
+   - [x] Admin content manager - **DONE** (Faith & Finances articles)
+   - [x] E2E test coverage - **DONE** (37 tests passing, including admin content)
    - [ ] Apply Coming Soon badges to unfinished features (optional)
 
 2. **Week 1 Post-Launch:**
    - [ ] Monitor support volume via Crisp dashboard
    - [ ] Gather user feedback on missing features
    - [ ] Begin Plaid integration planning
+   - [ ] Create initial educational content in Content Manager
 
 3. **Month 1:**
    - [ ] Complete Plaid integration
    - [ ] Implement family messaging
    - [ ] Add voice recording UI
+
+---
+
+## What's Next (Priority Order)
+
+Based on the gap analysis, here are the recommended next priorities:
+
+### P1 - High Priority (Should Have for Launch)
+
+| Feature | Area | Effort | Status |
+|---------|------|--------|--------|
+| ~~Frontend feature gating~~ | System | Low | **DONE** |
+| ~~Subscription status banner~~ | System | Low | **DONE** |
+| ~~Admin content manager~~ | Admin | Medium | **DONE** |
+| Enforce vault_tags_collections gate | Vault | Low | Pending - categories exist, just add granular gate |
+| Coming Soon badges for incomplete features | UI | Low | Optional - prevents user confusion |
+
+### P1.5 - High Value Quick Wins
+
+| Feature | Area | Effort | Notes |
+|---------|------|--------|-------|
+| Add educational content | Content | Low | Use Content Manager to add articles |
+| Rich family profile UI | Family | Low | Data already stored, just needs better display |
+| Financial insights stub | Financial | Low | Show "AI insights coming soon" placeholder |
+
+### P2 - Medium Priority (Post-Launch Week 1)
+
+| Feature | Area | Effort | Notes |
+|---------|------|--------|-------|
+| Plaid integration | Financial | High | Foundation for all financial features |
+| Vault folders | Vault | Medium | Schema + UI for hierarchy |
+| Voice recording UI | Vault | Medium | Browser MediaRecorder API |
+
+### P3 - Lower Priority (Month 1+)
+
+| Feature | Area | Effort | Notes |
+|---------|------|--------|-------|
+| Family messaging | Family | High | New schema + real-time UI |
+| Family tree visualization | Family | High | Graph rendering |
+| Story templates | Legacy | Medium | Template library + selection |
