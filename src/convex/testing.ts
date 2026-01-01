@@ -430,6 +430,80 @@ export const resetTestUser = mutation({
  * Check if current user is in a clean state (no profile)
  * Useful for tests to verify cleanup worked
  */
+/**
+ * Grant admin role to current test user
+ * Only works for test user emails (containing +clerk_test, etc.)
+ */
+export const grantAdminRole = mutation({
+  args: {},
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return {
+        success: false,
+        message: "Not authenticated",
+      };
+    }
+
+    const email = identity.email;
+    if (!email) {
+      return {
+        success: false,
+        message: "No email associated with user",
+      };
+    }
+
+    // Security check - only allow test users
+    const isTestUser = TEST_EMAIL_PATTERNS.some((pattern) => email.includes(pattern));
+    if (!isTestUser) {
+      console.warn(`[Testing] Blocked admin role grant for non-test user: ${email}`);
+      return {
+        success: false,
+        message: "Admin role grant only allowed for test users",
+      };
+    }
+
+    const userId = identity.subject;
+
+    // Check if admin role already exists
+    const existingRole = await ctx.db
+      .query("userRoles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (existingRole) {
+      if (existingRole.role === "admin") {
+        return {
+          success: true,
+          message: "User already has admin role",
+        };
+      }
+      // Update existing role to admin
+      await ctx.db.patch(existingRole._id, { role: "admin" });
+      return {
+        success: true,
+        message: "Updated existing role to admin",
+      };
+    }
+
+    // Create new admin role
+    await ctx.db.insert("userRoles", {
+      userId,
+      role: "admin",
+    });
+
+    console.log(`[Testing] Granted admin role to test user: ${email}`);
+    return {
+      success: true,
+      message: `Granted admin role to ${email}`,
+    };
+  },
+});
+
 export const isCleanState = mutation({
   args: {},
   returns: v.object({

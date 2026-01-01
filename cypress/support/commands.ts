@@ -99,6 +99,17 @@ declare global {
         hasMemberships: boolean;
         hasHouseholds: boolean;
       }>;
+
+      /**
+       * Grant admin role to the current test user
+       * Must be called AFTER signing in with Clerk.
+       * SECURITY: Only works for test user emails (+clerk_test, +e2e_test, etc.)
+       * @example cy.grantAdminRole()
+       */
+      grantAdminRole(): Chainable<{
+        success: boolean;
+        message: string;
+      }>;
     }
   }
 }
@@ -288,6 +299,10 @@ interface ConvexTestHelpers {
     hasMemberships: boolean;
     hasHouseholds: boolean;
   }>;
+  grantAdminRole: () => Promise<{
+    success: boolean;
+    message: string;
+  }>;
 }
 
 // Result types for test commands
@@ -414,6 +429,41 @@ Cypress.Commands.add("isTestUserClean", (): Cypress.Chainable<IsCleanStateResult
         return result as IsCleanStateResult;
       });
     }) as Cypress.Chainable<IsCleanStateResult>;
+});
+
+// Result type for grantAdminRole
+type GrantAdminRoleResult = {
+  success: boolean;
+  message: string;
+};
+
+/**
+ * Grant admin role to test user
+ * Calls the Convex testing.grantAdminRole mutation through the window's test helpers.
+ * Must be signed in first and on a page with the Convex client loaded.
+ */
+Cypress.Commands.add("grantAdminRole", (): Cypress.Chainable<GrantAdminRoleResult> => {
+  cy.log("**Granting admin role to test user**");
+
+  return cy
+    .window({ timeout: 30000 })
+    .then((win): GrantAdminRoleResult | Cypress.Chainable<GrantAdminRoleResult> => {
+      const testHelpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+        .__CONVEX_TEST_HELPERS__;
+
+      if (!testHelpers) {
+        console.error("Convex test helpers not found on window.");
+        return {
+          success: false,
+          message: "Convex test helpers not available",
+        };
+      }
+
+      return cy.wrap(testHelpers.grantAdminRole(), { timeout: 30000 }).then((result) => {
+        console.log("Grant admin role result:", result);
+        return result as GrantAdminRoleResult;
+      });
+    }) as Cypress.Chainable<GrantAdminRoleResult>;
 });
 
 // Export to make TypeScript happy
