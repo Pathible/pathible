@@ -1,36 +1,32 @@
 "use client";
 
-import { Activity, FileText, Key, Mail, TrendingUp, Users } from "lucide-react";
+import { useQuery } from "convex/react";
+import { Activity, FileText, Home, Key, Loader2, TrendingUp, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { api } from "@/convex/_generated/api";
 
 interface StatCardProps {
   title: string;
   value: string | number;
-  change?: string;
-  changeType?: "increase" | "decrease" | "neutral";
+  subtitle?: string;
   icon: React.ReactNode;
+  isLoading?: boolean;
 }
 
-function StatCard({ title, value, change, changeType = "neutral", icon }: StatCardProps) {
-  const changeColor =
-    changeType === "increase"
-      ? "text-primary"
-      : changeType === "decrease"
-        ? "text-destructive"
-        : "text-muted-foreground";
-
+function StatCard({ title, value, subtitle, icon, isLoading }: StatCardProps) {
   return (
     <Card className="border-border">
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="font-crimson text-3xl font-semibold">{value}</p>
-            {change && (
-              <p className={`flex items-center gap-1 text-sm ${changeColor}`}>
-                {changeType === "increase" && <TrendingUp className="h-3 w-3" />}
-                {change}
-              </p>
+            {isLoading ? (
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            ) : (
+              <p className="font-crimson text-3xl font-semibold">{value}</p>
+            )}
+            {subtitle && (
+              <p className="flex items-center gap-1 text-sm text-muted-foreground">{subtitle}</p>
             )}
           </div>
           <div className="text-muted-foreground">{icon}</div>
@@ -40,79 +36,60 @@ function StatCard({ title, value, change, changeType = "neutral", icon }: StatCa
   );
 }
 
-interface ActivityItem {
-  id: string;
-  action: string;
-  email: string;
-  timestamp: string;
+function formatTimeAgo(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-interface LegacyRequest {
-  id: string;
-  title: string;
-  requestedBy: string;
-  status: string;
-  statusColor: "pending" | "review" | "completed";
+function formatActionType(actionType: string): string {
+  const actionLabels: Record<string, string> = {
+    document_uploaded: "Document uploaded",
+    document_viewed: "Document viewed",
+    document_updated: "Document updated",
+    document_deleted: "Document deleted",
+    wisdom_created: "Wisdom entry created",
+    wisdom_updated: "Wisdom entry updated",
+    wisdom_deleted: "Wisdom entry deleted",
+    letter_created: "Letter created",
+    household_created: "Household created",
+    household_updated: "Household updated",
+    member_invited: "Member invited",
+    member_joined: "Member joined",
+    member_removed: "Member removed",
+    member_role_updated: "Member role updated",
+    plan_updated: "Legacy plan updated",
+    asset_created: "Financial asset added",
+    asset_updated: "Financial asset updated",
+    asset_deleted: "Financial asset deleted",
+    policy_created: "Insurance policy added",
+    policy_updated: "Insurance policy updated",
+    policy_deleted: "Insurance policy deleted",
+    category_created: "Category created",
+    category_updated: "Category updated",
+    category_deleted: "Category deleted",
+    family_unit_created: "Family unit created",
+    family_unit_updated: "Family unit updated",
+    family_unit_deleted: "Family unit deleted",
+    family_member_created: "Family member added",
+    family_member_updated: "Family member updated",
+    family_member_deleted: "Family member removed",
+    suggestion_completed: "Suggestion completed",
+    other: "Activity",
+  };
+  return actionLabels[actionType] || actionType.replace(/_/g, " ");
 }
 
-const mockActivity: ActivityItem[] = [
-  {
-    id: "1",
-    action: "New user signup",
-    email: "sarah.miller@email.com",
-    timestamp: "2 minutes ago",
-  },
-  {
-    id: "2",
-    action: "Wisdom entry created",
-    email: "john.doe@email.com",
-    timestamp: "15 minutes ago",
-  },
-  {
-    id: "3",
-    action: "Legacy access requested",
-    email: "family.smith@email.com",
-    timestamp: "1 hour ago",
-  },
-  {
-    id: "4",
-    action: "Household created",
-    email: "maria.garcia@email.com",
-    timestamp: "2 hours ago",
-  },
-  {
-    id: "5",
-    action: "Letter sent to family",
-    email: "robert.wilson@email.com",
-    timestamp: "3 hours ago",
-  },
-];
+function RecentActivity() {
+  const activity = useQuery(api.admin.getRecentActivity, { limit: 5 });
 
-const mockLegacyRequests: LegacyRequest[] = [
-  {
-    id: "1",
-    title: "Smith Family - Legacy Access",
-    requestedBy: "jane.smith@email.com",
-    status: "Document verification pending",
-    statusColor: "pending",
-  },
-  {
-    id: "2",
-    title: "Johnson Household - Beneficiary Activation",
-    requestedBy: "Pre-designated beneficiary request",
-    status: "Awaiting review",
-    statusColor: "review",
-  },
-  {
-    id: "3",
-    title: "Williams Family - Access Granted",
-    requestedBy: "Completed: 2 days ago",
-    status: "Active",
-    statusColor: "completed",
-  },
-];
-
-function RecentActivity({ items }: { items: ActivityItem[] }) {
   return (
     <Card className="border-border">
       <CardHeader>
@@ -123,37 +100,43 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
         <CardDescription>Latest user actions across the platform</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-start justify-between border-b border-border pb-4 last:border-0 last:pb-0"
-            >
-              <div>
-                <p className="font-medium">{item.action}</p>
-                <p className="text-sm text-muted-foreground">{item.email}</p>
+        {activity === undefined ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : activity.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">No activity recorded yet</p>
+        ) : (
+          <div className="space-y-4">
+            {activity.map((item) => (
+              <div
+                key={item._id}
+                className="flex items-start justify-between border-b border-border pb-4 last:border-0 last:pb-0"
+              >
+                <div>
+                  <p className="font-medium">{formatActionType(item.actionType)}</p>
+                  <p className="text-sm text-muted-foreground">{item.userName || "Unknown user"}</p>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {formatTimeAgo(item._creationTime)}
+                </span>
               </div>
-              <span className="text-sm text-muted-foreground">{item.timestamp}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function PendingLegacyRequests({ requests }: { requests: LegacyRequest[] }) {
-  const getStatusStyles = (statusColor: LegacyRequest["statusColor"]) => {
-    switch (statusColor) {
-      case "pending":
-        return "bg-amber-50 border-amber-200";
-      case "review":
-        return "bg-amber-50 border-amber-200";
-      case "completed":
-        return "bg-primary/5 border-primary/20";
-      default:
-        return "bg-muted border-border";
-    }
+function IncompleteLegacyPlans() {
+  const plans = useQuery(api.admin.getIncompleteLegacyPlans, { limit: 5 });
+
+  const getCompletionStyles = (percentage: number) => {
+    if (percentage < 25) return "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900";
+    if (percentage < 75)
+      return "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900";
+    return "bg-primary/5 border-primary/20";
   };
 
   return (
@@ -161,22 +144,81 @@ function PendingLegacyRequests({ requests }: { requests: LegacyRequest[] }) {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Key className="h-5 w-5 text-primary" />
-          <CardTitle className="font-crimson text-xl">Pending Legacy Requests</CardTitle>
+          <CardTitle className="font-crimson text-xl">Legacy Plans In Progress</CardTitle>
         </div>
-        <CardDescription>Requests requiring admin attention</CardDescription>
+        <CardDescription>Users who may need encouragement to complete their plans</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {plans === undefined ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : plans.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">All legacy plans are complete!</p>
+        ) : (
+          <div className="space-y-3">
+            {plans.map((plan) => (
+              <div
+                key={plan._id}
+                className={`rounded-lg border p-4 ${getCompletionStyles(plan.completionPercentage)}`}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-medium">{plan.householdName || "Unknown household"}</p>
+                  <span className="text-sm font-medium">{plan.completionPercentage}%</span>
+                </div>
+                <p className="text-sm text-muted-foreground">By: {plan.userName || "Unknown"}</p>
+                <p className="text-sm text-muted-foreground">
+                  Updated: {formatTimeAgo(plan.updatedAt)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SubscriptionBreakdown({
+  tiers,
+}: {
+  tiers: { foundations: number; heritage: number; legacy: number; founders: number };
+}) {
+  const total = tiers.foundations + tiers.heritage + tiers.legacy + tiers.founders;
+
+  return (
+    <Card className="border-border">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          <CardTitle className="font-crimson text-xl">Subscription Tiers</CardTitle>
+        </div>
+        <CardDescription>Distribution of households by plan</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {requests.map((request) => (
-            <div
-              key={request.id}
-              className={`rounded-lg border p-4 ${getStatusStyles(request.statusColor)}`}
-            >
-              <p className="font-medium">{request.title}</p>
-              <p className="text-sm text-muted-foreground">Requested by: {request.requestedBy}</p>
-              <p className="text-sm text-muted-foreground">Status: {request.status}</p>
+          <div className="flex justify-between items-center">
+            <span className="text-sm">Foundations</span>
+            <span className="font-medium">{tiers.foundations}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm">Heritage</span>
+            <span className="font-medium">{tiers.heritage}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm">Legacy</span>
+            <span className="font-medium">{tiers.legacy}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-primary font-medium">Founders</span>
+            <span className="font-medium text-primary">{tiers.founders}</span>
+          </div>
+          <div className="pt-2 border-t">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">Total</span>
+              <span className="font-bold">{total}</span>
             </div>
-          ))}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -184,6 +226,10 @@ function PendingLegacyRequests({ requests }: { requests: LegacyRequest[] }) {
 }
 
 export function AdminDashboard() {
+  const stats = useQuery(api.admin.getStats, {});
+
+  const isLoading = stats === undefined;
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -195,40 +241,46 @@ export function AdminDashboard() {
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Active Users"
-          value="1,284"
-          change="+12%"
-          changeType="increase"
+          title="Total Users"
+          value={stats?.totalUsers ?? 0}
           icon={<Users className="h-5 w-5" />}
+          isLoading={isLoading}
         />
         <StatCard
-          title="Content Created"
-          value="3,847"
-          change="+8%"
-          changeType="increase"
+          title="Households"
+          value={stats?.totalHouseholds ?? 0}
+          icon={<Home className="h-5 w-5" />}
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Content Items"
+          value={stats?.totalContent ?? 0}
+          subtitle={
+            stats ? `${stats.wisdomEntries} wisdom, ${stats.vaultDocuments} documents` : undefined
+          }
           icon={<FileText className="h-5 w-5" />}
+          isLoading={isLoading}
         />
         <StatCard
-          title="Emails Sent"
-          value="892"
-          change="+23%"
-          changeType="increase"
-          icon={<Mail className="h-5 w-5" />}
-        />
-        <StatCard
-          title="Legacy Requests"
-          value="12"
-          change="3 pending"
-          changeType="neutral"
+          title="Legacy Plans"
+          value={stats?.totalLegacyPlans ?? 0}
           icon={<Key className="h-5 w-5" />}
+          isLoading={isLoading}
         />
       </div>
 
       {/* Activity and Requests Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <RecentActivity items={mockActivity} />
-        <PendingLegacyRequests requests={mockLegacyRequests} />
+        <RecentActivity />
+        <IncompleteLegacyPlans />
       </div>
+
+      {/* Subscription Breakdown */}
+      {stats && (
+        <div className="grid gap-6 lg:grid-cols-3">
+          <SubscriptionBreakdown tiers={stats.subscriptionsByTier} />
+        </div>
+      )}
     </div>
   );
 }
