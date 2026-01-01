@@ -183,7 +183,7 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
             <Wallet className="h-5 w-5" />
             Financial Accounts
           </CardTitle>
-          <CardDescription>Manage your bank accounts and investments</CardDescription>
+          <CardDescription>The accounts your family should know about</CardDescription>
           <CardAction>
             <Button onClick={() => handleOpenDialog()} data-tour="financial-add-account">
               <Plus className="h-4 w-4" />
@@ -195,9 +195,9 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
           {isLoading ? null : accounts.length === 0 ? (
             <div className="text-center py-12">
               <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No accounts yet</h3>
+              <h3 className="text-lg font-semibold mb-2">Nothing here yet</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Start by adding your first financial account
+                Add the accounts your family will need to know about someday
               </p>
               <Button onClick={() => handleOpenDialog()}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -267,8 +267,8 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
             <DialogTitle>{editingAccount ? "Edit Account" : "Add New Account"}</DialogTitle>
             <DialogDescription>
               {editingAccount
-                ? "Update your account information"
-                : "Add a new financial account to track"}
+                ? "Update the details for this account"
+                : "Record the basics so your family can find this when they need it"}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
@@ -349,9 +349,9 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogTitle>Remove this account?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {accountToDelete?.name}? This action cannot be undone.
+              Remove {accountToDelete?.name} from your records? This can&apos;t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
