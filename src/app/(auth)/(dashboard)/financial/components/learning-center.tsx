@@ -1,192 +1,218 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { BookOpen, Clock, Heart, Loader2, TrendingUp } from "lucide-react";
-import Link from "next/link";
-import { ComingSoonBadge } from "@/components/coming-soon";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Blocks, Heart, Loader2, Sparkles } from "lucide-react";
+import type { Article, Stage } from "@/components/learning";
+import {
+  EncouragingMessage,
+  LearningHero,
+  LearningStages,
+  LearningStagesMobile,
+} from "@/components/learning";
 import { api } from "@/convex/_generated/api";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  estate_planning: "Estate Planning",
-  financial_planning: "Financial Planning",
-  family_legacy: "Family Legacy",
-  legal: "Legal",
-  insurance: "Insurance",
-  digital_legacy: "Digital Legacy",
-  end_of_life: "End of Life",
-  faith_stewardship: "Faith & Stewardship",
-  other: "Other",
+/**
+ * Category to stage mapping
+ * Stage 1 (Understanding): faith_stewardship, other
+ * Stage 2 (Building): estate_planning, financial_planning, legal
+ * Stage 3 (Strengthening): family_legacy, digital_legacy, insurance, end_of_life
+ */
+const CATEGORY_TO_STAGE: Record<string, number> = {
+  faith_stewardship: 1,
+  other: 1,
+  estate_planning: 2,
+  financial_planning: 2,
+  legal: 2,
+  family_legacy: 3,
+  digital_legacy: 3,
+  insurance: 3,
+  end_of_life: 3,
 };
+
+/**
+ * Stage configuration with icons and colors
+ */
+const STAGE_CONFIG: Omit<Stage, "articles">[] = [
+  {
+    id: "understanding",
+    number: 1,
+    title: "Understanding Your Why",
+    subtitle: "Building the right mindset",
+    icon: Heart,
+    accentColor: "primary",
+  },
+  {
+    id: "building",
+    number: 2,
+    title: "Building Your Foundation",
+    subtitle: "Practical steps forward",
+    icon: Blocks,
+    accentColor: "secondary",
+  },
+  {
+    id: "strengthening",
+    number: 3,
+    title: "Strengthening Your Legacy",
+    subtitle: "Advanced planning & relationships",
+    icon: Sparkles,
+    accentColor: "accent",
+  },
+];
+
+/**
+ * Default featured article when none exists in database
+ */
+const DEFAULT_FEATURED_ARTICLE = {
+  title: "The Gift of Clarity: Why Your Family Needs a Legacy Plan",
+  excerpt:
+    "Discover how thoughtful planning is one of the greatest acts of love you can give your family. This foundational guide will help you understand the 'why' behind legacy planning.",
+  readTimeMinutes: 5,
+  slug: "gift-of-clarity",
+};
+
+/**
+ * Organize articles into stages based on their category
+ */
+function organizeArticlesIntoStages(articles: Article[]): Stage[] {
+  // Group articles by stage
+  const stageArticles: Record<number, Article[]> = {
+    1: [],
+    2: [],
+    3: [],
+  };
+
+  for (const article of articles) {
+    const stageNumber = CATEGORY_TO_STAGE[article.category] ?? 1;
+    stageArticles[stageNumber].push(article);
+  }
+
+  // Build stage objects with articles
+  return STAGE_CONFIG.map((config) => ({
+    ...config,
+    articles: stageArticles[config.number] || [],
+  }));
+}
+
+/**
+ * Find the featured article from the list
+ * Prefers "gift-of-clarity" slug, then first faith_stewardship article, then first article
+ */
+function findFeaturedArticle(articles: Article[]): Article | null {
+  // Try to find by specific slug first
+  const giftOfClarity = articles.find((a) => a.slug === "gift-of-clarity");
+  if (giftOfClarity) return giftOfClarity;
+
+  // Fall back to first faith_stewardship article
+  const faithArticle = articles.find((a) => a.category === "faith_stewardship");
+  if (faithArticle) return faithArticle;
+
+  // Fall back to first article
+  return articles[0] || null;
+}
 
 export function LearningCenter() {
   // Fetch all published articles from the database
   const articles = useQuery(api.articles.listPublished, {
-    limit: 12,
+    limit: 50, // Get more articles for organizing into stages
   });
 
-  const principles = [
-    {
-      title: "Everything Belongs to God",
-      verse: "The earth is the Lord's, and everything in it. - Psalm 24:1",
-      description: "We are stewards, not owners, of all God has entrusted to us.",
-    },
-    {
-      title: "Generosity Reflects God's Heart",
-      verse: "Give, and it will be given to you. - Luke 6:38",
-      description: "Generous giving is a way to participate in God's work in the world.",
-    },
-    {
-      title: "Plan Wisely for Tomorrow",
-      verse: "The prudent see danger and take refuge. - Proverbs 27:12",
-      description: "Planning and preparation honor God and protect your family.",
-    },
-  ];
+  // For now, treat all articles as unread (read tracking to be added later)
+  const readArticles = new Set<string>();
 
-  const quotes = [
-    {
-      text: "For where your treasure is, there your heart will be also.",
-      reference: "Matthew 6:21",
-    },
-    {
-      text: "Honor the Lord with your wealth, with the firstfruits of all your crops.",
-      reference: "Proverbs 3:9",
-    },
-    {
-      text: "Whoever can be trusted with very little can also be trusted with much.",
-      reference: "Luke 16:10",
-    },
-  ];
+  // Loading state
+  if (articles === undefined) {
+    return (
+      <div className="flex items-center justify-center py-24" data-tour="learning-center-header">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
-  const hasArticles = articles && articles.length > 0;
+  // Transform API response to Article type
+  const typedArticles: Article[] = articles.map((article) => ({
+    _id: article._id,
+    title: article.title,
+    slug: article.slug,
+    excerpt: article.excerpt,
+    category: article.category,
+    readTimeMinutes: article.readTimeMinutes,
+    featuredImageUrl: article.featuredImageUrl,
+    publishedAt: article.publishedAt,
+  }));
+
+  // Find featured article and organize stages
+  const featuredArticle = findFeaturedArticle(typedArticles);
+
+  // Filter out the featured article from stage articles to avoid duplication
+  const stageArticles = featuredArticle
+    ? typedArticles.filter((a) => a.slug !== featuredArticle.slug)
+    : typedArticles;
+
+  const stages = organizeArticlesIntoStages(stageArticles);
+
+  // Calculate totals
+  const totalArticles =
+    stages.reduce((sum, stage) => sum + stage.articles.length, 0) + (featuredArticle ? 1 : 0);
+  const readCount = readArticles.size;
+
+  // Build featured article props
+  const featuredArticleProps = featuredArticle
+    ? {
+        title: featuredArticle.title,
+        excerpt: featuredArticle.excerpt,
+        readTimeMinutes: featuredArticle.readTimeMinutes,
+        slug: featuredArticle.slug,
+        isRead: readArticles.has(featuredArticle.slug),
+      }
+    : {
+        ...DEFAULT_FEATURED_ARTICLE,
+        isRead: false,
+      };
+
+  // Check if we have any articles to display
+  const hasArticles = totalArticles > 0;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <Card data-tour="learning-center-header">
-        <CardHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <Heart className="h-6 w-6 text-primary" />
-            <CardTitle className="text-2xl">Faith & Finances</CardTitle>
-            {!hasArticles && <ComingSoonBadge size="sm" />}
-          </div>
-          <CardDescription className="text-base">
-            {hasArticles
-              ? "Explore biblical principles for managing money and building a legacy of faith."
-              : "Explore biblical principles for managing money and building a legacy of faith. Full articles and resources are coming soon."}
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <div className="space-y-6" data-tour="learning-center-header">
+      {/* Hero with Featured Article */}
+      <LearningHero
+        featuredArticle={featuredArticleProps}
+        totalArticles={hasArticles ? totalArticles : 8} // Show placeholder count when empty
+        readCount={readCount}
+      />
 
-      {/* Learning Articles */}
-      <div data-tour="learning-resources-section">
-        <div className="flex items-center gap-2 mb-4">
-          <BookOpen className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">Learning Resources</h2>
+      {hasArticles ? (
+        <>
+          {/* Desktop Stages */}
+          <div className="hidden md:block" data-tour="learning-resources-section">
+            <LearningStages stages={stages} readArticles={readArticles} />
+          </div>
+
+          {/* Mobile Accordion Stages */}
+          <div className="md:hidden" data-tour="learning-resources-section">
+            <LearningStagesMobile stages={stages} readArticles={readArticles} />
+          </div>
+        </>
+      ) : (
+        // Empty state - stages will appear as articles are published
+        <div
+          className="text-center py-12 text-muted-foreground"
+          data-tour="learning-resources-section"
+        >
+          <p className="text-lg mb-2">Articles are being prepared for you.</p>
+          <p className="text-sm">
+            Check back soon for faith-centered resources on legacy planning.
+          </p>
         </div>
+      )}
 
-        {articles === undefined ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : hasArticles ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {articles.map((article) => (
-              <Link key={article._id} href={`/financial/articles/${article.slug}`}>
-                <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                  <CardHeader>
-                    <div className="text-xs text-primary font-medium mb-2">
-                      {CATEGORY_LABELS[article.category] || article.category}
-                    </div>
-                    <CardTitle className="text-lg">{article.title}</CardTitle>
-                    <CardDescription>{article.excerpt}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>{article.readTimeMinutes} min read</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {/* Placeholder articles when none exist */}
-            {[
-              {
-                title: "Biblical Principles of Stewardship",
-                description: "Understanding God's view of money and possessions through Scripture",
-                category: "Faith & Money",
-                readTime: "5 min read",
-              },
-              {
-                title: "Giving with Purpose",
-                description: "How to create a giving plan that aligns with your faith values",
-                category: "Generosity",
-                readTime: "4 min read",
-              },
-              {
-                title: "Planning for Your Family's Future",
-                description: "Estate planning through the lens of biblical wisdom",
-                category: "Legacy Planning",
-                readTime: "7 min read",
-              },
-            ].map((article) => (
-              <Card key={article.title} className="opacity-75">
-                <CardHeader>
-                  <div className="text-xs text-primary font-medium mb-2">{article.category}</div>
-                  <CardTitle className="text-lg">{article.title}</CardTitle>
-                  <CardDescription>{article.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">{article.readTime}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+      {/* Encouraging Footer Message */}
+      <div
+        className="mt-16 pt-8 border-t border-border/50"
+        data-tour="stewardship-principles-section"
+      >
+        <EncouragingMessage />
       </div>
-
-      {/* Stewardship Principles */}
-      <div data-tour="stewardship-principles-section">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">Stewardship Principles</h2>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {principles.map((principle) => (
-            <Card key={principle.title}>
-              <CardHeader>
-                <CardTitle className="text-lg mb-2">{principle.title}</CardTitle>
-                <div className="bg-primary/5 border-l-4 border-primary p-3 rounded mb-3">
-                  <p className="text-sm italic text-muted-foreground">{principle.verse}</p>
-                </div>
-                <CardDescription>{principle.description}</CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Biblical Quotes */}
-      <Card data-tour="biblical-wisdom-section">
-        <CardHeader>
-          <CardTitle>Biblical Wisdom on Stewardship</CardTitle>
-          <CardDescription>Scripture verses to guide your financial decisions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {quotes.map((quote) => (
-              <div key={quote.reference} className="border-l-4 border-primary/50 pl-4 py-2">
-                <p className="text-base mb-2">{quote.text}</p>
-                <p className="text-sm text-muted-foreground font-medium">{quote.reference}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
