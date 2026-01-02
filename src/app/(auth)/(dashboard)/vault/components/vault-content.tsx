@@ -2,14 +2,18 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { AlertCircle, Loader2, Settings, Shield } from "lucide-react";
+import { AlertCircle, Loader2, Mic, Settings, Shield, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ComingSoonCard } from "@/components/coming-soon";
+import { FeatureGate } from "@/components/feature-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
+import { FEATURES } from "@/lib/feature-access";
 import { CategoryManager } from "./category-manager";
 import { DocumentList } from "./document-list";
 import { SearchAndFilter } from "./search-and-filter";
+import { TagsCollections } from "./tags-collections";
 import { UploadButton } from "./upload-button";
 import { VaultStats } from "./vault-stats";
 
@@ -189,6 +193,27 @@ export function VaultContent() {
         categories={categories || []}
         totalDocuments={stats?.totalDocuments || 0}
       />
+
+      {/* Tags & Collections (Heritage+ feature) */}
+      <FeatureGate feature={FEATURES.VAULT_TAGS_COLLECTIONS}>
+        <TagsCollections />
+      </FeatureGate>
+
+      {/* Coming Soon Features */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <ComingSoonCard
+          feature={FEATURES.VAULT_VOICE_UPLOADS}
+          title="Voice Recordings"
+          description="Record oral histories and voice memos to preserve your family's stories in your own voice."
+          icon={<Mic className="h-5 w-5" />}
+        />
+        <ComingSoonCard
+          feature={FEATURES.VAULT_GUIDED_ORGANIZATION}
+          title="Guided Organization"
+          description="Step-by-step wizards to help you organize important documents like wills, insurance, and medical records."
+          icon={<Sparkles className="h-5 w-5" />}
+        />
+      </div>
 
       {/* Documents List */}
       <DocumentList
