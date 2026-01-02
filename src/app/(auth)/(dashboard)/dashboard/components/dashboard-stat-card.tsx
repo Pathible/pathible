@@ -45,6 +45,7 @@ export function DashboardStatCard({
     <Card
       className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary/50"
       onClick={() => router.push(href)}
+      data-testid={`stat-card-${icon}`}
     >
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -53,7 +54,9 @@ export function DashboardStatCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold mb-1">{value}</div>
+        <div className="text-3xl font-bold mb-1" data-testid={`stat-value-${icon}`}>
+          {value}
+        </div>
         <CardTitle className="text-base mb-1">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardContent>
