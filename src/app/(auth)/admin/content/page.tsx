@@ -212,84 +212,88 @@ export default function ContentManagerPage() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Views</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="w-[70px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {articles.map((article) => (
-                  <TableRow key={article._id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{article.title}</p>
-                        <p className="text-sm text-muted-foreground">{article.excerpt}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{CATEGORY_LABELS[article.category]}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={STATUS_STYLES[article.status]}>{article.status}</Badge>
-                    </TableCell>
-                    <TableCell>{article.viewCount}</TableCell>
-                    <TableCell>{formatDate(article.updatedAt)}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/content/${article._id}`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          {article.status === "published" && (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[300px] max-w-[400px]">Title</TableHead>
+                    <TableHead className="w-[140px]">Category</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="w-[80px]">Views</TableHead>
+                    <TableHead className="w-[100px]">Updated</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {articles.map((article) => (
+                    <TableRow key={article._id}>
+                      <TableCell className="max-w-[400px]">
+                        <div className="space-y-1">
+                          <p className="font-medium truncate">{article.title}</p>
+                          <p className="text-sm text-muted-foreground line-clamp-1">
+                            {article.excerpt}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{CATEGORY_LABELS[article.category]}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={STATUS_STYLES[article.status]}>{article.status}</Badge>
+                      </TableCell>
+                      <TableCell>{article.viewCount}</TableCell>
+                      <TableCell>{formatDate(article.updatedAt)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
-                              <Link href={`/financial/articles/${article.slug}`} target="_blank">
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
+                              <Link href={`/admin/content/${article._id}`}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
                               </Link>
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          {article.status === "draft" && (
-                            <DropdownMenuItem onClick={() => handlePublish(article._id)}>
-                              <Send className="h-4 w-4 mr-2" />
-                              Publish
+                            {article.status === "published" && (
+                              <DropdownMenuItem asChild>
+                                <Link href={`/financial/articles/${article.slug}`} target="_blank">
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View
+                                </Link>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            {article.status === "draft" && (
+                              <DropdownMenuItem onClick={() => handlePublish(article._id)}>
+                                <Send className="h-4 w-4 mr-2" />
+                                Publish
+                              </DropdownMenuItem>
+                            )}
+                            {article.status === "published" && (
+                              <DropdownMenuItem onClick={() => handleArchive(article._id)}>
+                                <Archive className="h-4 w-4 mr-2" />
+                                Archive
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(article._id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
                             </DropdownMenuItem>
-                          )}
-                          {article.status === "published" && (
-                            <DropdownMenuItem onClick={() => handleArchive(article._id)}>
-                              <Archive className="h-4 w-4 mr-2" />
-                              Archive
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(article._id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
