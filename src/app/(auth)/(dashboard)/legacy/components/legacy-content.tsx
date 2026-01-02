@@ -122,7 +122,15 @@ export function LegacyContent() {
 
   // Show summary if plan is complete, otherwise show wizard
   if (legacyPlan?.isComplete) {
-    return <LegacySummary householdId={householdId} legacyPlan={legacyPlan} stats={stats} />;
+    return (
+      <LegacySummary
+        householdId={householdId}
+        householdName={households[0]?.name ?? "My Family"}
+        userName={user.firstName ?? user.fullName ?? "User"}
+        legacyPlan={legacyPlan}
+        stats={stats}
+      />
+    );
   }
 
   return (
