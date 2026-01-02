@@ -154,7 +154,9 @@ async function verifyWebhookSignature(
 }
 
 function base64ToUint8Array(base64: string): Uint8Array {
-  const binaryString = atob(base64);
+  // Convert base64url to standard base64 (Svix uses base64url encoding)
+  const standardBase64 = base64.replace(/-/g, "+").replace(/_/g, "/");
+  const binaryString = atob(standardBase64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
