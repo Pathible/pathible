@@ -14,6 +14,19 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
 
 const TEST_USER_EMAIL = Cypress.env("TEST_USER_EMAIL");
 
+/**
+ * Helper to ensure user is on dashboard, handling onboarding redirect
+ */
+function ensureOnDashboard(): Cypress.Chainable<boolean> {
+  return cy.url({ timeout: 15000 }).then((url) => {
+    if (url.includes("/onboarding") || url.includes("/select-plan")) {
+      cy.log("User needs to complete setup - test will be skipped");
+      return false;
+    }
+    return url.includes("/dashboard");
+  });
+}
+
 describe("Dashboard Page", () => {
   beforeEach(() => {
     // Clear browser state
@@ -35,95 +48,98 @@ describe("Dashboard Page", () => {
 
   describe("Dashboard Stats Display", () => {
     it("should display the dashboard stats section", () => {
-      // Navigate to dashboard
       cy.visit("/dashboard", { failOnStatusCode: false });
 
-      // Check if we land on dashboard or need to complete setup
-      cy.url({ timeout: 15000 }).then((url) => {
-        if (url.includes("/dashboard")) {
-          // Verify stats section is visible
-          cy.get('[data-testid="dashboard-stats"]', { timeout: 10000 }).should("be.visible");
-
-          // Verify all three stat cards are present
-          cy.contains("Heritage Vault", { timeout: 10000 }).should("be.visible");
-          cy.contains("Wisdom & Stories", { timeout: 10000 }).should("be.visible");
-          cy.contains("Legacy Plan", { timeout: 10000 }).should("be.visible");
-        } else {
-          cy.log("User needs to complete onboarding first - skipping dashboard stats test");
+      ensureOnDashboard().then((onDashboard) => {
+        if (!onDashboard) {
+          cy.log("Skipping - user not on dashboard");
+          return;
         }
+
+        // Verify stats section is visible
+        cy.get('[data-testid="dashboard-stats"]', { timeout: 10000 }).should("be.visible");
+
+        // Verify all three stat cards are present using data-testid
+        cy.get('[data-testid="stat-card-shield"]').should("be.visible");
+        cy.get('[data-testid="stat-card-bookOpen"]').should("be.visible");
+        cy.get('[data-testid="stat-card-fileText"]').should("be.visible");
       });
     });
 
     it("should display legacy plan completion percentage", () => {
       cy.visit("/dashboard", { failOnStatusCode: false });
 
-      cy.url({ timeout: 15000 }).then((url) => {
-        if (url.includes("/dashboard")) {
-          // Find the Legacy Plan card and verify it shows a percentage
-          cy.contains("Legacy Plan", { timeout: 10000 })
-            .closest('[class*="card"]')
-            .within(() => {
-              // Should contain a percentage value (0% or higher)
-              cy.contains(/%/).should("be.visible");
-            });
-        } else {
-          cy.log("User needs to complete onboarding first - skipping test");
+      ensureOnDashboard().then((onDashboard) => {
+        if (!onDashboard) {
+          cy.log("Skipping - user not on dashboard");
+          return;
         }
+
+        // Find the Legacy Plan card and verify it shows a percentage
+        cy.get('[data-testid="stat-value-fileText"]')
+          .invoke("text")
+          .should("match", /^\d+%$/);
       });
     });
 
     it("should display correct numeric values for vault and wisdom stats", () => {
       cy.visit("/dashboard", { failOnStatusCode: false });
 
-      cy.url({ timeout: 15000 }).then((url) => {
-        if (url.includes("/dashboard")) {
-          // Heritage Vault should show a number
-          cy.contains("Heritage Vault", { timeout: 10000 })
-            .closest('[class*="card"]')
-            .within(() => {
-              // Should contain a numeric value
-              cy.get('[class*="text"]').first().invoke("text").should("match", /^\d+$/);
-            });
-
-          // Wisdom & Stories should show a number
-          cy.contains("Wisdom & Stories", { timeout: 10000 })
-            .closest('[class*="card"]')
-            .within(() => {
-              cy.get('[class*="text"]').first().invoke("text").should("match", /^\d+$/);
-            });
-        } else {
-          cy.log("User needs to complete onboarding first - skipping test");
+      ensureOnDashboard().then((onDashboard) => {
+        if (!onDashboard) {
+          cy.log("Skipping - user not on dashboard");
+          return;
         }
+
+        // Heritage Vault should show a number
+        cy.get('[data-testid="stat-value-shield"]').invoke("text").should("match", /^\d+$/);
+
+        // Wisdom & Stories should show a number
+        cy.get('[data-testid="stat-value-bookOpen"]').invoke("text").should("match", /^\d+$/);
       });
     });
   });
 
   describe("Dashboard Navigation", () => {
-    it("should have clickable stat cards that navigate to correct pages", () => {
+    it("should navigate to vault when clicking Heritage Vault card", () => {
       cy.visit("/dashboard", { failOnStatusCode: false });
 
-      cy.url({ timeout: 15000 }).then((url) => {
-        if (url.includes("/dashboard")) {
-          // Click on Heritage Vault card
-          cy.contains("Heritage Vault", { timeout: 10000 }).click();
-          cy.url({ timeout: 10000 }).should("include", "/vault");
-
-          // Go back to dashboard
-          cy.visit("/dashboard");
-
-          // Click on Wisdom & Stories card
-          cy.contains("Wisdom & Stories", { timeout: 10000 }).click();
-          cy.url({ timeout: 10000 }).should("include", "/wisdom");
-
-          // Go back to dashboard
-          cy.visit("/dashboard");
-
-          // Click on Legacy Plan card
-          cy.contains("Legacy Plan", { timeout: 10000 }).click();
-          cy.url({ timeout: 10000 }).should("include", "/legacy");
-        } else {
-          cy.log("User needs to complete onboarding first - skipping test");
+      ensureOnDashboard().then((onDashboard) => {
+        if (!onDashboard) {
+          cy.log("Skipping - user not on dashboard");
+          return;
         }
+
+        cy.get('[data-testid="stat-card-shield"]').click();
+        cy.url({ timeout: 10000 }).should("include", "/vault");
+      });
+    });
+
+    it("should navigate to wisdom when clicking Wisdom & Stories card", () => {
+      cy.visit("/dashboard", { failOnStatusCode: false });
+
+      ensureOnDashboard().then((onDashboard) => {
+        if (!onDashboard) {
+          cy.log("Skipping - user not on dashboard");
+          return;
+        }
+
+        cy.get('[data-testid="stat-card-bookOpen"]').click();
+        cy.url({ timeout: 10000 }).should("include", "/wisdom");
+      });
+    });
+
+    it("should navigate to legacy when clicking Legacy Plan card", () => {
+      cy.visit("/dashboard", { failOnStatusCode: false });
+
+      ensureOnDashboard().then((onDashboard) => {
+        if (!onDashboard) {
+          cy.log("Skipping - user not on dashboard");
+          return;
+        }
+
+        cy.get('[data-testid="stat-card-fileText"]').click();
+        cy.url({ timeout: 10000 }).should("include", "/legacy");
       });
     });
   });
@@ -132,41 +148,41 @@ describe("Dashboard Page", () => {
     it("should display welcome message with user name", () => {
       cy.visit("/dashboard", { failOnStatusCode: false });
 
-      cy.url({ timeout: 15000 }).then((url) => {
-        if (url.includes("/dashboard")) {
-          // Should show welcome message
-          cy.contains(/Welcome back,/i, { timeout: 10000 }).should("be.visible");
-        } else {
-          cy.log("User needs to complete onboarding first - skipping test");
+      ensureOnDashboard().then((onDashboard) => {
+        if (!onDashboard) {
+          cy.log("Skipping - user not on dashboard");
+          return;
         }
+
+        cy.contains(/Welcome back,/i, { timeout: 10000 }).should("be.visible");
       });
     });
 
     it("should display next step CTA section", () => {
       cy.visit("/dashboard", { failOnStatusCode: false });
 
-      cy.url({ timeout: 15000 }).then((url) => {
-        if (url.includes("/dashboard")) {
-          // Should show next step section
-          cy.get('[data-tour="next-step-cta"]', { timeout: 10000 }).should("be.visible");
-          cy.contains("Next Step", { timeout: 10000 }).should("be.visible");
-        } else {
-          cy.log("User needs to complete onboarding first - skipping test");
+      ensureOnDashboard().then((onDashboard) => {
+        if (!onDashboard) {
+          cy.log("Skipping - user not on dashboard");
+          return;
         }
+
+        cy.get('[data-tour="next-step-cta"]', { timeout: 10000 }).should("be.visible");
+        cy.contains("Next Step", { timeout: 10000 }).should("be.visible");
       });
     });
 
     it("should display daily reflection section", () => {
       cy.visit("/dashboard", { failOnStatusCode: false });
 
-      cy.url({ timeout: 15000 }).then((url) => {
-        if (url.includes("/dashboard")) {
-          // Should show daily reflection
-          cy.get('[data-tour="daily-reflection"]', { timeout: 10000 }).should("be.visible");
-          cy.contains("Daily Reflection", { timeout: 10000 }).should("be.visible");
-        } else {
-          cy.log("User needs to complete onboarding first - skipping test");
+      ensureOnDashboard().then((onDashboard) => {
+        if (!onDashboard) {
+          cy.log("Skipping - user not on dashboard");
+          return;
         }
+
+        cy.get('[data-tour="daily-reflection"]', { timeout: 10000 }).should("be.visible");
+        cy.contains("Daily Reflection", { timeout: 10000 }).should("be.visible");
       });
     });
   });
