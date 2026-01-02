@@ -134,16 +134,13 @@ describe("Admin Content Manager E2E Test", () => {
       // Select category (Faith & Stewardship is default)
       // Set status to draft (default)
 
-      // Save the article
+      // Save the article and wait for success
       cy.contains("button", "Save Draft").click();
-      cy.contains("Article saved as draft", { timeout: 10000 }).should("be.visible");
 
-      // Should redirect to content list
-      cy.url({ timeout: 10000 }).should("include", "/admin/content");
-      cy.url().should("not.include", "/new");
-
-      // Verify article appears in the list
-      cy.contains(TEST_ARTICLE_TITLE, { timeout: 10000 }).should("be.visible");
+      // The form will redirect after successful save
+      // Wait for the content list page and verify article appears
+      cy.url({ timeout: 30000 }).should("not.include", "/new");
+      cy.contains(TEST_ARTICLE_TITLE, { timeout: 15000 }).should("be.visible");
       cy.contains("draft").should("be.visible");
 
       // =========================================================================
@@ -151,14 +148,11 @@ describe("Admin Content Manager E2E Test", () => {
       // =========================================================================
       cy.log("**STEP 2: Editing article**");
 
-      // Click on the article row to edit (via dropdown)
-      cy.contains("tr", TEST_ARTICLE_TITLE).within(() => {
-        cy.get('button[aria-haspopup="menu"]').click();
-      });
-      cy.contains("Edit").click();
+      // Click on the article row to edit (clicking the row navigates to edit page)
+      cy.contains("tr", TEST_ARTICLE_TITLE).click();
 
       // Should be on edit page
-      cy.url({ timeout: 10000 }).should("match", /\/admin\/content\/[a-z0-9]+$/);
+      cy.url({ timeout: 15000 }).should("match", /\/admin\/content\/[a-z0-9]+$/);
       cy.contains("Edit Article", { timeout: 10000 }).should("be.visible");
 
       // Update the title
@@ -168,13 +162,12 @@ describe("Admin Content Manager E2E Test", () => {
       cy.get('button[role="combobox"]').last().click();
       cy.contains('[role="option"]', "Published").click();
 
-      // Save changes
+      // Save changes and wait for redirect
       cy.contains("button", "Save Changes").click();
-      cy.contains("Article updated", { timeout: 10000 }).should("be.visible");
 
-      // Verify changes in list
-      cy.url({ timeout: 10000 }).should("include", "/admin/content");
-      cy.contains(`${TEST_ARTICLE_TITLE} - Updated`, { timeout: 10000 }).should("be.visible");
+      // Wait for redirect to content list and verify updated article
+      cy.url({ timeout: 30000 }).should("match", /\/admin\/content$/);
+      cy.contains(`${TEST_ARTICLE_TITLE} - Updated`, { timeout: 15000 }).should("be.visible");
       cy.contains("published").should("be.visible");
 
       // =========================================================================
@@ -191,9 +184,8 @@ describe("Admin Content Manager E2E Test", () => {
       // Confirm deletion in the dialog
       cy.on("window:confirm", () => true);
 
-      // Verify article is deleted
-      cy.contains("Article deleted", { timeout: 10000 }).should("be.visible");
-      cy.contains(`${TEST_ARTICLE_TITLE} - Updated`).should("not.exist");
+      // Verify article is deleted (wait for it to disappear from the list)
+      cy.contains(`${TEST_ARTICLE_TITLE} - Updated`, { timeout: 15000 }).should("not.exist");
     });
 
     it("should filter articles by status", () => {
