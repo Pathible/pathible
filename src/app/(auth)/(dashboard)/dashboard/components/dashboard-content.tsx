@@ -23,6 +23,9 @@ export function DashboardContent() {
   const wisdomStats = useQuery(api.wisdom.getStats, householdId ? { householdId } : "skip");
   const coreBeliefsData = useQuery(api.coreBeliefs.list, householdId ? { householdId } : "skip");
 
+  // Get legacy plan stats
+  const legacyStats = useQuery(api.legacy.getStats, householdId ? { householdId } : "skip");
+
   // Daily devotional/quote
   const dailyQuote = {
     text: "A good person leaves an inheritance for their children's children, but a sinner's wealth is stored up for the righteous.",
@@ -38,7 +41,7 @@ export function DashboardContent() {
   const stats = {
     vaultItemsCount: vaultStats?.totalDocuments ?? 0,
     wisdomEntriesCount: wisdomEntriesCount + coreBeliefsCount,
-    legacyPlanCompletion: 0, // TODO: Connect to legacy plan query
+    legacyPlanCompletion: legacyStats?.completionPercentage ?? 0,
   };
 
   // Check if profile already exists
@@ -80,8 +83,15 @@ export function DashboardContent() {
   const nextStep = getNextStep();
   const NextStepIcon = nextStep.icon;
 
-  // Loading state
-  if (!isUserLoaded || households === undefined) {
+  // Loading state - wait for all data before rendering to prevent stale "Next Step" CTA
+  const isLoadingHouseholdData =
+    householdId &&
+    (vaultStats === undefined ||
+      wisdomStats === undefined ||
+      coreBeliefsData === undefined ||
+      legacyStats === undefined);
+
+  if (!isUserLoaded || households === undefined || isLoadingHouseholdData) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
