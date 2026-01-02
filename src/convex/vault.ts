@@ -7,6 +7,7 @@ import {
   PLAN_LIMITS,
   requireActiveSubscription,
   requireAuth,
+  requireFeatureAccess,
   requireHouseholdAccess,
   requireHouseholdAdmin,
 } from "./auth";
@@ -700,7 +701,7 @@ export const remove = mutation({
  * Create a new category
  * Anyone in the household can create categories
  *
- * SECURITY: Requires active subscription
+ * SECURITY: Requires active subscription and Heritage tier for tags/collections feature
  */
 export const createCategory = mutation({
   args: {
@@ -715,6 +716,9 @@ export const createCategory = mutation({
 
     // SECURITY: Require active subscription
     await requireActiveSubscription(ctx, args.householdId);
+
+    // SECURITY: Require Heritage tier for tags/collections feature
+    await requireFeatureAccess(ctx, args.householdId, "vault_tags_collections");
 
     // Validate inputs using shared helpers
     const validatedName = validateCategoryName(args.name);
@@ -760,7 +764,7 @@ export const createCategory = mutation({
  * Update a category
  * Admins only
  *
- * SECURITY: Requires active subscription
+ * SECURITY: Requires active subscription and Heritage tier for tags/collections feature
  *
  * PERFORMANCE NOTE: Renaming a category requires updating all documents that use it.
  * This is O(n) where n = documents in household. Convex doesn't support indexing on
@@ -785,6 +789,9 @@ export const updateCategory = mutation({
 
     // SECURITY: Require active subscription
     await requireActiveSubscription(ctx, category.householdId);
+
+    // SECURITY: Require Heritage tier for tags/collections feature
+    await requireFeatureAccess(ctx, category.householdId, "vault_tags_collections");
 
     // Build update object
     const updates: Partial<Doc<"vaultCategories">> = {};
@@ -855,7 +862,7 @@ export const updateCategory = mutation({
  * Delete a category
  * Admins only - removes category from all documents
  *
- * SECURITY: Requires active subscription
+ * SECURITY: Requires active subscription and Heritage tier for tags/collections feature
  *
  * PERFORMANCE NOTE: Deleting a category requires updating all documents that use it.
  * This is O(n) where n = documents in household. Convex doesn't support indexing on
@@ -878,6 +885,9 @@ export const deleteCategory = mutation({
 
     // SECURITY: Require active subscription
     await requireActiveSubscription(ctx, category.householdId);
+
+    // SECURITY: Require Heritage tier for tags/collections feature
+    await requireFeatureAccess(ctx, category.householdId, "vault_tags_collections");
 
     // Remove category from all documents
     // NOTE: O(n) scan - see function docs for explanation
@@ -952,6 +962,8 @@ const DEFAULT_CATEGORIES = [
  *
  * Also counts any existing documents that match the default category names,
  * ensuring the documentCount counters are accurate from the start.
+ *
+ * SECURITY: Requires active subscription and Heritage tier for tags/collections feature
  */
 export const initializeDefaultCategories = mutation({
   args: {
@@ -960,6 +972,10 @@ export const initializeDefaultCategories = mutation({
   returns: v.number(), // Returns count of categories created
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
+
+    // SECURITY: Require active subscription and Heritage tier
+    await requireActiveSubscription(ctx, args.householdId);
+    await requireFeatureAccess(ctx, args.householdId, "vault_tags_collections");
 
     // Check if categories already exist
     const existing = await ctx.db

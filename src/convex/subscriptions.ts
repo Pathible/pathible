@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAuth } from "./auth";
 
 /**
@@ -88,7 +88,7 @@ export const getCurrentSubscription = query({
  * Called by the Clerk webhook handler when subscription events occur.
  * Updates the household's subscription tier and status for display purposes.
  */
-export const syncFromClerk = mutation({
+export const syncFromClerk = internalMutation({
   args: {
     clerkUserId: v.string(),
     planId: v.string(),

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import {
@@ -528,7 +529,10 @@ export const inviteMember = mutation({
       description: `Invited ${args.email} to join household`,
     });
 
-    // TODO: Send invitation email (implement in separate email service)
+    // Schedule email sending (non-blocking) - reuse existing onboarding email function
+    await ctx.scheduler.runAfter(0, internal.onboarding.sendInvitationEmail, {
+      invitationId,
+    });
 
     return invitationId;
   },
