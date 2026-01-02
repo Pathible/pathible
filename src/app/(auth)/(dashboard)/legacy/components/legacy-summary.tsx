@@ -1,5 +1,6 @@
 "use client";
 
+import { pdf } from "@react-pdf/renderer";
 import { useMutation, useQuery } from "convex/react";
 import {
   CheckCircle2,
@@ -7,11 +8,13 @@ import {
   Edit,
   FileText,
   Heart,
+  Loader2,
   MapPin,
   MessageSquare,
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { KeyContactsManager } from "./key-contacts-manager";
+import { LegacyPDFDocument } from "./legacy-pdf-document";
 
 interface LegacyPlan {
   _id: Id<"legacyPlans">;
@@ -41,11 +45,20 @@ interface LegacyStats {
 
 interface LegacySummaryProps {
   householdId: Id<"households">;
+  householdName: string;
+  userName: string;
   legacyPlan: LegacyPlan;
   stats: LegacyStats | null;
 }
 
-export function LegacySummary({ householdId, legacyPlan, stats }: LegacySummaryProps) {
+export function LegacySummary({
+  householdId,
+  householdName,
+  userName,
+  legacyPlan,
+  stats,
+}: LegacySummaryProps) {
+  const [isExporting, setIsExporting] = useState(false);
   const resetCompletion = useMutation(api.legacy.resetCompletion);
   const keyContacts = useQuery(api.legacy.getKeyContacts, {
     householdId,
@@ -62,9 +75,48 @@ export function LegacySummary({ householdId, legacyPlan, stats }: LegacySummaryP
     }
   };
 
-  const handleExportPDF = () => {
-    // TODO: Implement PDF export
-    toast.info("PDF export will be available in a future update.");
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      // Prepare data for PDF
+      const pdfData = {
+        trustedContacts: legacyPlan.trustedContacts,
+        guardians: legacyPlan.guardians,
+        petCare: legacyPlan.petCare,
+        memorial: legacyPlan.memorial,
+        finalMessage: legacyPlan.finalMessage,
+        keyContacts: (keyContacts || []).map((c) => ({
+          name: c.name,
+          role: c.role,
+          phone: c.phone,
+          email: c.email,
+          address: c.address,
+          notes: c.notes,
+        })),
+        userName,
+        householdName,
+        lastUpdated: stats?.lastUpdated ? new Date(stats.lastUpdated) : null,
+      };
+
+      // Generate PDF blob
+      const blob = await pdf(<LegacyPDFDocument data={pdfData} />).toBlob();
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `legacy-plan-${householdName.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Legacy summary exported successfully!");
+    } catch {
+      toast.error("Failed to export PDF. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const formatDate = (timestamp: number | null) => {
@@ -208,9 +260,13 @@ export function LegacySummary({ householdId, legacyPlan, stats }: LegacySummaryP
 
       {/* Action Buttons */}
       <div className="flex gap-4 justify-center pt-4">
-        <Button onClick={handleExportPDF} size="lg">
-          <Download className="mr-2 h-5 w-5" />
-          Export Legacy Summary PDF
+        <Button onClick={handleExportPDF} size="lg" disabled={isExporting}>
+          {isExporting ? (
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          ) : (
+            <Download className="mr-2 h-5 w-5" />
+          )}
+          {isExporting ? "Generating PDF..." : "Export Legacy Summary PDF"}
         </Button>
         <Button onClick={handleEditResponses} variant="outline" size="lg">
           <Edit className="mr-2 h-5 w-5" />
