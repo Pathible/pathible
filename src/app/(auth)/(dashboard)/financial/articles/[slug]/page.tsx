@@ -51,9 +51,9 @@ export default function ArticlePage() {
     return (
       <div className="space-y-6">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/financial">
+          <Link href="/financial?tab=learning">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Financial
+            Back to Faith & Finances
           </Link>
         </Button>
         <Card>
@@ -73,7 +73,7 @@ export default function ArticlePage() {
     <div className="space-y-6">
       {/* Back Navigation */}
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/financial">
+        <Link href="/financial?tab=learning">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Faith & Finances
         </Link>
@@ -120,7 +120,7 @@ export default function ArticlePage() {
       {/* Bottom Navigation */}
       <div className="flex justify-center">
         <Button variant="outline" asChild>
-          <Link href="/financial">
+          <Link href="/financial?tab=learning">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Faith & Finances
           </Link>
