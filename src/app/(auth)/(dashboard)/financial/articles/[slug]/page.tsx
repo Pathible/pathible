@@ -5,6 +5,7 @@ import { ArrowLeft, Clock, Heart, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef } from "react";
+import Markdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -110,62 +111,8 @@ export default function ArticlePage() {
       {/* Article Content */}
       <Card>
         <CardContent className="py-8">
-          <article className="prose prose-slate dark:prose-invert max-w-none">
-            {/* Simple content rendering - paragraphs split by double newlines */}
-            {article.content.split(/\n\n+/).map((paragraph) => {
-              // Use first 50 chars of paragraph as key (content is static)
-              const key = paragraph.slice(0, 50);
-              // Check if it's a heading (starts with #)
-              if (paragraph.startsWith("# ")) {
-                return (
-                  <h2 key={key} className="text-2xl font-semibold mt-8 mb-4">
-                    {paragraph.slice(2)}
-                  </h2>
-                );
-              }
-              if (paragraph.startsWith("## ")) {
-                return (
-                  <h3 key={key} className="text-xl font-semibold mt-6 mb-3">
-                    {paragraph.slice(3)}
-                  </h3>
-                );
-              }
-              if (paragraph.startsWith("### ")) {
-                return (
-                  <h4 key={key} className="text-lg font-semibold mt-4 mb-2">
-                    {paragraph.slice(4)}
-                  </h4>
-                );
-              }
-              // Check if it's a blockquote (starts with >)
-              if (paragraph.startsWith("> ")) {
-                return (
-                  <blockquote
-                    key={key}
-                    className="border-l-4 border-primary pl-4 py-2 my-4 italic text-muted-foreground"
-                  >
-                    {paragraph.slice(2)}
-                  </blockquote>
-                );
-              }
-              // Check if it's a list (starts with - or *)
-              if (paragraph.match(/^[-*] /m)) {
-                const items = paragraph.split(/\n/).filter((line) => line.trim());
-                return (
-                  <ul key={key} className="list-disc pl-6 my-4 space-y-2">
-                    {items.map((item) => (
-                      <li key={item.slice(0, 30)}>{item.replace(/^[-*] /, "")}</li>
-                    ))}
-                  </ul>
-                );
-              }
-              // Regular paragraph
-              return (
-                <p key={key} className="mb-4 leading-relaxed">
-                  {paragraph}
-                </p>
-              );
-            })}
+          <article className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-crimson prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3 prose-p:leading-relaxed prose-blockquote:border-primary prose-blockquote:italic prose-blockquote:text-muted-foreground prose-li:my-1">
+            <Markdown>{article.content}</Markdown>
           </article>
         </CardContent>
       </Card>

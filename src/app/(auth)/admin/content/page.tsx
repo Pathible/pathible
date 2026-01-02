@@ -1,18 +1,9 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import {
-  Archive,
-  Edit,
-  Eye,
-  FileText,
-  Loader2,
-  MoreHorizontal,
-  Plus,
-  Send,
-  Trash2,
-} from "lucide-react";
+import { Archive, Eye, FileText, Loader2, MoreHorizontal, Plus, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +61,7 @@ function formatDate(timestamp: number): string {
 }
 
 export default function ContentManagerPage() {
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
@@ -226,7 +218,11 @@ export default function ContentManagerPage() {
                 </TableHeader>
                 <TableBody>
                   {articles.map((article) => (
-                    <TableRow key={article._id}>
+                    <TableRow
+                      key={article._id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => router.push(`/admin/content/${article._id}`)}
+                    >
                       <TableCell className="max-w-[400px]">
                         <div className="space-y-1">
                           <p className="font-medium truncate">{article.title}</p>
@@ -246,17 +242,15 @@ export default function ContentManagerPage() {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/admin/content/${article._id}`}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </Link>
-                            </DropdownMenuItem>
                             {article.status === "published" && (
                               <DropdownMenuItem asChild>
                                 <Link href={`/financial/articles/${article.slug}`} target="_blank">
