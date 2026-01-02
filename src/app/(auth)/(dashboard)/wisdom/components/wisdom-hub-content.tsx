@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { ArrowRight, BookMarked, BookOpen, Heart, Loader2 } from "lucide-react";
+import { ArrowRight, BookMarked, BookOpen, Heart, Loader2, Share2 } from "lucide-react";
 import Link from "next/link";
 import { ComingSoonBadge } from "@/components/coming-soon";
 import { Card, CardContent } from "@/components/ui/card";
@@ -150,6 +150,16 @@ export function WisdomHubContent() {
             description="The truths you've built your life on, written down for generations"
           />
         </div>
+
+        {/* Coming Soon - Shared Wisdom Pages */}
+        <NavCard
+          href="#"
+          icon={<Share2 className="h-5 w-5" />}
+          title="Shared Wisdom Pages"
+          description="Create beautiful, shareable pages of your wisdom for family and friends"
+          disabled
+          comingSoon
+        />
       </div>
 
       {/* Stats */}

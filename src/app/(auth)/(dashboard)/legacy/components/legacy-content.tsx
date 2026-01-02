@@ -2,10 +2,12 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { AlertCircle, FileText, Loader2 } from "lucide-react";
+import { AlertCircle, FileText, LayoutTemplate, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ComingSoonCard } from "@/components/coming-soon";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
+import { FEATURES } from "@/lib/feature-access";
 import { LegacySummary } from "./legacy-summary";
 import { LegacyWizard } from "./legacy-wizard";
 
@@ -145,6 +147,14 @@ export function LegacyContent() {
         householdId={householdId}
         legacyPlan={legacyPlan}
         onCreatePlan={() => createPlan({ householdId })}
+      />
+
+      {/* Coming Soon Features */}
+      <ComingSoonCard
+        feature={FEATURES.LEGACY_STORY_TEMPLATES}
+        title="Story Templates"
+        description="Pre-written templates to help you capture life stories, values, and memories for future generations."
+        icon={<LayoutTemplate className="h-5 w-5" />}
       />
 
       {/* Privacy Note */}

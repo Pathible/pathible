@@ -2,10 +2,11 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { AlertCircle, Plus, UserPlus, Users } from "lucide-react";
+import { AlertCircle, GitBranch, MessageCircle, Plus, UserPlus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ComingSoonCard } from "@/components/coming-soon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -25,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
+import { FEATURES } from "@/lib/feature-access";
 import { FamilyUnitCard } from "./family-unit-card";
 
 export function FamilyEcosystemContent() {
@@ -267,6 +269,22 @@ export function FamilyEcosystemContent() {
           <p className="text-muted-foreground text-lg">
             Your family at a glance, and who has access to what
           </p>
+        </div>
+
+        {/* Coming Soon Features */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <ComingSoonCard
+            feature={FEATURES.FAMILY_MESSAGING}
+            title="Family Messaging"
+            description="Stay connected with secure, private messaging for your family members."
+            icon={<MessageCircle className="h-5 w-5" />}
+          />
+          <ComingSoonCard
+            feature={FEATURES.FAMILY_RELATIONSHIPS}
+            title="Family Tree"
+            description="Visualize and map your family relationships across generations."
+            icon={<GitBranch className="h-5 w-5" />}
+          />
         </div>
 
         {/* Family Units Grid */}
