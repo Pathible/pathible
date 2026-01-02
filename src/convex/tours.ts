@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireAuth } from "./auth";
 
 // ============================================================================
@@ -1141,5 +1142,268 @@ export const seedFeatureTours = mutation({
       financialTourId,
       legacyTourId,
     };
+  },
+});
+
+/**
+ * Seed Learning Center Tour (internal - run via CLI)
+ * Creates or updates the tour for the Faith & Finances / Learning Center feature
+ *
+ * Usage: npx convex run tours:seedLearningCenterTour
+ */
+export const seedLearningCenterTour = internalMutation({
+  args: {},
+  returns: v.object({
+    tourId: v.id("tours"),
+    created: v.boolean(),
+    stepsUpdated: v.number(),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    let created = false;
+
+    // Check if tour already exists
+    const existing = await ctx.db
+      .query("tours")
+      .withIndex("by_key", (q) => q.eq("key", "learning-center-tour"))
+      .unique();
+
+    let tourId: Id<"tours">;
+
+    if (existing) {
+      tourId = existing._id;
+      // Update tour metadata
+      await ctx.db.patch(existing._id, {
+        name: "Faith & Finances Tour",
+        description: "Explore biblical wisdom and practical resources for faithful stewardship.",
+        status: "published",
+        priority: 45,
+        updatedAt: now,
+      });
+    } else {
+      // Create the tour
+      tourId = await ctx.db.insert("tours", {
+        key: "learning-center-tour",
+        name: "Faith & Finances Tour",
+        description: "Explore biblical wisdom and practical resources for faithful stewardship.",
+        status: "published",
+        version: 1,
+        priority: 45,
+        createdBy: "system",
+        createdAt: now,
+        updatedAt: now,
+      });
+      created = true;
+    }
+
+    // Define the tour steps
+    const steps = [
+      {
+        stepKey: "learning-tab",
+        route: "/financial",
+        anchorKey: "faith-finances-tab",
+        title: "Faith & Finances",
+        body: "Click this tab to explore biblical wisdom on money, stewardship, and legacy. We've prepared articles and principles to guide your planning journey.",
+      },
+      {
+        stepKey: "learning-header",
+        route: "/financial?tab=learning",
+        anchorKey: "learning-center-header",
+        title: "Welcome to Faith & Finances",
+        body: "This is your space for biblical wisdom on money and legacy. Explore articles written from a faith perspective to guide your planning journey.",
+      },
+      {
+        stepKey: "learning-resources",
+        route: "/financial?tab=learning",
+        anchorKey: "learning-resources-section",
+        title: "Learning Resources",
+        body: "Browse articles covering estate planning, insurance, financial literacy, and more. Each article is designed to help you make wise, faith-informed decisions.",
+      },
+      {
+        stepKey: "learning-principles",
+        route: "/financial?tab=learning",
+        anchorKey: "stewardship-principles-section",
+        title: "Stewardship Principles",
+        body: "These foundational biblical principles remind us that everything belongs to God. Let these truths guide your approach to planning and generosity.",
+      },
+      {
+        stepKey: "learning-wisdom",
+        route: "/financial?tab=learning",
+        anchorKey: "biblical-wisdom-section",
+        title: "Biblical Wisdom",
+        body: "Scripture speaks directly to how we handle money and possessions. These verses offer timeless guidance for your financial decisions.",
+      },
+    ];
+
+    // Create or update each step
+    let stepsUpdated = 0;
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+
+      // Check if step exists
+      const existingStep = await ctx.db
+        .query("tourSteps")
+        .withIndex("by_tour_and_stepKey", (q) => q.eq("tourId", tourId).eq("stepKey", step.stepKey))
+        .unique();
+
+      if (existingStep) {
+        // Update existing step
+        await ctx.db.patch(existingStep._id, {
+          order: i,
+          route: step.route,
+          anchorKey: step.anchorKey,
+          title: step.title,
+          body: step.body,
+          enabled: true,
+          updatedAt: now,
+        });
+      } else {
+        // Create new step
+        await ctx.db.insert("tourSteps", {
+          tourId,
+          stepKey: step.stepKey,
+          order: i,
+          route: step.route,
+          anchorKey: step.anchorKey,
+          title: step.title,
+          body: step.body,
+          enabled: true,
+          versionIntroduced: 1,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      stepsUpdated++;
+    }
+
+    return { tourId, created, stepsUpdated };
+  },
+});
+
+/**
+ * Seed Content Manager Tour (internal - run via CLI)
+ * Creates or updates the tour for administrators to learn the content management system
+ *
+ * Usage: npx convex run tours:seedContentManagerTour
+ */
+export const seedContentManagerTour = internalMutation({
+  args: {},
+  returns: v.object({
+    tourId: v.id("tours"),
+    created: v.boolean(),
+    stepsUpdated: v.number(),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    let created = false;
+
+    // Check if tour already exists
+    const existing = await ctx.db
+      .query("tours")
+      .withIndex("by_key", (q) => q.eq("key", "admin-content-tour"))
+      .unique();
+
+    let tourId: Id<"tours">;
+
+    if (existing) {
+      tourId = existing._id;
+      // Update tour metadata
+      await ctx.db.patch(existing._id, {
+        name: "Content Manager Tour",
+        description: "Learn how to create and manage educational articles for Faith & Finances.",
+        status: "published",
+        priority: 15,
+        updatedAt: now,
+      });
+    } else {
+      // Create the tour
+      tourId = await ctx.db.insert("tours", {
+        key: "admin-content-tour",
+        name: "Content Manager Tour",
+        description: "Learn how to create and manage educational articles for Faith & Finances.",
+        status: "published",
+        version: 1,
+        priority: 15,
+        createdBy: "system",
+        createdAt: now,
+        updatedAt: now,
+      });
+      created = true;
+    }
+
+    // Define the tour steps
+    const steps = [
+      {
+        stepKey: "content-header",
+        route: "/admin/content",
+        anchorKey: "content-manager-header",
+        title: "Content Manager",
+        body: "Welcome to the Content Manager! Here you can create, edit, and publish educational articles that appear in the Faith & Finances section.",
+      },
+      {
+        stepKey: "content-new-article",
+        route: "/admin/content",
+        anchorKey: "content-new-article-btn",
+        title: "Create New Articles",
+        body: "Click here to write a new article. Articles support Markdown formatting for rich content including headers, lists, and blockquotes.",
+      },
+      {
+        stepKey: "content-filters",
+        route: "/admin/content",
+        anchorKey: "content-filters",
+        title: "Filter Articles",
+        body: "Use these filters to find articles by status (draft, published, archived) or category. This helps manage your content library as it grows.",
+      },
+      {
+        stepKey: "content-table",
+        route: "/admin/content",
+        anchorKey: "content-articles-table",
+        title: "Article List",
+        body: "Click any row to edit an article. Use the menu on the right to publish, archive, or delete articles. Published articles immediately appear in Faith & Finances.",
+      },
+    ];
+
+    // Create or update each step
+    let stepsUpdated = 0;
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+
+      // Check if step exists
+      const existingStep = await ctx.db
+        .query("tourSteps")
+        .withIndex("by_tour_and_stepKey", (q) => q.eq("tourId", tourId).eq("stepKey", step.stepKey))
+        .unique();
+
+      if (existingStep) {
+        // Update existing step
+        await ctx.db.patch(existingStep._id, {
+          order: i,
+          route: step.route,
+          anchorKey: step.anchorKey,
+          title: step.title,
+          body: step.body,
+          enabled: true,
+          updatedAt: now,
+        });
+      } else {
+        // Create new step
+        await ctx.db.insert("tourSteps", {
+          tourId,
+          stepKey: step.stepKey,
+          order: i,
+          route: step.route,
+          anchorKey: step.anchorKey,
+          title: step.title,
+          body: step.body,
+          enabled: true,
+          versionIntroduced: 1,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      stepsUpdated++;
+    }
+
+    return { tourId, created, stepsUpdated };
   },
 });
