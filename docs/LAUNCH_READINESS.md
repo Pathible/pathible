@@ -63,17 +63,17 @@
 
 | Issue | File | Risk | Status |
 |-------|------|------|--------|
-| `subscriptions.syncFromClerk` has no auth | subscriptions.ts | Tier manipulation | **OPEN** |
+| `subscriptions.syncFromClerk` has no auth | subscriptions.ts | Tier manipulation | **FIXED** |
 
-**Details:** Mutation exposed without authentication. Should be `internalMutation` called only from HTTP webhook handler.
+**Details:** Converted to `internalMutation`. Now only callable from Convex HTTP endpoint (`/clerk-webhook`) which verifies webhook signatures.
 
 ### Major Issues (Should Fix)
 
 | Issue | File | Risk | Status |
 |-------|------|------|--------|
-| `articles.incrementViewCount` no auth | articles.ts | View count manipulation | **OPEN** |
+| `articles.incrementViewCount` no auth | articles.ts | View count manipulation | **FIXED** |
 
-**Details:** Anyone can inflate article view counts. Add `requireAuth` or rate limiting.
+**Details:** Added `requireAuth(ctx)` to prevent anonymous view count manipulation.
 
 ### Minor Issues (Acceptable for Launch)
 
