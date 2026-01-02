@@ -6,6 +6,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +74,11 @@ export default function ContentManagerPage() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<{
+    id: Id<"educationalArticles">;
+    title: string;
+  } | null>(null);
 
   const articles = useQuery(api.articles.listAll, {
     status:
@@ -104,13 +119,18 @@ export default function ContentManagerPage() {
     }
   };
 
-  const handleDelete = async (id: Id<"educationalArticles">) => {
-    if (!confirm("Are you sure you want to delete this article? This cannot be undone.")) {
-      return;
-    }
+  const handleDeleteClick = (id: Id<"educationalArticles">, title: string) => {
+    setArticleToDelete({ id, title });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!articleToDelete) return;
     try {
-      await deleteArticle({ id });
+      await deleteArticle({ id: articleToDelete.id });
       toast.success("Article deleted");
+      setDeleteDialogOpen(false);
+      setArticleToDelete(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete");
     }
@@ -274,7 +294,7 @@ export default function ContentManagerPage() {
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => handleDelete(article._id)}
+                              onClick={() => handleDeleteClick(article._id, article.title)}
                               className="text-destructive"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -291,6 +311,28 @@ export default function ContentManagerPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Article?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{articleToDelete?.title}&quot;? This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

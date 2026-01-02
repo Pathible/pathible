@@ -7,6 +7,16 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,6 +65,7 @@ export default function EditArticlePage() {
   const [category, setCategory] = useState<CategoryValue | undefined>(undefined);
   const [status, setStatus] = useState<"draft" | "published" | "archived" | undefined>(undefined);
   const [initialized, setInitialized] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const updateArticle = useMutation(api.articles.update);
   const deleteArticle = useMutation(api.articles.remove);
 
@@ -112,10 +123,7 @@ export default function EditArticlePage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this article? This cannot be undone.")) {
-      return;
-    }
+  const handleDeleteConfirm = async () => {
     try {
       await deleteArticle({ id: articleId });
       toast.success("Article deleted");
@@ -166,7 +174,7 @@ export default function EditArticlePage() {
             <p className="text-muted-foreground">Make changes to your article</p>
           </div>
         </div>
-        <Button variant="destructive" size="sm" onClick={handleDelete}>
+        <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
           <Trash2 className="h-4 w-4 mr-2" />
           Delete
         </Button>
@@ -351,6 +359,28 @@ export default function EditArticlePage() {
           </div>
         </div>
       </form>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Article?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{article.title}&quot;? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
