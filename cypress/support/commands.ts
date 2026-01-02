@@ -110,6 +110,19 @@ declare global {
         success: boolean;
         message: string;
       }>;
+
+      /**
+       * Clean up test articles created during E2E tests
+       * Deletes all articles with slugs starting with "e2e-test-" or titles containing "E2E Test Article"
+       * Must be called AFTER signing in with Clerk.
+       * SECURITY: Only works for test user emails (+clerk_test, +e2e_test, etc.)
+       * @example cy.cleanupTestArticles()
+       */
+      cleanupTestArticles(): Chainable<{
+        success: boolean;
+        message: string;
+        deletedCount: number;
+      }>;
     }
   }
 }
@@ -303,6 +316,11 @@ interface ConvexTestHelpers {
     success: boolean;
     message: string;
   }>;
+  cleanupTestArticles: () => Promise<{
+    success: boolean;
+    message: string;
+    deletedCount: number;
+  }>;
 }
 
 // Result types for test commands
@@ -464,6 +482,43 @@ Cypress.Commands.add("grantAdminRole", (): Cypress.Chainable<GrantAdminRoleResul
         return result as GrantAdminRoleResult;
       });
     }) as Cypress.Chainable<GrantAdminRoleResult>;
+});
+
+// Result type for cleanupTestArticles
+type CleanupTestArticlesResult = {
+  success: boolean;
+  message: string;
+  deletedCount: number;
+};
+
+/**
+ * Clean up test articles
+ * Calls the Convex testing.cleanupTestArticles mutation through the window's test helpers.
+ * Must be signed in first and on a page with the Convex client loaded.
+ */
+Cypress.Commands.add("cleanupTestArticles", (): Cypress.Chainable<CleanupTestArticlesResult> => {
+  cy.log("**Cleaning up test articles**");
+
+  return cy
+    .window({ timeout: 30000 })
+    .then((win): CleanupTestArticlesResult | Cypress.Chainable<CleanupTestArticlesResult> => {
+      const testHelpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+        .__CONVEX_TEST_HELPERS__;
+
+      if (!testHelpers) {
+        console.error("Convex test helpers not found on window.");
+        return {
+          success: false,
+          message: "Convex test helpers not available",
+          deletedCount: 0,
+        };
+      }
+
+      return cy.wrap(testHelpers.cleanupTestArticles(), { timeout: 30000 }).then((result) => {
+        console.log("Cleanup test articles result:", result);
+        return result as CleanupTestArticlesResult;
+      });
+    }) as Cypress.Chainable<CleanupTestArticlesResult>;
 });
 
 // Export to make TypeScript happy

@@ -18,6 +18,11 @@ interface ConvexTestHelpers {
   resetTestUser: () => Promise<unknown>;
   isCleanState: () => Promise<unknown>;
   grantAdminRole: () => Promise<{ success: boolean; message: string }>;
+  cleanupTestArticles: () => Promise<{
+    success: boolean;
+    message: string;
+    deletedCount: number;
+  }>;
 }
 
 // Expose Convex test helpers for E2E testing (Cypress)
@@ -36,6 +41,7 @@ function exposeTestHelpers() {
         resetTestUser: () => convex.mutation(api.testing.resetTestUser, {}),
         isCleanState: () => convex.mutation(api.testing.isCleanState, {}),
         grantAdminRole: () => convex.mutation(api.testing.grantAdminRole, {}),
+        cleanupTestArticles: () => convex.mutation(api.testing.cleanupTestArticles, {}),
       };
   }
 }

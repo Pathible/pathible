@@ -27,9 +27,11 @@ export default function ArticlePage() {
   const params = useParams();
   const slug = params.slug as string;
   const hasIncrementedView = useRef(false);
+  const hasMarkedAsRead = useRef(false);
 
   const article = useQuery(api.articles.getBySlug, { slug });
   const incrementViewCount = useMutation(api.articles.incrementViewCount);
+  const markAsRead = useMutation(api.articles.markAsRead);
 
   // Increment view count once when article loads
   useEffect(() => {
@@ -38,6 +40,14 @@ export default function ArticlePage() {
       incrementViewCount({ id: article._id });
     }
   }, [article, incrementViewCount]);
+
+  // Mark article as read when user views it
+  useEffect(() => {
+    if (article && !hasMarkedAsRead.current) {
+      hasMarkedAsRead.current = true;
+      markAsRead({ articleId: article._id });
+    }
+  }, [article, markAsRead]);
 
   if (article === undefined) {
     return (

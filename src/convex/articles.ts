@@ -381,3 +381,86 @@ export const incrementViewCount = mutation({
     return null;
   },
 });
+
+// ============================================================================
+// USER READ TRACKING
+// ============================================================================
+
+/**
+ * Mark an article as read for the current user
+ * Idempotent - calling multiple times won't create duplicate records
+ */
+export const markAsRead = mutation({
+  args: {
+    articleId: v.id("educationalArticles"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+
+    // Check if already marked as read
+    const existing = await ctx.db
+      .query("userArticleReads")
+      .withIndex("by_user_and_article", (q) =>
+        q.eq("userId", profile._id).eq("articleId", args.articleId),
+      )
+      .unique();
+
+    if (existing) {
+      // Already read, no action needed
+      return null;
+    }
+
+    // Verify article exists
+    const article = await ctx.db.get(args.articleId);
+    if (!article) {
+      throw new Error("Article not found");
+    }
+
+    // Create read record
+    await ctx.db.insert("userArticleReads", {
+      userId: profile._id,
+      articleId: args.articleId,
+      readAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Get all articles the current user has read
+ * Returns article slugs for easy lookup
+ */
+export const getUserReadArticles = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      slug: v.string(),
+      readAt: v.number(),
+    }),
+  ),
+  handler: async (ctx) => {
+    const { profile } = await requireAuth(ctx);
+
+    // Get all read records for this user
+    const readRecords = await ctx.db
+      .query("userArticleReads")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .collect();
+
+    // Fetch article slugs
+    const results: { slug: string; readAt: number }[] = [];
+    for (const record of readRecords) {
+      const article = await ctx.db.get(record.articleId);
+      if (article) {
+        results.push({
+          slug: article.slug,
+          readAt: record.readAt,
+        });
+      }
+    }
+
+    return results;
+  },
+});

@@ -95,19 +95,34 @@ function organizeArticlesIntoStages(articles: Article[]): Stage[] {
 
 /**
  * Find the featured article from the list
- * Prefers "gift-of-clarity" slug, then first faith_stewardship article, then first article
+ * Shows "gift-of-clarity" first, then progresses to unread articles as user completes them
+ * Follows the stage order: Stage 1 -> Stage 2 -> Stage 3
  */
-function findFeaturedArticle(articles: Article[]): Article | null {
-  // Try to find by specific slug first
+function findFeaturedArticle(articles: Article[], readArticles: Set<string>): Article | null {
+  // Primary article - show first if not read
   const giftOfClarity = articles.find((a) => a.slug === "gift-of-clarity");
-  if (giftOfClarity) return giftOfClarity;
+  if (giftOfClarity && !readArticles.has(giftOfClarity.slug)) {
+    return giftOfClarity;
+  }
 
-  // Fall back to first faith_stewardship article
-  const faithArticle = articles.find((a) => a.category === "faith_stewardship");
-  if (faithArticle) return faithArticle;
+  // Group articles by stage for ordered progression
+  const stageOrder = [1, 2, 3];
+  for (const stageNum of stageOrder) {
+    // Get articles for this stage
+    const stageArticles = articles.filter((a) => {
+      const articleStage = CATEGORY_TO_STAGE[a.category] ?? 1;
+      return articleStage === stageNum;
+    });
 
-  // Fall back to first article
-  return articles[0] || null;
+    // Find first unread article in this stage
+    const unreadArticle = stageArticles.find((a) => !readArticles.has(a.slug));
+    if (unreadArticle) {
+      return unreadArticle;
+    }
+  }
+
+  // All articles read - show the primary article again (or first article)
+  return giftOfClarity || articles[0] || null;
 }
 
 export function LearningCenter() {
@@ -116,11 +131,14 @@ export function LearningCenter() {
     limit: 50, // Get more articles for organizing into stages
   });
 
-  // For now, treat all articles as unread (read tracking to be added later)
-  const readArticles = new Set<string>();
+  // Fetch user's read articles
+  const readArticlesData = useQuery(api.articles.getUserReadArticles, {});
+
+  // Build set of read article slugs
+  const readArticles = new Set(readArticlesData?.map((a) => a.slug) ?? []);
 
   // Loading state
-  if (articles === undefined) {
+  if (articles === undefined || readArticlesData === undefined) {
     return (
       <div className="flex items-center justify-center py-24" data-tour="learning-center-header">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -140,8 +158,8 @@ export function LearningCenter() {
     publishedAt: article.publishedAt,
   }));
 
-  // Find featured article and organize stages
-  const featuredArticle = findFeaturedArticle(typedArticles);
+  // Find featured article (progresses as user reads) and organize stages
+  const featuredArticle = findFeaturedArticle(typedArticles, readArticles);
 
   // Filter out the featured article from stage articles to avoid duplication
   const stageArticles = featuredArticle

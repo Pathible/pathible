@@ -552,6 +552,18 @@ export default defineSchema({
     .index("by_status_and_publishedAt", ["status", "publishedAt"]),
 
   /**
+   * User article reads - tracks which articles each user has read
+   */
+  userArticleReads: defineTable({
+    userId: v.id("profiles"), // Links to profiles table (user's profile)
+    articleId: v.id("educationalArticles"),
+    readAt: v.number(), // Unix timestamp when marked as read
+  })
+    .index("by_user", ["userId"])
+    .index("by_article", ["articleId"])
+    .index("by_user_and_article", ["userId", "articleId"]),
+
+  /**
    * Smart suggestions - AI-driven suggestions for users
    */
   smartSuggestions: defineTable({
