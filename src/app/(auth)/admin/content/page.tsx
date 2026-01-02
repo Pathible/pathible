@@ -119,14 +119,14 @@ export default function ContentManagerPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="content-manager-header">
         <div>
           <h1 className="font-crimson text-3xl font-semibold">Content Manager</h1>
           <p className="text-muted-foreground">
             Create and manage educational articles for Faith & Finances
           </p>
         </div>
-        <Button asChild>
+        <Button asChild data-tour="content-new-article-btn">
           <Link href="/admin/content/new">
             <Plus className="h-4 w-4 mr-2" />
             New Article
@@ -135,7 +135,7 @@ export default function ContentManagerPage() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card data-tour="content-filters">
         <CardHeader>
           <CardTitle className="text-lg">Filters</CardTitle>
         </CardHeader>
@@ -174,7 +174,7 @@ export default function ContentManagerPage() {
       </Card>
 
       {/* Articles Table */}
-      <Card>
+      <Card data-tour="content-articles-table">
         <CardHeader>
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />

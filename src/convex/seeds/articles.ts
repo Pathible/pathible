@@ -99,7 +99,7 @@ And someday, when your children's children look back at what you left them, may 
     status: "published",
     authorName: "Pathible Team",
     readTimeMinutes: 5,
-    viewCount: 387,
+    viewCount: 0,
   },
   {
     title: "Teaching Your Children About Money and Faith",
@@ -189,7 +189,7 @@ Lord, help us teach our children well. Give us wisdom to model faithful stewards
     status: "published",
     authorName: "Pathible Team",
     readTimeMinutes: 6,
-    viewCount: 294,
+    viewCount: 0,
   },
 
   // ============================================================================
@@ -284,7 +284,7 @@ That's a gift that lasts.
     status: "published",
     authorName: "Pathible Team",
     readTimeMinutes: 6,
-    viewCount: 456,
+    viewCount: 0,
   },
   {
     title: "The Gift of Clarity: Why Your Family Needs a Legacy Plan",
@@ -393,7 +393,7 @@ The best time to create a legacy plan was years ago. The second best time is now
     status: "published",
     authorName: "Pathible Team",
     readTimeMinutes: 5,
-    viewCount: 328,
+    viewCount: 0,
   },
 
   // ============================================================================
@@ -508,7 +508,7 @@ And your family will have the gift of clarity - which is more valuable than you 
     status: "published",
     authorName: "Pathible Team",
     readTimeMinutes: 6,
-    viewCount: 412,
+    viewCount: 0,
   },
   {
     title: "Understanding Insurance: What Your Family Needs to Know",
@@ -645,7 +645,7 @@ Employer benefits often have time limits and specific procedures. Knowing these 
     status: "published",
     authorName: "Pathible Team",
     readTimeMinutes: 7,
-    viewCount: 189,
+    viewCount: 0,
   },
 
   // ============================================================================
@@ -806,7 +806,7 @@ Small steps, steady progress. That's how it gets done.
     status: "published",
     authorName: "Pathible Team",
     readTimeMinutes: 7,
-    viewCount: 523,
+    viewCount: 0,
   },
   {
     title: "Creating a Document Access Map for Your Loved Ones",
@@ -987,6 +987,6 @@ That peace is worth the effort.
     status: "published",
     authorName: "Pathible Team",
     readTimeMinutes: 7,
-    viewCount: 267,
+    viewCount: 0,
   },
 ];

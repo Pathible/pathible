@@ -3,6 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { AlertCircle, Lightbulb, TrendingUp, Wallet } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ComingSoonBadge } from "@/components/coming-soon";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,8 +17,24 @@ import { PropertyManager } from "./property-manager";
 import { SuggestionsList } from "./suggestions-list";
 
 export function FinancialContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 10;
+
+  // URL-controlled tabs for tour navigation
+  const activeTab = searchParams.get("tab") || "overview";
+
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "overview") {
+      params.delete("tab");
+    } else {
+      params.set("tab", value);
+    }
+    const query = params.toString();
+    router.push(query ? `/financial?${query}` : "/financial", { scroll: false });
+  };
 
   // Check Clerk session status
   const { user, isLoaded: isUserLoaded } = useUser();
@@ -137,7 +154,7 @@ export function FinancialContent() {
       {stats && <FinancialStats stats={stats} />}
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">
             <TrendingUp className="h-4 w-4 mr-2" />
@@ -148,9 +165,8 @@ export function FinancialContent() {
             Smart Suggestions
             <ComingSoonBadge size="sm" />
           </TabsTrigger>
-          <TabsTrigger value="learning" className="gap-2">
+          <TabsTrigger value="learning" data-tour="faith-finances-tab">
             Faith & Finances
-            <ComingSoonBadge size="sm" />
           </TabsTrigger>
         </TabsList>
 

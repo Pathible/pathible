@@ -20,10 +20,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function LearningCenter() {
-  // Fetch published articles from the database
+  // Fetch all published articles from the database
   const articles = useQuery(api.articles.listPublished, {
-    category: "faith_stewardship",
-    limit: 6,
+    limit: 12,
   });
 
   const principles = [
@@ -64,7 +63,7 @@ export function LearningCenter() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
+      <Card data-tour="learning-center-header">
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
             <Heart className="h-6 w-6 text-primary" />
@@ -80,7 +79,7 @@ export function LearningCenter() {
       </Card>
 
       {/* Learning Articles */}
-      <div>
+      <div data-tour="learning-resources-section">
         <div className="flex items-center gap-2 mb-4">
           <BookOpen className="h-5 w-5 text-primary" />
           <h2 className="text-xl font-semibold">Learning Resources</h2>
@@ -151,7 +150,7 @@ export function LearningCenter() {
       </div>
 
       {/* Stewardship Principles */}
-      <div>
+      <div data-tour="stewardship-principles-section">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="h-5 w-5 text-primary" />
           <h2 className="text-xl font-semibold">Stewardship Principles</h2>
@@ -172,7 +171,7 @@ export function LearningCenter() {
       </div>
 
       {/* Biblical Quotes */}
-      <Card>
+      <Card data-tour="biblical-wisdom-section">
         <CardHeader>
           <CardTitle>Biblical Wisdom on Stewardship</CardTitle>
           <CardDescription>Scripture verses to guide your financial decisions</CardDescription>

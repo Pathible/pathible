@@ -50,10 +50,11 @@ export default function EditArticlePage() {
   const router = useRouter();
   const articleId = params.id as Id<"educationalArticles">;
 
-  const [category, setCategory] = useState<CategoryValue>("faith_stewardship");
-  const [status, setStatus] = useState<"draft" | "published" | "archived">("draft");
-
   const article = useQuery(api.articles.get, { id: articleId });
+
+  const [category, setCategory] = useState<CategoryValue | undefined>(undefined);
+  const [status, setStatus] = useState<"draft" | "published" | "archived" | undefined>(undefined);
+  const [initialized, setInitialized] = useState(false);
   const updateArticle = useMutation(api.articles.update);
   const deleteArticle = useMutation(api.articles.remove);
 
@@ -64,9 +65,9 @@ export default function EditArticlePage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>();
 
-  // Populate form when article loads
+  // Populate form when article loads (only once)
   useEffect(() => {
-    if (article) {
+    if (article && !initialized) {
       reset({
         title: article.title,
         slug: article.slug,
@@ -77,10 +78,20 @@ export default function EditArticlePage() {
       });
       setCategory(article.category as CategoryValue);
       setStatus(article.status as "draft" | "published" | "archived");
+      setInitialized(true);
     }
-  }, [article, reset]);
+  }, [article, reset, initialized]);
 
   const onSubmit = async (data: FormData) => {
+    if (!category) {
+      toast.error("Please select a category");
+      return;
+    }
+    if (!status) {
+      toast.error("Please select a status");
+      return;
+    }
+
     try {
       await updateArticle({
         id: articleId,
@@ -236,9 +247,13 @@ export default function EditArticlePage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Select value={category} onValueChange={(v) => setCategory(v as CategoryValue)}>
+                  <Select
+                    key={`category-${article._id}-${initialized}`}
+                    value={category}
+                    onValueChange={(v) => setCategory(v as CategoryValue)}
+                  >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
                       {CATEGORIES.map((cat) => (
@@ -278,11 +293,12 @@ export default function EditArticlePage() {
                 <div className="space-y-2">
                   <Label>Status</Label>
                   <Select
+                    key={`status-${article._id}-${initialized}`}
                     value={status}
                     onValueChange={(v) => setStatus(v as "draft" | "published" | "archived")}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="draft">Draft</SelectItem>
@@ -326,8 +342,7 @@ export default function EditArticlePage() {
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground space-y-1">
                 <p>Views: {article.viewCount}</p>
-                <p>Created: {new Date(article._creationTime).toLocaleDateString()}</p>
-                <p>Updated: {new Date(article.updatedAt).toLocaleDateString()}</p>
+                <p>Last Updated: {new Date(article.updatedAt).toLocaleDateString()}</p>
                 {article.publishedAt && (
                   <p>Published: {new Date(article.publishedAt).toLocaleDateString()}</p>
                 )}

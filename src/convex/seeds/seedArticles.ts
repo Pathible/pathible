@@ -49,10 +49,6 @@ export const seed = internalMutation({
           continue;
         }
 
-        // Calculate published timestamp (random time in the past 90 days for variety)
-        const daysAgo = Math.floor(Math.random() * 90);
-        const publishedAt = now - daysAgo * 24 * 60 * 60 * 1000;
-
         await ctx.db.insert("educationalArticles", {
           title: article.title,
           slug: article.slug,
@@ -63,7 +59,7 @@ export const seed = internalMutation({
           readTimeMinutes: article.readTimeMinutes,
           viewCount: article.viewCount,
           authorId: authorId,
-          publishedAt: article.status === "published" ? publishedAt : undefined,
+          publishedAt: article.status === "published" ? now : undefined,
           updatedAt: now,
         });
 
@@ -119,9 +115,6 @@ export const clearAndSeed = internalMutation({
 
     for (const article of articleSeedData) {
       try {
-        const daysAgo = Math.floor(Math.random() * 90);
-        const publishedAt = now - daysAgo * 24 * 60 * 60 * 1000;
-
         await ctx.db.insert("educationalArticles", {
           title: article.title,
           slug: article.slug,
@@ -132,7 +125,7 @@ export const clearAndSeed = internalMutation({
           readTimeMinutes: article.readTimeMinutes,
           viewCount: article.viewCount,
           authorId: authorId,
-          publishedAt: article.status === "published" ? publishedAt : undefined,
+          publishedAt: article.status === "published" ? now : undefined,
           updatedAt: now,
         });
 
