@@ -78,6 +78,17 @@ describe("Admin Content Manager E2E Test", () => {
     });
   });
 
+  afterEach(() => {
+    // Clean up any test articles created during the test
+    // This ensures no orphaned data even if test fails
+    cy.log("**Cleaning up test articles after test**");
+    cy.cleanupTestArticles().then((result) => {
+      if (result.deletedCount > 0) {
+        cy.log(`Cleaned up ${result.deletedCount} test article(s)`);
+      }
+    });
+  });
+
   describe("Content Manager CRUD Operations", () => {
     beforeEach(() => {
       // Sign in
@@ -179,10 +190,11 @@ describe("Admin Content Manager E2E Test", () => {
       cy.contains("tr", `${TEST_ARTICLE_TITLE} - Updated`).within(() => {
         cy.get('button[aria-haspopup="menu"]').click();
       });
-      cy.contains("Delete").click();
+      cy.contains('[role="menuitem"]', "Delete").click();
 
-      // Confirm deletion in the dialog
-      cy.on("window:confirm", () => true);
+      // Confirm deletion in the AlertDialog
+      cy.get('[role="alertdialog"]', { timeout: 10000 }).should("be.visible");
+      cy.get('[role="alertdialog"]').contains("button", "Delete").click();
 
       // Verify article is deleted (wait for it to disappear from the list)
       cy.contains(`${TEST_ARTICLE_TITLE} - Updated`, { timeout: 15000 }).should("not.exist");

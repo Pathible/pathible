@@ -504,6 +504,78 @@ export const grantAdminRole = mutation({
   },
 });
 
+/**
+ * Clean up test articles created during E2E tests
+ * Deletes all articles with slugs starting with "e2e-test-"
+ * Only works for authenticated test users
+ */
+export const cleanupTestArticles = mutation({
+  args: {},
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    deletedCount: v.number(),
+  }),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return {
+        success: false,
+        message: "Not authenticated",
+        deletedCount: 0,
+      };
+    }
+
+    const email = identity.email || "";
+
+    // Security check - only allow test users
+    const isTestUser = TEST_EMAIL_PATTERNS.some((pattern) =>
+      email.toLowerCase().includes(pattern.toLowerCase()),
+    );
+
+    if (!isTestUser) {
+      console.warn(`[Testing] Blocked article cleanup for non-test user: ${email}`);
+      return {
+        success: false,
+        message: "Article cleanup only allowed for test users",
+        deletedCount: 0,
+      };
+    }
+
+    console.log(`[Testing] Cleaning up test articles for: ${email}`);
+
+    // Find all articles with e2e-test- prefix in slug
+    const allArticles = await ctx.db.query("educationalArticles").collect();
+    const testArticles = allArticles.filter(
+      (article) =>
+        article.slug.startsWith("e2e-test-") || article.title.includes("E2E Test Article"),
+    );
+
+    let deletedCount = 0;
+    for (const article of testArticles) {
+      // Also clean up any read records for this article
+      const readRecords = await ctx.db
+        .query("userArticleReads")
+        .withIndex("by_article", (q) => q.eq("articleId", article._id))
+        .collect();
+
+      for (const record of readRecords) {
+        await ctx.db.delete(record._id);
+      }
+
+      await ctx.db.delete(article._id);
+      deletedCount++;
+      console.log(`[Testing] Deleted test article: ${article.slug}`);
+    }
+
+    return {
+      success: true,
+      message: `Cleaned up ${deletedCount} test articles`,
+      deletedCount,
+    };
+  },
+});
+
 export const isCleanState = mutation({
   args: {},
   returns: v.object({
