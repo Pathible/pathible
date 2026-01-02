@@ -10,7 +10,7 @@
 
 | Product Area | Complete | Partial | Missing | Launch Ready |
 |--------------|----------|---------|---------|--------------|
-| Heritage Vault | 2/6 | 2/6 | 2/6 | Partial |
+| Heritage Vault | 3/6 | 1/6 | 2/6 | Partial |
 | Financial Intelligence | 1/5 | 1/5 | 3/5 | Partial |
 | Family Network | 1/4 | 1/4 | 2/4 | Partial |
 | Legacy Builder | 1/2 | 0/2 | 1/2 | Partial |
@@ -32,7 +32,7 @@
 | `vault_document_storage` | Foundations | **COMPLETE** | Full B2 integration, upload/download, access control |
 | `vault_photo_video` | Foundations | **COMPLETE** | Uses document upload, MIME types validated |
 | `vault_folders` | Foundations | **PARTIAL** | Feature defined but no folder UI/schema; categories used as substitute |
-| `vault_tags_collections` | Heritage | **PARTIAL** | Categories exist but feature gate not enforced; no rich tagging UI |
+| `vault_tags_collections` | Heritage | **COMPLETE** | Categories with feature gate enforced (PR #42); no rich tagging UI |
 | `vault_voice_uploads` | Heritage | **MISSING** | No voice recording UI; audio can upload as generic document |
 | `vault_guided_organization` | Heritage | **MISSING** | No wizard/workflow implementation |
 
@@ -104,7 +104,7 @@
 
 | Feature | Tier | Status | Details |
 |---------|------|--------|---------|
-| `legacy_questionnaires` | Legacy | **COMPLETE** | Multi-section wizard, key contacts, completion tracking |
+| `legacy_questionnaires` | Legacy | **COMPLETE** | Multi-section wizard, key contacts, completion tracking, PDF export (PR #41) |
 | `legacy_story_templates` | Legacy | **MISSING** | Feature defined but zero implementation |
 
 **What Works:**
@@ -112,6 +112,7 @@
 - Key contacts management
 - Completion percentage tracking
 - Activity logging
+- PDF export of legacy summary (PR #41)
 
 **What's Missing:**
 - Story template library
@@ -390,7 +391,7 @@ Based on the gap analysis, here are the recommended next priorities:
 | ~~Frontend feature gating~~ | System | Low | **DONE** |
 | ~~Subscription status banner~~ | System | Low | **DONE** |
 | ~~Admin content manager~~ | Admin | Medium | **DONE** |
-| Enforce vault_tags_collections gate | Vault | Low | Pending - categories exist, just add granular gate |
+| ~~Enforce vault_tags_collections gate~~ | Vault | Low | **DONE** (PR #42) - Heritage tier required for category management |
 | Coming Soon badges for incomplete features | UI | Low | Optional - prevents user confusion |
 
 ### P1.5 - High Value Quick Wins

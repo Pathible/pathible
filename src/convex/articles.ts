@@ -364,6 +364,9 @@ export const remove = mutation({
 
 /**
  * Increment view count (called when article is viewed)
+ *
+ * SECURITY: Requires authentication to prevent view count manipulation.
+ * Each authenticated user can increment the count once per article view.
  */
 export const incrementViewCount = mutation({
   args: {
@@ -371,6 +374,9 @@ export const incrementViewCount = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // Require authentication to prevent anonymous view count manipulation
+    await requireAuth(ctx);
+
     const article = await ctx.db.get(args.id);
     if (!article) return null;
 
