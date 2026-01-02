@@ -1,3 +1,5 @@
+"use client";
+
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 // Define styles for the PDF
@@ -168,7 +170,7 @@ export function LegacyPDFDocument({ data }: { data: LegacyPDFData }) {
         {data.trustedContacts && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Trusted Contacts</Text>
-            <Text style={styles.sectionDescription}>The people you&apos;re counting on</Text>
+            <Text style={styles.sectionDescription}>The people you're counting on</Text>
             <Text style={styles.sectionContent}>{data.trustedContacts}</Text>
           </View>
         )}
@@ -177,9 +179,7 @@ export function LegacyPDFDocument({ data }: { data: LegacyPDFData }) {
         {data.guardians && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Guardianship Preferences</Text>
-            <Text style={styles.sectionDescription}>
-              Who you&apos;d trust with what matters most
-            </Text>
+            <Text style={styles.sectionDescription}>Who you'd trust with what matters most</Text>
             <Text style={styles.sectionContent}>{data.guardians}</Text>
           </View>
         )}

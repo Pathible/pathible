@@ -112,7 +112,8 @@ export function LegacySummary({
       URL.revokeObjectURL(url);
 
       toast.success("Legacy summary exported successfully!");
-    } catch {
+    } catch (error) {
+      console.error("Failed to export PDF:", error);
       toast.error("Failed to export PDF. Please try again.");
     } finally {
       setIsExporting(false);
