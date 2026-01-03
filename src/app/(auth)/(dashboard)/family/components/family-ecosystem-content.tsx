@@ -2,11 +2,10 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { AlertCircle, GitBranch, MessageCircle, Plus, UserPlus, Users } from "lucide-react";
+import { AlertCircle, Plus, UserPlus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ComingSoonCard } from "@/components/coming-soon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -26,7 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
-import { FEATURES } from "@/lib/feature-access";
 import { FamilyUnitCard } from "./family-unit-card";
 
 export function FamilyEcosystemContent() {
@@ -38,7 +36,10 @@ export function FamilyEcosystemContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
 
   // Get user's households
-  const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
+  const households = useQuery(
+    api.households.list,
+    isUserLoaded && user ? {} : "skip"
+  );
 
   // Use the first household
   const householdId = households?.[0]?._id;
@@ -46,14 +47,16 @@ export function FamilyEcosystemContent() {
   // Get family units
   const familyUnits = useQuery(
     api.familyEcosystem.listFamilyUnits,
-    isUserLoaded && user && householdId ? { householdId } : "skip",
+    isUserLoaded && user && householdId ? { householdId } : "skip"
   );
 
   // Mutations
   const createFamilyUnit = useMutation(api.familyEcosystem.createFamilyUnit);
-  const inviteToPrimaryFamily = useMutation(api.familyEcosystem.inviteToPrimaryFamily);
+  const inviteToPrimaryFamily = useMutation(
+    api.familyEcosystem.inviteToPrimaryFamily
+  );
   const ensureCurrentUserInPrimaryFamily = useMutation(
-    api.familyEcosystem.ensureCurrentUserInPrimaryFamily,
+    api.familyEcosystem.ensureCurrentUserInPrimaryFamily
   );
 
   // Dialog states
@@ -166,7 +169,9 @@ export function FamilyEcosystemContent() {
       resetInviteForm();
     } catch (error) {
       console.error("Failed to invite member:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to add family member");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add family member"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -191,7 +196,9 @@ export function FamilyEcosystemContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Signed In</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            Let&apos;s Get You Signed In
+          </h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
             Sign in to see your family and who has access to your legacy.
           </p>
@@ -215,9 +222,12 @@ export function FamilyEcosystemContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Having Trouble Connecting</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            Having Trouble Connecting
+          </h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-            We&apos;re having trouble reaching your family&apos;s data. Mind giving it another try?
+            We&apos;re having trouble reaching your family&apos;s data. Mind
+            giving it another try?
           </p>
         </CardContent>
       </Card>
@@ -230,7 +240,9 @@ export function FamilyEcosystemContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Set Up</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            Let&apos;s Get You Set Up
+          </h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
             Complete your profile to start adding the people who matter most.
           </p>
@@ -260,7 +272,10 @@ export function FamilyEcosystemContent() {
                 <UserPlus className="h-4 w-4 mr-2" />
                 Invite Member
               </Button>
-              <Button onClick={() => setShowAddFamilyDialog(true)} data-tour="family-add-unit">
+              <Button
+                onClick={() => setShowAddFamilyDialog(true)}
+                data-tour="family-add-unit"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Family
               </Button>
@@ -272,7 +287,8 @@ export function FamilyEcosystemContent() {
         </div>
 
         {/* Coming Soon Features */}
-        <div className="grid gap-4 md:grid-cols-2">
+        {/* TODO Hiding this for now until these features for now until ready */}
+        {/* <div className="grid gap-4 md:grid-cols-2">
           <ComingSoonCard
             feature={FEATURES.FAMILY_MESSAGING}
             title="Family Messaging"
@@ -285,16 +301,19 @@ export function FamilyEcosystemContent() {
             description="Visualize and map your family relationships across generations."
             icon={<GitBranch className="h-5 w-5" />}
           />
-        </div>
+        </div> */}
 
         {/* Family Units Grid */}
         {familyUnits.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Users className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Your Family Tree Starts Here</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Your Family Tree Starts Here
+              </h3>
               <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-                Add the people who matter most. They&apos;re the reason you&apos;re doing this.
+                Add the people who matter most. They&apos;re the reason
+                you&apos;re doing this.
               </p>
               <Button onClick={() => setShowAddFamilyDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -321,8 +340,8 @@ export function FamilyEcosystemContent() {
           <DialogHeader>
             <DialogTitle>Add a Family Group</DialogTitle>
             <DialogDescription>
-              Group your family members together, like &quot;The Johnsons&quot; or &quot;Mom&apos;s
-              Side&quot;
+              Group your family members together, like &quot;The Johnsons&quot;
+              or &quot;Mom&apos;s Side&quot;
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddFamily} className="space-y-4">
@@ -372,12 +391,16 @@ export function FamilyEcosystemContent() {
       </Dialog>
 
       {/* Invite Member Dialog */}
-      <Dialog open={showInviteMemberDialog} onOpenChange={setShowInviteMemberDialog}>
+      <Dialog
+        open={showInviteMemberDialog}
+        onOpenChange={setShowInviteMemberDialog}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Someone to Your Family</DialogTitle>
             <DialogDescription>
-              Bring someone into the circle. They&apos;ll be able to see what you&apos;ve shared.
+              Bring someone into the circle. They&apos;ll be able to see what
+              you&apos;ve shared.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleInviteMember} className="space-y-4">
@@ -422,7 +445,10 @@ export function FamilyEcosystemContent() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="inviteRelationship">Relationship *</Label>
-              <Select value={inviteRelationship} onValueChange={setInviteRelationship}>
+              <Select
+                value={inviteRelationship}
+                onValueChange={setInviteRelationship}
+              >
                 <SelectTrigger id="inviteRelationship">
                   <SelectValue placeholder="Select relationship" />
                 </SelectTrigger>

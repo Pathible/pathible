@@ -2,24 +2,22 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { AlertCircle, Loader2, Mic, Settings, Shield, Sparkles } from "lucide-react";
+import { AlertCircle, Loader2, Settings, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ComingSoonCard } from "@/components/coming-soon";
-import { FeatureGate } from "@/components/feature-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
-import { FEATURES } from "@/lib/feature-access";
 import { CategoryManager } from "./category-manager";
 import { DocumentList } from "./document-list";
 import { SearchAndFilter } from "./search-and-filter";
-import { TagsCollections } from "./tags-collections";
 import { UploadButton } from "./upload-button";
 import { VaultStats } from "./vault-stats";
 
 export function VaultContent() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const [selectedCategory, setSelectedCategory] = useState<
+    string | undefined
+  >();
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   // Track retry attempts for auth sync
   const [retryCount, setRetryCount] = useState(0);
@@ -29,11 +27,15 @@ export function VaultContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
 
   // Get user's households - run when session is ready
-  const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
+  const households = useQuery(
+    api.households.list,
+    isUserLoaded && user ? {} : "skip"
+  );
 
   // Unified retry logic for auth race conditions
   useEffect(() => {
-    const needsRetry = isUserLoaded && retryCount < maxRetries && (!user || households === null);
+    const needsRetry =
+      isUserLoaded && retryCount < maxRetries && (!user || households === null);
 
     if (needsRetry) {
       const timer = setTimeout(() => {
@@ -50,7 +52,10 @@ export function VaultContent() {
   const householdId = households?.[0]?._id;
 
   // Only fetch vault data once we have a household ID
-  const stats = useQuery(api.vault.getStats, householdId ? { householdId } : "skip");
+  const stats = useQuery(
+    api.vault.getStats,
+    householdId ? { householdId } : "skip"
+  );
   const documentsResponse = useQuery(
     api.vault.list,
     householdId
@@ -59,14 +64,21 @@ export function VaultContent() {
           searchQuery: searchQuery || undefined,
           category: selectedCategory,
         }
-      : "skip",
+      : "skip"
   );
   // Extract documents from paginated response (with type guard for safety)
-  const documents = Array.isArray(documentsResponse?.documents) ? documentsResponse.documents : [];
-  const categories = useQuery(api.vault.listCategories, householdId ? { householdId } : "skip");
+  const documents = Array.isArray(documentsResponse?.documents)
+    ? documentsResponse.documents
+    : [];
+  const categories = useQuery(
+    api.vault.listCategories,
+    householdId ? { householdId } : "skip"
+  );
 
   // Initialize default categories mutation
-  const initializeCategories = useMutation(api.vault.initializeDefaultCategories);
+  const initializeCategories = useMutation(
+    api.vault.initializeDefaultCategories
+  );
   const [categoriesInitialized, setCategoriesInitialized] = useState(false);
 
   // Auto-initialize default categories if household has none
@@ -97,7 +109,9 @@ export function VaultContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Signed In</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            Let&apos;s Get You Signed In
+          </h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
             Sign in to access your family&apos;s secure document vault.
           </p>
@@ -108,7 +122,10 @@ export function VaultContent() {
 
   // Still loading households query (undefined = query pending, null = auth not ready yet)
   // Show loading while retrying, show error if retries exhausted
-  if (households === undefined || (households === null && retryCount < maxRetries)) {
+  if (
+    households === undefined ||
+    (households === null && retryCount < maxRetries)
+  ) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -122,9 +139,12 @@ export function VaultContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Having Trouble Connecting</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            Having Trouble Connecting
+          </h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-            We&apos;re having trouble reaching your family&apos;s data. Mind giving it another try?
+            We&apos;re having trouble reaching your family&apos;s data. Mind
+            giving it another try?
           </p>
         </CardContent>
       </Card>
@@ -137,9 +157,12 @@ export function VaultContent() {
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Set Up</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            Let&apos;s Get You Set Up
+          </h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Complete your profile to start organizing your family&apos;s important documents.
+            Complete your profile to start organizing your family&apos;s
+            important documents.
           </p>
         </CardContent>
       </Card>
@@ -147,7 +170,9 @@ export function VaultContent() {
   }
 
   const isLoading =
-    stats === undefined || documentsResponse === undefined || categories === undefined;
+    stats === undefined ||
+    documentsResponse === undefined ||
+    categories === undefined;
 
   return (
     <div className="space-y-6">
@@ -161,7 +186,8 @@ export function VaultContent() {
             <h1 className="text-4xl font-bold">Heritage Vault</h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Everything your family needs, in one secure place they can actually find
+            Everything your family needs, in one secure place they can actually
+            find
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
@@ -195,12 +221,14 @@ export function VaultContent() {
       />
 
       {/* Tags & Collections (Heritage+ feature) */}
-      <FeatureGate feature={FEATURES.VAULT_TAGS_COLLECTIONS}>
+      {/* TODO Think about how this works more in the future */}
+      {/* <FeatureGate feature={FEATURES.VAULT_TAGS_COLLECTIONS}>
         <TagsCollections />
-      </FeatureGate>
+      </FeatureGate> */}
 
       {/* Coming Soon Features */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* TODO Hiding this for now until these features for now until ready */}
+      {/* <div className="grid gap-4 md:grid-cols-2">
         <ComingSoonCard
           feature={FEATURES.VAULT_VOICE_UPLOADS}
           title="Voice Recordings"
@@ -213,7 +241,7 @@ export function VaultContent() {
           description="Step-by-step wizards to help you organize important documents like wills, insurance, and medical records."
           icon={<Sparkles className="h-5 w-5" />}
         />
-      </div>
+      </div> */}
 
       {/* Documents List */}
       <DocumentList
