@@ -167,7 +167,9 @@ describe("Admin Content Manager E2E Test", () => {
       });
 
       // Click on the article row to edit (clicking the row navigates to edit page)
-      cy.contains("tr", /E2E Test Article/).first().click();
+      cy.contains("tr", /E2E Test Article/)
+        .first()
+        .click();
 
       // Should be on edit page
       cy.url({ timeout: 15000 }).should("match", /\/admin\/content\/[a-z0-9]+$/);
@@ -202,7 +204,9 @@ describe("Admin Content Manager E2E Test", () => {
       });
 
       // Click on the article row to go to edit page
-      cy.contains("tr", /E2E Test Article/).first().click();
+      cy.contains("tr", /E2E Test Article/)
+        .first()
+        .click();
 
       // Should be on edit page
       cy.url({ timeout: 15000 }).should("match", /\/admin\/content\/[a-z0-9]+$/);
