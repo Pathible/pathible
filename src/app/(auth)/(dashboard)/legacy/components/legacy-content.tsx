@@ -2,14 +2,25 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { AlertCircle, FileText, LayoutTemplate, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  FileText,
+  Heart,
+  LayoutTemplate,
+  Loader2,
+  ScrollText,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { ComingSoonCard } from "@/components/coming-soon";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { FEATURES } from "@/lib/feature-access";
 import { LegacySummary } from "./legacy-summary";
 import { LegacyWizard } from "./legacy-wizard";
+import { LegalDocumentsSection } from "./legal-documents-section";
 
 export function LegacyContent() {
   // Track retry attempts for auth sync
@@ -43,6 +54,10 @@ export function LegacyContent() {
   // Get legacy plan and stats
   const legacyPlan = useQuery(api.legacy.get, householdId ? { householdId } : "skip");
   const stats = useQuery(api.legacy.getStats, householdId ? { householdId } : "skip");
+  const legalDocsStats = useQuery(
+    api.legalDocuments.getStats,
+    householdId ? { householdId } : "skip",
+  );
 
   // Create legacy plan mutation
   const createPlan = useMutation(api.legacy.create);
@@ -120,19 +135,6 @@ export function LegacyContent() {
     );
   }
 
-  // Show summary if plan is complete, otherwise show wizard
-  if (legacyPlan?.isComplete) {
-    return (
-      <LegacySummary
-        householdId={householdId}
-        householdName={households[0]?.name ?? "My Family"}
-        userName={user.firstName ?? user.fullName ?? "User"}
-        legacyPlan={legacyPlan}
-        stats={stats}
-      />
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -150,28 +152,67 @@ export function LegacyContent() {
         </div>
       </div>
 
-      {/* Wizard */}
-      <LegacyWizard
-        householdId={householdId}
-        legacyPlan={legacyPlan}
-        onCreatePlan={() => createPlan({ householdId })}
-      />
+      {/* Tabbed Interface */}
+      <Tabs defaultValue="legacy-plan" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="legacy-plan" className="gap-2">
+            <Heart className="h-4 w-4" />
+            Your Legacy Plan
+            {stats && (
+              <Badge
+                variant={legacyPlan?.isComplete ? "default" : "secondary"}
+                className="ml-1 text-xs"
+              >
+                {legacyPlan?.isComplete ? <CheckCircle2 className="h-3 w-3 mr-1" /> : null}
+                {stats.completionPercentage}%
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="legal-documents" className="gap-2">
+            <ScrollText className="h-4 w-4" />
+            Legal Documents
+            {legalDocsStats && legalDocsStats.totalDocuments > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {legalDocsStats.completedDocuments}/{legalDocsStats.totalDocuments}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Coming Soon Features */}
-      <ComingSoonCard
-        feature={FEATURES.LEGACY_STORY_TEMPLATES}
-        title="Story Templates"
-        description="Pre-written templates to help you capture life stories, values, and memories for future generations."
-        icon={<LayoutTemplate className="h-5 w-5" />}
-      />
+        {/* Tab 1: Legacy Plan */}
+        <TabsContent value="legacy-plan" className="space-y-6">
+          {legacyPlan?.isComplete ? (
+            <LegacySummary
+              householdId={householdId}
+              householdName={households[0]?.name ?? "My Family"}
+              userName={user.firstName ?? user.fullName ?? "User"}
+              legacyPlan={legacyPlan}
+              stats={stats}
+            />
+          ) : (
+            <>
+              <LegacyWizard
+                householdId={householdId}
+                legacyPlan={legacyPlan}
+                onCreatePlan={() => createPlan({ householdId })}
+              />
 
-      {/* Privacy Note */}
-      <div className="p-4 bg-muted/50 rounded-lg">
-        <p className="text-base text-foreground/80 text-center font-medium">
-          Everything you share here is just for you and your family. Take your time, there are no
-          wrong answers.
-        </p>
-      </div>
+              {/* Coming Soon Features */}
+              <ComingSoonCard
+                feature={FEATURES.LEGACY_STORY_TEMPLATES}
+                title="Story Templates"
+                description="Pre-written templates to help you capture life stories, values, and memories for future generations."
+                icon={<LayoutTemplate className="h-5 w-5" />}
+              />
+            </>
+          )}
+        </TabsContent>
+
+        {/* Tab 2: Legal Documents */}
+        <TabsContent value="legal-documents" className="space-y-6">
+          <LegalDocumentsSection householdId={householdId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
