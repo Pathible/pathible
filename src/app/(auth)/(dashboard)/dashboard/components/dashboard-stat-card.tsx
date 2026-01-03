@@ -8,6 +8,7 @@ import {
   type LucideIcon,
   Shield,
   Sparkles,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -21,6 +22,7 @@ const iconMap: Record<string, LucideIcon> = {
   users: Users,
   heart: Heart,
   sparkles: Sparkles,
+  trendingUp: TrendingUp,
 };
 
 interface DashboardStatCardProps {
