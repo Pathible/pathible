@@ -1,5 +1,4 @@
 import { httpRouter } from "convex/server";
-import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 
 const http = httpRouter();
@@ -7,8 +6,9 @@ const http = httpRouter();
 /**
  * Clerk Webhook Handler (Convex HTTP Action)
  *
- * This endpoint receives webhooks directly from Clerk, verifies the signature,
- * and calls the internal mutation to sync subscription data.
+ * This endpoint receives webhooks directly from Clerk and verifies the signature.
+ * Currently just logs events - subscription data is managed via Clerk Billing
+ * and accessed directly through Clerk's `has()` function.
  *
  * SECURITY: This is an httpAction, not a mutation, so it can only be called
  * via HTTP requests to the Convex deployment URL. The webhook signature
@@ -21,7 +21,7 @@ const http = httpRouter();
 http.route({
   path: "/clerk-webhook",
   method: "POST",
-  handler: httpAction(async (ctx, request) => {
+  handler: httpAction(async (_ctx, request) => {
     // Get webhook secret from environment
     const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
     if (!webhookSecret) {
@@ -62,31 +62,16 @@ http.route({
     const eventType = payload.type as string;
     console.log(`[Clerk Webhook] Processing event: ${eventType}`);
 
-    // Handle subscription-related events
+    // Log subscription events for debugging
+    // Subscription data is now managed via Clerk Billing and effective tier system
     if (
       eventType === "user.updated" ||
       eventType.startsWith("subscription.") ||
       eventType.includes("subscription")
     ) {
-      try {
-        const data = payload.data as Record<string, unknown>;
-        const userId = data.id as string | undefined;
-        const publicMetadata = data.public_metadata as Record<string, unknown> | undefined;
-
-        if (userId && publicMetadata) {
-          // Call the internal mutation (secure - only callable from within Convex)
-          await ctx.runMutation(internal.subscriptions.syncFromClerk, {
-            clerkUserId: userId,
-            planId: (publicMetadata.plan as string) || "unknown",
-            status: (publicMetadata.subscription_status as string) || "active",
-          });
-
-          console.log(`[Clerk Webhook] Synced subscription for user: ${userId}`);
-        }
-      } catch (error) {
-        console.error("[Clerk Webhook] Error syncing subscription:", error);
-        // Don't throw - return 200 to prevent retries for non-critical sync
-      }
+      const data = payload.data as Record<string, unknown>;
+      const userId = data.id as string | undefined;
+      console.log(`[Clerk Webhook] Subscription event for user: ${userId}`);
     }
 
     return new Response("OK", { status: 200 });
