@@ -1,3 +1,4 @@
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin } from "./auth";
@@ -279,10 +280,7 @@ export const listActivityLogs = query({
     module: v.optional(v.string()),
     startDate: v.optional(v.number()),
     endDate: v.optional(v.number()),
-    paginationOpts: v.object({
-      numItems: v.number(),
-      cursor: v.union(v.string(), v.null()),
-    }),
+    paginationOpts: paginationOptsValidator,
   },
   returns: v.object({
     page: v.array(

@@ -26,7 +26,7 @@ export default function ActivityLogsPage() {
       startDate,
       endDate,
     },
-    { initialNumItems: 50 },
+    { initialNumItems: 15 },
   );
 
   // Fetch counts for filter dropdowns
@@ -40,7 +40,7 @@ export default function ActivityLogsPage() {
     setEndDate(undefined);
   };
 
-  const hasActiveFilters = search || actionType || module || startDate || endDate;
+  const hasActiveFilters = Boolean(search || actionType || module || startDate || endDate);
 
   return (
     <div className="space-y-6">

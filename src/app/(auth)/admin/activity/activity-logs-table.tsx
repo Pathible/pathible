@@ -146,7 +146,7 @@ export function ActivityLogsTable({ results, status, loadMore }: ActivityLogsTab
       {/* Load More Button */}
       {status === "CanLoadMore" && (
         <div className="flex justify-center pt-4">
-          <Button variant="outline" onClick={() => loadMore(50)}>
+          <Button variant="outline" onClick={() => loadMore(15)}>
             Load More
           </Button>
         </div>
