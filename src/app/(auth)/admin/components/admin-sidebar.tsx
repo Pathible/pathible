@@ -7,7 +7,6 @@ import {
   Key,
   LayoutDashboard,
   Mail,
-  Settings,
   Shield,
   Users,
 } from "lucide-react";
