@@ -33,8 +33,10 @@ export function HouseholdsList() {
 
   const getTierBadge = (tier: string) => {
     const styles = {
-      foundations: "bg-pathible-forest/10 text-pathible-forest border-pathible-forest/20",
-      heritage: "bg-pathible-sage/20 text-pathible-sage border-pathible-sage/30",
+      foundations:
+        "bg-pathible-forest/10 text-pathible-forest border-pathible-forest/20",
+      heritage:
+        "bg-pathible-sage/20 text-pathible-sage border-pathible-sage/30",
       legacy: "bg-pathible-gold/20 text-pathible-gold border-pathible-gold/30",
       founders: "bg-primary text-primary-foreground border-primary",
     };
@@ -46,7 +48,8 @@ export function HouseholdsList() {
       active: "bg-primary/10 text-primary border-primary/20",
       inactive: "bg-muted text-muted-foreground border-muted",
       cancelled: "bg-destructive/10 text-destructive border-destructive/20",
-      past_due: "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400",
+      past_due:
+        "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400",
     };
     return styles[status as keyof typeof styles] || "";
   };
@@ -111,12 +114,28 @@ export function HouseholdsList() {
                   </TableCell>
                   <TableCell>{household.memberCount}</TableCell>
                   <TableCell>
-                    <Badge className={getTierBadge(household.subscriptionTier)}>
-                      {household.subscriptionTier}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className={getTierBadge(household.subscriptionTier)}
+                      >
+                        {household.subscriptionTier}
+                      </Badge>
+                      {household.tierOverride && (
+                        <>
+                          <span className="text-muted-foreground">/</span>
+                          <Badge
+                            className={getTierBadge(household.tierOverride)}
+                          >
+                            {household.tierOverride}
+                          </Badge>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusBadge(household.subscriptionStatus)}>
+                    <Badge
+                      className={getStatusBadge(household.subscriptionStatus)}
+                    >
                       {household.subscriptionStatus}
                     </Badge>
                   </TableCell>

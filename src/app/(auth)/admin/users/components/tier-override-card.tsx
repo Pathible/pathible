@@ -3,18 +3,6 @@
 import { useMutation } from "convex/react";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +13,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -46,7 +52,9 @@ export function TierOverrideCard({
   const applyTierOverride = useMutation(api.admin.users.applyTierOverride);
   const removeTierOverride = useMutation(api.admin.users.removeTierOverride);
 
-  const [selectedTier, setSelectedTier] = useState<string>(tierOverride || currentTier);
+  const [selectedTier, setSelectedTier] = useState<string>(
+    tierOverride || currentTier
+  );
   const [expirationDate, setExpirationDate] = useState<string>("");
   const [reason, setReason] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -62,12 +70,18 @@ export function TierOverrideCard({
 
   const getTierBadge = (tier: string) => {
     const styles = {
-      foundations: "bg-pathible-forest/10 text-pathible-forest border-pathible-forest/20",
-      heritage: "bg-pathible-sage/20 text-pathible-sage border-pathible-sage/30",
+      foundations:
+        "bg-pathible-forest/10 text-pathible-forest border-pathible-forest/20",
+      heritage:
+        "bg-pathible-sage/20 text-pathible-sage border-pathible-sage/30",
       legacy: "bg-pathible-gold/20 text-pathible-gold border-pathible-gold/30",
       founders: "bg-primary text-primary-foreground border-primary",
     };
-    return <Badge className={styles[tier as keyof typeof styles] || ""}>{tier}</Badge>;
+    return (
+      <Badge className={styles[tier as keyof typeof styles] || ""}>
+        {tier}
+      </Badge>
+    );
   };
 
   const handleApplyOverride = async () => {
@@ -80,7 +94,11 @@ export function TierOverrideCard({
     try {
       await applyTierOverride({
         householdId,
-        tier: selectedTier as "foundations" | "heritage" | "legacy" | "founders",
+        tier: selectedTier as
+          | "foundations"
+          | "heritage"
+          | "legacy"
+          | "founders",
         expiresAt: expirationDate
           ? new Date(expirationDate).getTime()
           : undefined,
@@ -117,19 +135,24 @@ export function TierOverrideCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-crimson text-xl">Subscription Override</CardTitle>
+        <CardTitle className="font-crimson text-xl">
+          Subscription Override
+        </CardTitle>
         <CardDescription>
           Temporarily override this household&apos;s subscription tier
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Current State Display */}
-        <div className="rounded-lg border border-border bg-muted/30 p-4">
+        <div className="rounded-lg border border-border p-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Current State:</span>
               {hasActiveOverride ? (
-                <Badge variant="outline" className="border-primary/50 text-primary">
+                <Badge
+                  variant="outline"
+                  className="border-primary/50 text-primary"
+                >
                   Override Active
                 </Badge>
               ) : (
@@ -140,13 +163,21 @@ export function TierOverrideCard({
             {hasActiveOverride && (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Override Tier:</span>
+                  <span className="text-sm text-muted-foreground">
+                    Override Tier:
+                  </span>
                   {getTierBadge(tierOverride)}
                 </div>
                 {tierOverrideExpiresAt && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Expires:</span>
-                    <span className={`text-sm ${isOverrideExpired ? "text-destructive" : ""}`}>
+                    <span className="text-sm text-muted-foreground">
+                      Expires:
+                    </span>
+                    <span
+                      className={`text-sm ${
+                        isOverrideExpired ? "text-destructive" : ""
+                      }`}
+                    >
                       {formatDate(tierOverrideExpiresAt)}
                       {isOverrideExpired && " (Expired)"}
                     </span>
@@ -154,7 +185,9 @@ export function TierOverrideCard({
                 )}
                 {tierOverrideReason && (
                   <div>
-                    <span className="text-sm text-muted-foreground">Reason:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Reason:
+                    </span>
                     <p className="text-sm mt-1">{tierOverrideReason}</p>
                   </div>
                 )}
@@ -163,7 +196,8 @@ export function TierOverrideCard({
 
             {!hasActiveOverride && (
               <p className="text-sm text-muted-foreground">
-                This household is using its standard subscription tier: {getTierBadge(currentTier)}
+                This household is using its standard subscription tier:{" "}
+                {getTierBadge(currentTier)}
               </p>
             )}
           </div>
@@ -188,7 +222,8 @@ export function TierOverrideCard({
 
           <div className="space-y-2">
             <Label htmlFor="expiration">
-              Expiration Date <span className="text-muted-foreground">(optional)</span>
+              Expiration Date{" "}
+              <span className="text-muted-foreground">(optional)</span>
             </Label>
             <Input
               id="expiration"
@@ -217,7 +252,10 @@ export function TierOverrideCard({
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">
-          <Button onClick={handleApplyOverride} disabled={isProcessing || !reason.trim()}>
+          <Button
+            onClick={handleApplyOverride}
+            disabled={isProcessing || !reason.trim()}
+          >
             {isProcessing ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -248,13 +286,18 @@ export function TierOverrideCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Tier Override</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove the tier override? The household will revert to
-              their standard subscription tier: {currentTier}.
+              Are you sure you want to remove the tier override? The household
+              will revert to their standard subscription tier: {currentTier}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveOverride} disabled={isProcessing}>
+            <AlertDialogCancel disabled={isProcessing}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveOverride}
+              disabled={isProcessing}
+            >
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

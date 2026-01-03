@@ -34,7 +34,7 @@ export const listUsers = query({
         email: v.string(),
         status: v.union(v.literal("active"), v.literal("inactive")),
         householdCount: v.number(),
-      }),
+      })
     ),
     nextCursor: v.optional(v.string()),
   }),
@@ -52,7 +52,7 @@ export const listUsers = query({
       filteredProfiles = filteredProfiles.filter(
         (p) =>
           p.firstName.toLowerCase().includes(searchLower) ||
-          p.lastName.toLowerCase().includes(searchLower),
+          p.lastName.toLowerCase().includes(searchLower)
       );
     }
 
@@ -69,7 +69,9 @@ export const listUsers = query({
           .withIndex("by_user", (q) => q.eq("userId", profile._id))
           .collect();
 
-        const activeHouseholds = memberships.filter((m) => m.status === "active").length;
+        const activeHouseholds = memberships.filter(
+          (m) => m.status === "active"
+        ).length;
 
         // Get email from Better Auth
         // Note: In Clerk, we can't query Better Auth users from Convex directly
@@ -83,10 +85,12 @@ export const listUsers = query({
           firstName: profile.firstName,
           lastName: profile.lastName,
           email,
-          status: profile.deletedAt ? ("inactive" as const) : ("active" as const),
+          status: profile.deletedAt
+            ? ("inactive" as const)
+            : ("active" as const),
           householdCount: activeHouseholds,
         };
-      }),
+      })
     );
 
     return {
@@ -123,8 +127,8 @@ export const getUser = query({
             v.literal("profile_complete"),
             v.literal("household_complete"),
             v.literal("preferences_complete"),
-            v.literal("complete"),
-          ),
+            v.literal("complete")
+          )
         ),
         onboardingStep: v.optional(v.number()),
         onboardingCompletedAt: v.optional(v.number()),
@@ -141,11 +145,15 @@ export const getUser = query({
             v.literal("owner"),
             v.literal("steward"),
             v.literal("viewer"),
-            v.literal("executor"),
+            v.literal("executor")
           ),
-          status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+          status: v.union(
+            v.literal("active"),
+            v.literal("pending"),
+            v.literal("inactive")
+          ),
           joinedAt: v.optional(v.number()),
-        }),
+        })
       ),
       recentActivity: v.array(
         v.object({
@@ -154,10 +162,10 @@ export const getUser = query({
           actionType: v.string(),
           description: v.string(),
           module: v.optional(v.string()),
-        }),
+        })
       ),
     }),
-    v.null(),
+    v.null()
   ),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -184,7 +192,7 @@ export const getUser = query({
           status: m.status,
           joinedAt: m.joinedAt,
         };
-      }),
+      })
     );
 
     // Get recent activity
@@ -255,15 +263,23 @@ export const listHouseholds = query({
           v.literal("foundations"),
           v.literal("heritage"),
           v.literal("legacy"),
-          v.literal("founders"),
+          v.literal("founders")
         ),
         subscriptionStatus: v.union(
           v.literal("active"),
           v.literal("inactive"),
           v.literal("cancelled"),
-          v.literal("past_due"),
+          v.literal("past_due")
         ),
-      }),
+        tierOverride: v.optional(
+          v.union(
+            v.literal("foundations"),
+            v.literal("heritage"),
+            v.literal("legacy"),
+            v.literal("founders")
+          )
+        ),
+      })
     ),
     nextCursor: v.optional(v.string()),
   }),
@@ -277,7 +293,9 @@ export const listHouseholds = query({
     let filteredHouseholds = households;
     if (args.search) {
       const searchLower = args.search.toLowerCase();
-      filteredHouseholds = households.filter((h) => h.name.toLowerCase().includes(searchLower));
+      filteredHouseholds = households.filter((h) =>
+        h.name.toLowerCase().includes(searchLower)
+      );
     }
 
     // Sort by creation time (newest first)
@@ -299,8 +317,9 @@ export const listHouseholds = query({
           memberCount: household.memberCount || 0,
           subscriptionTier: household.subscriptionTier,
           subscriptionStatus: household.subscriptionStatus,
+          tierOverride: household.tierOverride,
         };
-      }),
+      })
     );
 
     return {
@@ -330,13 +349,13 @@ export const getHousehold = query({
           v.literal("foundations"),
           v.literal("heritage"),
           v.literal("legacy"),
-          v.literal("founders"),
+          v.literal("founders")
         ),
         subscriptionStatus: v.union(
           v.literal("active"),
           v.literal("inactive"),
           v.literal("cancelled"),
-          v.literal("past_due"),
+          v.literal("past_due")
         ),
         storageUsedBytes: v.optional(v.number()),
         memberCount: v.optional(v.number()),
@@ -349,8 +368,8 @@ export const getHousehold = query({
             v.literal("foundations"),
             v.literal("heritage"),
             v.literal("legacy"),
-            v.literal("founders"),
-          ),
+            v.literal("founders")
+          )
         ),
         tierOverrideExpiresAt: v.optional(v.number()),
         tierOverrideReason: v.optional(v.string()),
@@ -366,11 +385,15 @@ export const getHousehold = query({
             v.literal("owner"),
             v.literal("steward"),
             v.literal("viewer"),
-            v.literal("executor"),
+            v.literal("executor")
           ),
-          status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
+          status: v.union(
+            v.literal("active"),
+            v.literal("pending"),
+            v.literal("inactive")
+          ),
           joinedAt: v.optional(v.number()),
-        }),
+        })
       ),
       recentActivity: v.array(
         v.object({
@@ -380,10 +403,10 @@ export const getHousehold = query({
           description: v.string(),
           module: v.optional(v.string()),
           userName: v.optional(v.string()),
-        }),
+        })
       ),
     }),
-    v.null(),
+    v.null()
   ),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -413,12 +436,14 @@ export const getHousehold = query({
           profileId: m.userId,
           firstName: profile?.firstName || "Unknown",
           lastName: profile?.lastName || "User",
-          email: profile ? `user-${profile.userId.substring(0, 8)}@...` : "unknown@...",
+          email: profile
+            ? `user-${profile.userId.substring(0, 8)}@...`
+            : "unknown@...",
           role: m.role,
           status: m.status,
           joinedAt: m.joinedAt,
         };
-      }),
+      })
     );
 
     // Get recent activity for this household
@@ -439,7 +464,7 @@ export const getHousehold = query({
           module: a.module,
           userName: user ? `${user.firstName} ${user.lastName}` : undefined,
         };
-      }),
+      })
     );
 
     return {
@@ -515,7 +540,9 @@ export const deactivateUser = mutation({
         module: "household",
         actionType: "other",
         entityType: "other",
-        description: `Admin deactivated user account${args.reason ? `: ${args.reason}` : ""}`,
+        description: `Admin deactivated user account${
+          args.reason ? `: ${args.reason}` : ""
+        }`,
       });
     }
 
@@ -564,7 +591,9 @@ export const reactivateUser = mutation({
         module: "household",
         actionType: "other",
         entityType: "other",
-        description: `Admin reactivated user account${args.reason ? `: ${args.reason}` : ""}`,
+        description: `Admin reactivated user account${
+          args.reason ? `: ${args.reason}` : ""
+        }`,
       });
     }
 
@@ -589,7 +618,7 @@ export const applyTierOverride = mutation({
       v.literal("foundations"),
       v.literal("heritage"),
       v.literal("legacy"),
-      v.literal("founders"),
+      v.literal("founders")
     ),
     expiresAt: v.optional(v.number()),
     reason: v.string(),
@@ -658,7 +687,9 @@ export const removeTierOverride = mutation({
       module: "household",
       actionType: "other",
       entityType: "household",
-      description: `Admin removed tier override${args.reason ? `: ${args.reason}` : ""}`,
+      description: `Admin removed tier override${
+        args.reason ? `: ${args.reason}` : ""
+      }`,
     });
 
     return { success: true };

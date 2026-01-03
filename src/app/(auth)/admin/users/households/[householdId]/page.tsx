@@ -5,7 +5,13 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -41,12 +47,18 @@ export default function HouseholdDetailPage() {
 
   const getTierBadge = (tier: string) => {
     const styles = {
-      foundations: "bg-pathible-forest/10 text-pathible-forest border-pathible-forest/20",
-      heritage: "bg-pathible-sage/20 text-pathible-sage border-pathible-sage/30",
+      foundations:
+        "bg-pathible-forest/10 text-pathible-forest border-pathible-forest/20",
+      heritage:
+        "bg-pathible-sage/20 text-pathible-sage border-pathible-sage/30",
       legacy: "bg-pathible-gold/20 text-pathible-gold border-pathible-gold/30",
       founders: "bg-primary text-primary-foreground border-primary",
     };
-    return <Badge className={styles[tier as keyof typeof styles] || ""}>{tier}</Badge>;
+    return (
+      <Badge className={styles[tier as keyof typeof styles] || ""}>
+        {tier}
+      </Badge>
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -54,9 +66,14 @@ export default function HouseholdDetailPage() {
       active: "bg-primary/10 text-primary border-primary/20",
       inactive: "bg-muted text-muted-foreground border-muted",
       cancelled: "bg-destructive/10 text-destructive border-destructive/20",
-      past_due: "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400",
+      past_due:
+        "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400",
     };
-    return <Badge className={styles[status as keyof typeof styles] || ""}>{status}</Badge>;
+    return (
+      <Badge className={styles[status as keyof typeof styles] || ""}>
+        {status}
+      </Badge>
+    );
   };
 
   const getRoleBadge = (role: string) => {
@@ -66,10 +83,15 @@ export default function HouseholdDetailPage() {
   const getMemberStatusBadge = (status: string) => {
     const styles = {
       active: "bg-primary/10 text-primary border-primary/20",
-      pending: "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400",
+      pending:
+        "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400",
       inactive: "bg-muted text-muted-foreground border-muted",
     };
-    return <Badge className={styles[status as keyof typeof styles] || ""}>{status}</Badge>;
+    return (
+      <Badge className={styles[status as keyof typeof styles] || ""}>
+        {status}
+      </Badge>
+    );
   };
 
   const formatActionType = (actionType: string): string => {
@@ -151,7 +173,9 @@ export default function HouseholdDetailPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="font-crimson text-3xl font-semibold">{household.household.name}</h1>
+          <h1 className="font-crimson text-3xl font-semibold">
+            {household.household.name}
+          </h1>
           {getTierBadge(household.household.subscriptionTier)}
         </div>
       </div>
@@ -159,7 +183,9 @@ export default function HouseholdDetailPage() {
       {/* Household Information */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-crimson text-xl">Household Information</CardTitle>
+          <CardTitle className="font-crimson text-xl">
+            Household Information
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -186,11 +212,15 @@ export default function HouseholdDetailPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Created</p>
-              <p className="font-medium">{formatDate(household.household._creationTime)}</p>
+              <p className="font-medium">
+                {formatDate(household.household._creationTime)}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Last Updated</p>
-              <p className="font-medium">{formatDate(household.household.updatedAt)}</p>
+              <p className="font-medium">
+                {formatDate(household.household.updatedAt)}
+              </p>
             </div>
           </div>
 
@@ -198,28 +228,55 @@ export default function HouseholdDetailPage() {
             <h3 className="font-semibold mb-4">Subscription Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Current Tier</p>
-                <div className="mt-1">{getTierBadge(household.household.subscriptionTier)}</div>
+                <p className="text-sm text-muted-foreground">
+                  Current Tier{" "}
+                  {household.household.tierOverride && (
+                    <Badge variant="outline" className="text-xs">
+                      Overriden
+                    </Badge>
+                  )}
+                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  {getTierBadge(household.household.subscriptionTier)}
+                  {household.household.tierOverride && (
+                    <>
+                      <span className="text-muted-foreground">/</span>
+                      {getTierBadge(household.household.tierOverride)}
+                    </>
+                  )}
+                </div>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Subscription Status</p>
-                <div className="mt-1">{getStatusBadge(household.household.subscriptionStatus)}</div>
+                <p className="text-sm text-muted-foreground">
+                  Subscription Status
+                </p>
+                <div className="mt-1">
+                  {getStatusBadge(household.household.subscriptionStatus)}
+                </div>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Storage Used</p>
-                <p className="font-medium">{formatBytes(household.household.storageUsedBytes)}</p>
+                <p className="font-medium">
+                  {formatBytes(household.household.storageUsedBytes)}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Document Count</p>
-                <p className="font-medium">{household.household.vaultDocumentCount || 0}</p>
+                <p className="font-medium">
+                  {household.household.vaultDocumentCount || 0}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Family Units</p>
-                <p className="font-medium">{household.household.familyUnitCount || 0}</p>
+                <p className="font-medium">
+                  {household.household.familyUnitCount || 0}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Members</p>
-                <p className="font-medium">{household.household.memberCount || 0}</p>
+                <p className="font-medium">
+                  {household.household.memberCount || 0}
+                </p>
               </div>
             </div>
           </div>
@@ -243,7 +300,9 @@ export default function HouseholdDetailPage() {
         </CardHeader>
         <CardContent>
           {household.members.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No members in this household</p>
+            <p className="text-center text-muted-foreground py-8">
+              No members in this household
+            </p>
           ) : (
             <Table>
               <TableHeader>
@@ -266,7 +325,9 @@ export default function HouseholdDetailPage() {
                         {member.firstName} {member.lastName}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{member.email}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {member.email}
+                    </TableCell>
                     <TableCell>{getRoleBadge(member.role)}</TableCell>
                     <TableCell>{getMemberStatusBadge(member.status)}</TableCell>
                     <TableCell className="text-muted-foreground">
@@ -283,12 +344,16 @@ export default function HouseholdDetailPage() {
       {/* Recent Activity */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-crimson text-xl">Recent Activity</CardTitle>
+          <CardTitle className="font-crimson text-xl">
+            Recent Activity
+          </CardTitle>
           <CardDescription>Latest actions in this household</CardDescription>
         </CardHeader>
         <CardContent>
           {household.recentActivity.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No recent activity</p>
+            <p className="text-center text-muted-foreground py-8">
+              No recent activity
+            </p>
           ) : (
             <div className="space-y-4">
               {household.recentActivity.map((activity) => (
@@ -297,9 +362,13 @@ export default function HouseholdDetailPage() {
                   className="flex items-start justify-between border-b border-border pb-4 last:border-0 last:pb-0"
                 >
                   <div>
-                    <p className="font-medium">{formatActionType(activity.actionType)}</p>
+                    <p className="font-medium">
+                      {formatActionType(activity.actionType)}
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      {activity.userName ? `By ${activity.userName}` : activity.description}
+                      {activity.userName
+                        ? `By ${activity.userName}`
+                        : activity.description}
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground whitespace-nowrap">
