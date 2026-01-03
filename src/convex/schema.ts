@@ -228,6 +228,9 @@ export default defineSchema({
     notes: v.optional(v.string()),
     createdBy: v.id("profiles"),
     updatedAt: v.number(),
+    // Tree visualization position (shared across household members)
+    treePositionX: v.optional(v.number()),
+    treePositionY: v.optional(v.number()),
   })
     .index("by_familyUnit", ["familyUnitId"])
     .index("by_household", ["householdId"])
@@ -235,6 +238,31 @@ export default defineSchema({
     .index("by_profileId", ["profileId"])
     .index("by_familyUnit_and_status", ["familyUnitId", "status"])
     .index("by_familyUnit_and_profileId", ["familyUnitId", "profileId"]),
+
+  /**
+   * Family relationships - explicit relationships between family members for tree visualization
+   * Stores directional relationships: person1 -> person2
+   */
+  familyRelationships: defineTable({
+    householdId: v.id("households"),
+    familyUnitId: v.id("familyUnits"),
+    person1Id: v.id("familyMembers"),
+    person2Id: v.id("familyMembers"),
+    relationshipType: v.union(
+      v.literal("parent_of"), // person1 is parent of person2
+      v.literal("spouse_of"), // person1 and person2 are spouses (symmetric)
+      v.literal("partner_of"), // person1 and person2 are partners (symmetric)
+    ),
+    marriageDate: v.optional(v.number()), // Unix timestamp
+    divorceDate: v.optional(v.number()), // Unix timestamp (if divorced)
+    createdBy: v.id("profiles"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_familyUnit", ["familyUnitId"])
+    .index("by_household", ["householdId"])
+    .index("by_person1", ["familyUnitId", "person1Id"])
+    .index("by_person2", ["familyUnitId", "person2Id"]),
 
   // ============================================================================
   // HERITAGE VAULT
@@ -748,6 +776,11 @@ export default defineSchema({
       v.literal("member_role_updated"),
       // Plan actions
       v.literal("plan_updated"),
+      // Legacy planning actions
+      v.literal("legal_document_created"),
+      v.literal("legal_document_updated"),
+      v.literal("legal_document_deleted"),
+      v.literal("legal_document_completed"),
       // Financial actions
       v.literal("asset_created"),
       v.literal("asset_updated"),
@@ -766,6 +799,11 @@ export default defineSchema({
       v.literal("family_member_created"),
       v.literal("family_member_updated"),
       v.literal("family_member_deleted"),
+      // Family relationship actions
+      v.literal("family_relationship_created"),
+      v.literal("family_relationship_updated"),
+      v.literal("family_relationship_deleted"),
+      v.literal("family_tree_positions_updated"),
       // Suggestion actions
       v.literal("suggestion_completed"),
       // Fallback
@@ -783,6 +821,7 @@ export default defineSchema({
         // Legacy entities
         v.literal("letter"),
         v.literal("plan"),
+        v.literal("legal_document"),
         // Household entities
         v.literal("household"),
         // Financial entities
@@ -792,6 +831,7 @@ export default defineSchema({
         // Family entities
         v.literal("family_unit"),
         v.literal("family_member"),
+        v.literal("family_relationship"),
         // Other
         v.literal("suggestion"),
         v.literal("other"),

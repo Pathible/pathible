@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, MessageCircle, Plus, Share2 } from "lucide-react";
+import { ArrowLeft, GitBranch, MessageCircle, Plus, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ComingSoonBadge } from "@/components/coming-soon";
+import { FamilyTreeView } from "@/components/family-tree";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -261,6 +262,10 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
         <Tabs defaultValue="members" className="space-y-6">
           <TabsList>
             <TabsTrigger value="members">Members</TabsTrigger>
+            <TabsTrigger value="tree">
+              <GitBranch className="h-4 w-4 mr-2" />
+              Tree
+            </TabsTrigger>
             <TabsTrigger value="shared">Shared Items</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
@@ -297,6 +302,10 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="tree">
+            <FamilyTreeView familyUnitId={unitId as Id<"familyUnits">} />
           </TabsContent>
 
           <TabsContent value="shared">
