@@ -119,6 +119,17 @@ export default defineSchema({
     // Vault document count counter (updated atomically on document create/delete)
     // Avoids O(n) full table scans for stats queries
     vaultDocumentCount: v.optional(v.number()),
+    // Admin tier override fields
+    tierOverride: v.optional(
+      v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+        v.literal("founders"),
+      ),
+    ),
+    tierOverrideExpiresAt: v.optional(v.number()), // Unix timestamp, optional for permanent overrides
+    tierOverrideReason: v.optional(v.string()), // Reason for the override
     updatedAt: v.number(),
   }).index("by_primaryContactId", ["primaryContactId"]),
 
