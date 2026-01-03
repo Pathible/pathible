@@ -70,11 +70,6 @@ const settingsNavItems = [
     href: "/admin/roles",
     icon: Shield,
   },
-  {
-    title: "System Settings",
-    href: "/admin/settings",
-    icon: Settings,
-  },
 ];
 
 export function AdminSidebar() {
@@ -110,7 +105,11 @@ export function AdminSidebar() {
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)} className="px-2">
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.href)}
+                      className="px-2"
+                    >
                       <Link href={item.href}>
                         <Icon className="h-4 w-4" />
                         <span>{item.title}</span>
@@ -136,7 +135,11 @@ export function AdminSidebar() {
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)} className="px-2">
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.href)}
+                      className="px-2"
+                    >
                       <Link href={item.href}>
                         <Icon className="h-4 w-4" />
                         <span>{item.title}</span>
