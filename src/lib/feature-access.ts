@@ -12,7 +12,7 @@
  */
 
 import { useAuth } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
   FEATURE_DISPLAY,
@@ -224,11 +224,22 @@ export const getFeatureMetadata = getFeatureMetadataFromSource;
  * ```
  */
 export function useEffectiveSubscription() {
+  // useConvexAuth tells us when Convex has received AND validated the auth token
+  // This is more reliable than Clerk's isLoaded which only tracks client-side state
+  const { isLoading: isConvexAuthLoading, isAuthenticated } = useConvexAuth();
   const subscription = useQuery(api.auth.getEffectiveSubscription);
 
+  // Consider loading if EITHER:
+  // 1. Convex auth is still syncing (JWT not yet validated by Convex)
+  // 2. Convex query is still pending
+  // This prevents the flash where we show "upgrade" before auth is fully synced
+  const isLoading = isConvexAuthLoading || subscription === undefined;
+
   return {
-    /** True while the query is loading */
-    isLoading: subscription === undefined,
+    /** True while Convex auth or subscription query is loading */
+    isLoading,
+    /** Whether the user is authenticated with Convex */
+    isAuthenticated,
     /** The effective tier (considering overrides), or null if not authenticated */
     effectiveTier: subscription?.effectiveTier ?? null,
     /** The actual subscription tier (what they're paying for) */
