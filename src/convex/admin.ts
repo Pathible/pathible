@@ -1,3 +1,4 @@
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin } from "./auth";
@@ -266,6 +267,142 @@ export const getIncompleteLegacyPlans = query({
     );
 
     return enrichedPlans;
+  },
+});
+
+/**
+ * List activity logs with filtering and pagination
+ */
+export const listActivityLogs = query({
+  args: {
+    search: v.optional(v.string()),
+    actionType: v.optional(v.string()),
+    module: v.optional(v.string()),
+    startDate: v.optional(v.number()),
+    endDate: v.optional(v.number()),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: v.object({
+    page: v.array(
+      v.object({
+        _id: v.id("activityLog"),
+        _creationTime: v.number(),
+        actionType: v.string(),
+        description: v.string(),
+        module: v.optional(v.string()),
+        entityType: v.optional(v.string()),
+        entityId: v.optional(v.string()),
+        userId: v.id("profiles"),
+        userName: v.string(),
+        householdId: v.id("households"),
+        householdName: v.optional(v.string()),
+      }),
+    ),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    // Start with base query ordered by creation time (descending)
+    const results = await ctx.db.query("activityLog").order("desc").paginate(args.paginationOpts);
+
+    // Apply filters in memory (since we can't efficiently filter on multiple fields in Convex)
+    let filteredResults = results.page;
+
+    // Filter by module
+    if (args.module) {
+      filteredResults = filteredResults.filter((log) => log.module === args.module);
+    }
+
+    // Filter by actionType
+    if (args.actionType) {
+      filteredResults = filteredResults.filter((log) => log.actionType === args.actionType);
+    }
+
+    // Filter by date range
+    if (args.startDate) {
+      const startDate = args.startDate;
+      filteredResults = filteredResults.filter((log) => log._creationTime >= startDate);
+    }
+    if (args.endDate) {
+      const endDate = args.endDate;
+      filteredResults = filteredResults.filter((log) => log._creationTime <= endDate);
+    }
+
+    // Filter by search term (search in description)
+    if (args.search?.trim()) {
+      const searchLower = args.search.toLowerCase();
+      filteredResults = filteredResults.filter((log) =>
+        log.description.toLowerCase().includes(searchLower),
+      );
+    }
+
+    // Enrich with user and household info
+    const enrichedLogs = await Promise.all(
+      filteredResults.map(async (log) => {
+        const profile = await ctx.db.get(log.userId);
+        const household = await ctx.db.get(log.householdId);
+
+        return {
+          _id: log._id,
+          _creationTime: log._creationTime,
+          actionType: log.actionType,
+          description: log.description,
+          module: log.module,
+          entityType: log.entityType,
+          entityId: log.entityId,
+          userId: log.userId,
+          userName: profile ? `${profile.firstName} ${profile.lastName}` : "Unknown User",
+          householdId: log.householdId,
+          householdName: household?.name,
+        };
+      }),
+    );
+
+    return {
+      page: enrichedLogs,
+      isDone: results.isDone,
+      continueCursor: results.continueCursor,
+    };
+  },
+});
+
+/**
+ * Get action type counts for filter dropdown hints
+ */
+export const getActionTypeCounts = query({
+  args: {},
+  returns: v.object({
+    total: v.number(),
+    byActionType: v.record(v.string(), v.number()),
+    byModule: v.record(v.string(), v.number()),
+  }),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    // Get all activity logs (limited to recent for performance)
+    const logs = await ctx.db.query("activityLog").order("desc").take(1000);
+
+    // Count by action type
+    const byActionType: Record<string, number> = {};
+    const byModule: Record<string, number> = {};
+
+    for (const log of logs) {
+      // Count action types
+      byActionType[log.actionType] = (byActionType[log.actionType] || 0) + 1;
+
+      // Count modules
+      if (log.module) {
+        byModule[log.module] = (byModule[log.module] || 0) + 1;
+      }
+    }
+
+    return {
+      total: logs.length,
+      byActionType,
+      byModule,
+    };
   },
 });
 
