@@ -1,103 +1,41 @@
 /**
  * Feature Access Control Utilities
  *
- * Single source of truth for feature identifiers and access checking.
- * Uses Clerk Billing's has() method for feature-based access control.
+ * IMPORTANT: This file now uses Convex as the source of truth for subscription tier,
+ * NOT Clerk Billing. This allows for tier overrides (promotional pricing).
  *
- * IMPORTANT: These slugs must match exactly what's configured in Clerk Dashboard.
- * Run /api/debug/clerk-billing to verify the current Clerk configuration.
+ * The `useEffectiveSubscription` hook queries Convex for the effective tier,
+ * which considers both the actual subscription tier and any override.
  *
- * @see https://clerk.com/docs/nextjs/guides/billing/for-b2c#control-access-with-features-and-plans
+ * @see src/convex/shared/subscriptionTiers.ts for tier definitions
+ * @see src/convex/auth.ts getEffectiveSubscription query
  */
 
 import { useAuth } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import {
+  FEATURE_DISPLAY,
+  FEATURE_SLUGS,
+  FEATURE_TIERS,
+  type FeatureSlug,
+  getFeatureMetadata as getFeatureMetadataFromSource,
+  type SubscriptionTier,
+  TIER_DISPLAY,
+  tierHasAccess,
+  tierHasFeatureAccess,
+} from "@/convex/shared/subscriptionTiers";
+
+// Re-export for backwards compatibility
+export { FEATURE_SLUGS, FEATURE_TIERS, type FeatureSlug };
 
 /**
  * Feature slugs from Clerk Dashboard
- * These MUST match the exact slugs configured in Clerk Billing
+ * @deprecated Use FEATURE_SLUGS from @/convex/shared/subscriptionTiers
  *
- * Plan hierarchy:
- * - Foundations: Base features
- * - Heritage: Foundations + advanced features
- * - Legacy: Heritage + premium features
+ * These MUST match the exact slugs configured in Clerk Billing
  */
-export const FEATURES = {
-  // ============================================================================
-  // HERITAGE VAULT FEATURES
-  // ============================================================================
-  /** Secure document storage with encryption (Foundations+) */
-  VAULT_DOCUMENT_STORAGE: "vault_document_storage",
-  /** Photo and video uploads (Foundations+) */
-  VAULT_PHOTO_VIDEO: "vault_photo_video",
-  /** Folder organization (Foundations+) */
-  VAULT_FOLDERS: "vault_folders",
-  /** Tags and collections for organization (Heritage+) */
-  VAULT_TAGS_COLLECTIONS: "vault_tags_collections",
-  /** Voice memo and oral history uploads (Heritage+) */
-  VAULT_VOICE_UPLOADS: "vault_voice_uploads",
-  /** Guided organization wizards (Heritage+) */
-  VAULT_GUIDED_ORGANIZATION: "vault_guided_organization",
-
-  // ============================================================================
-  // FINANCIAL INTELLIGENCE FEATURES
-  // ============================================================================
-  /** Financial account overview (Foundations+) */
-  FINANCIAL_OVERVIEW: "financial_overview",
-  /** Detailed account summaries (Heritage+) */
-  FINANCIAL_SUMMARIES: "financial_summaries",
-  /** AI-powered financial insights (Heritage+) */
-  FINANCIAL_INSIGHTS: "financial_insights",
-  /** Spending categorization (Legacy) */
-  FINANCIAL_SPENDING_CATEGORIES: "financial_spending_categories",
-  /** Trend analysis over time (Legacy) */
-  FINANCIAL_TRENDS: "financial_trends",
-
-  // ============================================================================
-  // FAMILY NETWORK FEATURES
-  // ============================================================================
-  /** Add family members to household (Foundations+) */
-  FAMILY_MEMBERS: "family_members",
-  /** Rich member profiles (Heritage+) */
-  FAMILY_PROFILES: "family_profiles",
-  /** Family messaging (Heritage+) */
-  FAMILY_MESSAGING: "family_messaging",
-  /** Relationship mapping and family tree (Legacy) */
-  FAMILY_RELATIONSHIPS: "family_relationships",
-
-  // ============================================================================
-  // LEGACY BUILDER FEATURES
-  // ============================================================================
-  /** Guided questionnaires for life story (Legacy) */
-  LEGACY_QUESTIONNAIRES: "legacy_questionnaires",
-  /** Story templates for legacy documents (Legacy) */
-  LEGACY_STORY_TEMPLATES: "legacy_story_templates",
-
-  // ============================================================================
-  // WISDOM & EDUCATION FEATURES
-  // ============================================================================
-  /** Wisdom entries for values and lessons (Heritage+) */
-  WISDOM_ENTRIES: "wisdom_entries",
-  /** Shared wisdom pages for collaboration (Legacy) */
-  WISDOM_SHARED_PAGES: "wisdom_shared_pages",
-
-  // ============================================================================
-  // SUPPORT FEATURES
-  // ============================================================================
-  /** Standard email support (Foundations) */
-  STANDARD_SUPPORT: "standard_support",
-  /** Priority support with faster response (Heritage) */
-  SUPPORT_PRIORITY: "support_priority",
-  /** Concierge support with personal rep (Legacy) */
-  SUPPORT_CONCIERGE: "support_concierge",
-
-  // ============================================================================
-  // EARLY ACCESS
-  // ============================================================================
-  /** Early access to new features (Heritage+) */
-  EARLY_ACCESS_FEATURES: "early_access_features",
-} as const;
-
-export type FeatureSlug = (typeof FEATURES)[keyof typeof FEATURES];
+export const FEATURES = FEATURE_SLUGS;
 
 /**
  * Feature metadata for UI display
@@ -106,141 +44,25 @@ export type FeatureSlug = (typeof FEATURES)[keyof typeof FEATURES];
 export const FEATURE_METADATA: Record<
   FeatureSlug,
   { name: string; description: string; requiredPlan: string }
-> = {
-  // Heritage Vault
-  [FEATURES.VAULT_DOCUMENT_STORAGE]: {
-    name: "Secure Document Storage",
-    description: "Store important documents with bank-level encryption",
-    requiredPlan: "Foundations",
-  },
-  [FEATURES.VAULT_PHOTO_VIDEO]: {
-    name: "Photo & Video Uploads",
-    description: "Preserve family memories with photo and video storage",
-    requiredPlan: "Foundations",
-  },
-  [FEATURES.VAULT_FOLDERS]: {
-    name: "Folder Organization",
-    description: "Create folders to organize your documents",
-    requiredPlan: "Foundations",
-  },
-  [FEATURES.VAULT_TAGS_COLLECTIONS]: {
-    name: "Tags & Collections",
-    description: "Organize with tags and curated collections",
-    requiredPlan: "Heritage",
-  },
-  [FEATURES.VAULT_VOICE_UPLOADS]: {
-    name: "Voice Recordings",
-    description: "Record oral histories and voice memos",
-    requiredPlan: "Heritage",
-  },
-  [FEATURES.VAULT_GUIDED_ORGANIZATION]: {
-    name: "Guided Organization",
-    description: "Step-by-step wizards for document management",
-    requiredPlan: "Heritage",
-  },
-
-  // Financial Intelligence
-  [FEATURES.FINANCIAL_OVERVIEW]: {
-    name: "Financial Overview",
-    description: "See all your linked accounts in one place",
-    requiredPlan: "Foundations",
-  },
-  [FEATURES.FINANCIAL_SUMMARIES]: {
-    name: "Account Summaries",
-    description: "Detailed summaries for each financial account",
-    requiredPlan: "Heritage",
-  },
-  [FEATURES.FINANCIAL_INSIGHTS]: {
-    name: "Financial Insights",
-    description: "AI-powered insights about your financial health",
-    requiredPlan: "Heritage",
-  },
-  [FEATURES.FINANCIAL_SPENDING_CATEGORIES]: {
-    name: "Spending Categories",
-    description: "Automatic categorization of your spending",
-    requiredPlan: "Legacy",
-  },
-  [FEATURES.FINANCIAL_TRENDS]: {
-    name: "Trend Analysis",
-    description: "View spending and saving trends over time",
-    requiredPlan: "Legacy",
-  },
-
-  // Family Network
-  [FEATURES.FAMILY_MEMBERS]: {
-    name: "Family Members",
-    description: "Add family members to your household",
-    requiredPlan: "Foundations",
-  },
-  [FEATURES.FAMILY_PROFILES]: {
-    name: "Member Profiles",
-    description: "Rich profiles for each family member",
-    requiredPlan: "Heritage",
-  },
-  [FEATURES.FAMILY_MESSAGING]: {
-    name: "Family Messaging",
-    description: "Private messaging within your household",
-    requiredPlan: "Heritage",
-  },
-  [FEATURES.FAMILY_RELATIONSHIPS]: {
-    name: "Relationship Mapping",
-    description: "Interactive family tree with relationship visualization",
-    requiredPlan: "Legacy",
-  },
-
-  // Legacy Builder
-  [FEATURES.LEGACY_QUESTIONNAIRES]: {
-    name: "Guided Questionnaires",
-    description: "Thoughtful prompts to document your life story",
-    requiredPlan: "Legacy",
-  },
-  [FEATURES.LEGACY_STORY_TEMPLATES]: {
-    name: "Story Templates",
-    description: "Pre-built templates for common legacy topics",
-    requiredPlan: "Legacy",
-  },
-
-  // Wisdom
-  [FEATURES.WISDOM_ENTRIES]: {
-    name: "Wisdom Entries",
-    description: "Document family values, lessons, and life advice",
-    requiredPlan: "Heritage",
-  },
-  [FEATURES.WISDOM_SHARED_PAGES]: {
-    name: "Shared Wisdom Pages",
-    description: "Collaborative pages for family wisdom",
-    requiredPlan: "Legacy",
-  },
-
-  // Support
-  [FEATURES.STANDARD_SUPPORT]: {
-    name: "Standard Support",
-    description: "Email support with 48-hour response time",
-    requiredPlan: "Foundations",
-  },
-  [FEATURES.SUPPORT_PRIORITY]: {
-    name: "Priority Support",
-    description: "24-hour response time with live chat",
-    requiredPlan: "Heritage",
-  },
-  [FEATURES.SUPPORT_CONCIERGE]: {
-    name: "Concierge Support",
-    description: "Personal support rep with same-day response",
-    requiredPlan: "Legacy",
-  },
-
-  // Early Access
-  [FEATURES.EARLY_ACCESS_FEATURES]: {
-    name: "Early Feature Access",
-    description: "Get new features before general release",
-    requiredPlan: "Heritage",
-  },
-};
+> = Object.fromEntries(
+  Object.values(FEATURE_SLUGS).map((slug) => {
+    const display = FEATURE_DISPLAY[slug];
+    const requiredTier = FEATURE_TIERS[slug];
+    return [
+      slug,
+      {
+        name: display.name,
+        description: display.description,
+        requiredPlan: TIER_DISPLAY[requiredTier].label,
+      },
+    ];
+  }),
+) as Record<FeatureSlug, { name: string; description: string; requiredPlan: string }>;
 
 /**
  * Valid feature slugs for runtime validation
  */
-const VALID_FEATURE_SLUGS = new Set(Object.values(FEATURES));
+const VALID_FEATURE_SLUGS = new Set(Object.values(FEATURE_SLUGS));
 
 /**
  * Check if user has access to a specific feature (server-side)
@@ -371,4 +193,165 @@ export function useMultipleFeatureAccess(featureList: FeatureSlug[]) {
  */
 export function getRequiredPlanForFeature(feature: FeatureSlug): string {
   return FEATURE_METADATA[feature]?.requiredPlan ?? "Unknown";
+}
+
+/**
+ * Get full feature metadata including required tier
+ * @see getFeatureMetadata from @/convex/shared/subscriptionTiers
+ */
+export const getFeatureMetadata = getFeatureMetadataFromSource;
+
+// ============================================================================
+// CONVEX-BASED HOOKS (Source of Truth for Feature Gating)
+// ============================================================================
+
+/**
+ * Hook to get the effective subscription tier from Convex
+ *
+ * This is the CLIENT-SIDE source of truth for subscription access.
+ * It queries Convex for the effective tier (considering overrides).
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { effectiveTier, isLoading } = useEffectiveSubscription();
+ *
+ *   if (isLoading) return <Skeleton />;
+ *   if (!effectiveTier) return <NotAuthenticated />;
+ *
+ *   return <div>Your plan: {effectiveTier}</div>;
+ * }
+ * ```
+ */
+export function useEffectiveSubscription() {
+  const subscription = useQuery(api.auth.getEffectiveSubscription);
+
+  return {
+    /** True while the query is loading */
+    isLoading: subscription === undefined,
+    /** The effective tier (considering overrides), or null if not authenticated */
+    effectiveTier: subscription?.effectiveTier ?? null,
+    /** The actual subscription tier (what they're paying for) */
+    subscriptionTier: subscription?.subscriptionTier ?? null,
+    /** Whether there's an active tier override */
+    hasOverride: subscription?.hasOverride ?? false,
+    /** The subscription status (active, inactive, cancelled, past_due) */
+    subscriptionStatus: subscription?.subscriptionStatus ?? null,
+    /** The household ID */
+    householdId: subscription?.householdId ?? null,
+    /** Full subscription data object */
+    subscription,
+  };
+}
+
+/**
+ * Hook to check if user has access to a specific tier
+ *
+ * Uses the effective tier from Convex (NOT Clerk).
+ *
+ * @example
+ * ```tsx
+ * function HeritageFeature() {
+ *   const { hasAccess, isLoading } = useEffectiveTierAccess("heritage");
+ *
+ *   if (isLoading) return <Skeleton />;
+ *   if (!hasAccess) return <UpgradePrompt requiredTier="heritage" />;
+ *
+ *   return <HeritageUI />;
+ * }
+ * ```
+ */
+export function useEffectiveTierAccess(requiredTier: SubscriptionTier) {
+  const { effectiveTier, isLoading, subscription } = useEffectiveSubscription();
+
+  const hasAccess = effectiveTier ? tierHasAccess(effectiveTier, requiredTier) : false;
+
+  return {
+    isLoading,
+    hasAccess,
+    effectiveTier,
+    requiredTier,
+    subscription,
+  };
+}
+
+/**
+ * Hook to check if user has access to a specific feature
+ *
+ * Uses the effective tier from Convex (NOT Clerk).
+ * This is the RECOMMENDED way to check feature access in components.
+ *
+ * @example
+ * ```tsx
+ * function TagsSection() {
+ *   const { hasAccess, isLoading, requiredTier } = useEffectiveFeatureAccess(
+ *     FEATURES.VAULT_TAGS_COLLECTIONS
+ *   );
+ *
+ *   if (isLoading) return <Skeleton />;
+ *   if (!hasAccess) return <UpgradePrompt requiredTier={requiredTier} />;
+ *
+ *   return <TagsUI />;
+ * }
+ * ```
+ */
+export function useEffectiveFeatureAccess(feature: FeatureSlug) {
+  const { effectiveTier, isLoading, subscription } = useEffectiveSubscription();
+
+  const requiredTier = FEATURE_TIERS[feature];
+  const hasAccess = effectiveTier ? tierHasFeatureAccess(effectiveTier, feature) : false;
+
+  return {
+    isLoading,
+    hasAccess,
+    effectiveTier,
+    requiredTier,
+    featureMetadata: FEATURE_METADATA[feature],
+    subscription,
+  };
+}
+
+/**
+ * Hook to check multiple features at once
+ *
+ * Uses the effective tier from Convex (NOT Clerk).
+ *
+ * @example
+ * ```tsx
+ * function VaultSection() {
+ *   const { features, isLoading, hasAny } = useEffectiveMultipleFeatureAccess([
+ *     FEATURES.VAULT_TAGS_COLLECTIONS,
+ *     FEATURES.VAULT_VOICE_UPLOADS,
+ *   ]);
+ *
+ *   if (isLoading) return <Skeleton />;
+ *
+ *   return (
+ *     <>
+ *       {features.vault_tags_collections && <TagsUI />}
+ *       {features.vault_voice_uploads && <VoiceUI />}
+ *     </>
+ *   );
+ * }
+ * ```
+ */
+export function useEffectiveMultipleFeatureAccess(featureList: FeatureSlug[]) {
+  const { effectiveTier, isLoading, subscription } = useEffectiveSubscription();
+
+  const features = featureList.reduce(
+    (acc, feature) => {
+      acc[feature] = effectiveTier ? tierHasFeatureAccess(effectiveTier, feature) : false;
+      return acc;
+    },
+    {} as Record<FeatureSlug, boolean>,
+  );
+
+  return {
+    isLoading,
+    features,
+    hasAny: Object.values(features).some(Boolean),
+    hasAll: Object.values(features).every(Boolean),
+    effectiveTier,
+    subscription,
+  };
 }
