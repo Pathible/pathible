@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { TierOverrideCard } from "../../components/tier-override-card";
 
 export default function HouseholdDetailPage() {
   const params = useParams();
@@ -224,6 +225,15 @@ export default function HouseholdDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Tier Override */}
+      <TierOverrideCard
+        householdId={household.household._id}
+        currentTier={household.household.subscriptionTier}
+        tierOverride={household.household.tierOverride}
+        tierOverrideExpiresAt={household.household.tierOverrideExpiresAt}
+        tierOverrideReason={household.household.tierOverrideReason}
+      />
 
       {/* Household Members */}
       <Card>

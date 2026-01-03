@@ -458,10 +458,10 @@ export const getHousehold = query({
         familyUnitCount: household.familyUnitCount,
         vaultDocumentCount: household.vaultDocumentCount,
         updatedAt: household.updatedAt,
-        // These fields will be added to schema later
-        tierOverride: undefined,
-        tierOverrideExpiresAt: undefined,
-        tierOverrideReason: undefined,
+        // Tier override fields
+        tierOverride: household.tierOverride,
+        tierOverrideExpiresAt: household.tierOverrideExpiresAt,
+        tierOverrideReason: household.tierOverrideReason,
       },
       members: enrichedMembers,
       recentActivity: enrichedActivity,
@@ -603,10 +603,11 @@ export const applyTierOverride = mutation({
       throw new Error("Household not found");
     }
 
-    // TODO: Update schema to include tierOverride fields
-    // For now, we'll just update the tier directly
+    // Apply tier override
     await ctx.db.patch(args.householdId, {
-      subscriptionTier: args.tier,
+      tierOverride: args.tier,
+      tierOverrideExpiresAt: args.expiresAt,
+      tierOverrideReason: args.reason,
       updatedAt: Date.now(),
     });
 
@@ -642,8 +643,13 @@ export const removeTierOverride = mutation({
       throw new Error("Household not found");
     }
 
-    // TODO: Clear tierOverride fields when schema is updated
-    // For now, this is a placeholder
+    // Clear tier override fields
+    await ctx.db.patch(args.householdId, {
+      tierOverride: undefined,
+      tierOverrideExpiresAt: undefined,
+      tierOverrideReason: undefined,
+      updatedAt: Date.now(),
+    });
 
     // Log the action
     await ctx.db.insert("activityLog", {
