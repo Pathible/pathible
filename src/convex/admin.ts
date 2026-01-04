@@ -111,7 +111,7 @@ export const getRecentActivity = query({
           description: activity.description,
           module: activity.module,
           userName: profile ? `${profile.firstName} ${profile.lastName}` : undefined,
-          userEmail: undefined, // We don't store email in profiles
+          userEmail: profile?.email ?? undefined,
         };
       }),
     );

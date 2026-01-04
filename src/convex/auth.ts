@@ -151,6 +151,7 @@ const profileReturnValidator = v.object({
   _id: v.id("profiles"),
   _creationTime: v.number(),
   userId: v.string(),
+  email: v.optional(v.string()),
   firstName: v.string(),
   lastName: v.string(),
   avatarUrl: v.optional(v.string()),
@@ -224,6 +225,18 @@ export async function requireAuth(ctx: QueryCtx | MutationCtx): Promise<Authenti
   // Reject soft-deleted profiles
   if (profile.deletedAt) {
     throw new Error("Account has been deleted");
+  }
+
+  // Backfill email if missing (only in mutation context)
+  // This ensures existing users get their email stored on next login
+  if (!profile.email && user.email && "patch" in ctx.db) {
+    const mutationCtx = ctx as MutationCtx;
+    await mutationCtx.db.patch(profile._id, {
+      email: user.email,
+      updatedAt: Date.now(),
+    });
+    // Update the profile object we return
+    profile.email = user.email;
   }
 
   return {
@@ -396,12 +409,14 @@ export async function requireSubscriptionTier(
 ): Promise<Doc<"households">> {
   const household = await requireActiveSubscription(ctx, householdId);
 
-  const currentLevel = TIER_LEVELS[household.subscriptionTier];
+  // Use tierOverride if set, otherwise fall back to subscriptionTier
+  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const currentLevel = TIER_LEVELS[effectiveTier];
   const requiredLevel = TIER_LEVELS[requiredTier];
 
   if (currentLevel < requiredLevel) {
     throw new Error(
-      `This feature requires the ${requiredTier} plan or higher. Current plan: ${household.subscriptionTier}`,
+      `This feature requires the ${requiredTier} plan or higher. Current plan: ${effectiveTier}`,
     );
   }
 
@@ -464,7 +479,9 @@ export async function checkStorageQuota(
   additionalBytes: number = 0,
 ): Promise<{ currentBytes: number; maxBytes: number; remainingBytes: number }> {
   const household = await requireActiveSubscription(ctx, householdId);
-  const limits = PLAN_LIMITS[household.subscriptionTier];
+  // Use tierOverride if set, otherwise fall back to subscriptionTier
+  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const limits = PLAN_LIMITS[effectiveTier];
 
   // Use pre-computed counter (defaults to 0 for backwards compatibility)
   const currentBytes = household.storageUsedBytes ?? 0;
@@ -506,14 +523,16 @@ export async function checkFamilyMemberLimit(
   checkingForNewMember: boolean = false,
 ): Promise<{ currentCount: number; maxCount: number; canAddMore: boolean }> {
   const household = await requireActiveSubscription(ctx, householdId);
-  const limits = PLAN_LIMITS[household.subscriptionTier];
+  // Use tierOverride if set, otherwise fall back to subscriptionTier
+  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const limits = PLAN_LIMITS[effectiveTier];
 
   const nonOwnerCount = await getMemberCountFromHousehold(ctx, household);
   const canAddMore = nonOwnerCount < limits.familyMembersMax;
 
   if (checkingForNewMember && !canAddMore) {
     throw new Error(
-      `Family member limit reached. Your ${household.subscriptionTier} plan allows ${formatLimit(
+      `Family member limit reached. Your ${effectiveTier} plan allows ${formatLimit(
         limits.familyMembersMax,
       )} member(s). Upgrade for more.`,
     );
@@ -546,14 +565,16 @@ export async function checkFamilyUnitLimit(
   checkingForNewUnit: boolean = false,
 ): Promise<{ currentCount: number; maxCount: number; canAddMore: boolean }> {
   const household = await requireActiveSubscription(ctx, householdId);
-  const limits = PLAN_LIMITS[household.subscriptionTier];
+  // Use tierOverride if set, otherwise fall back to subscriptionTier
+  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const limits = PLAN_LIMITS[effectiveTier];
 
   const currentCount = await getFamilyUnitCount(ctx, household);
   const canAddMore = currentCount < limits.familyUnitsMax;
 
   if (checkingForNewUnit && !canAddMore) {
     throw new Error(
-      `Family unit limit reached. Your ${household.subscriptionTier} plan allows ${formatLimit(
+      `Family unit limit reached. Your ${effectiveTier} plan allows ${formatLimit(
         limits.familyUnitsMax,
       )} family unit(s). Upgrade for more.`,
     );

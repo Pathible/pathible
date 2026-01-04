@@ -14,12 +14,13 @@ export default defineSchema({
   // ============================================================================
 
   /**
-   * User profiles - extends Better Auth user data with additional profile information
-   * Better Auth automatically manages the _better_auth_users table
-   * Note: userId is v.string() not v.id() because Better Auth manages user IDs internally
+   * User profiles - extends Clerk user data with additional profile information
+   * Clerk handles authentication and provides user identity via JWT
+   * Note: userId is v.string() because it's the Clerk user ID (subject from JWT)
    */
   profiles: defineTable({
-    userId: v.string(), // Better Auth user ID
+    userId: v.string(), // Clerk user ID
+    email: v.optional(v.string()), // User's email from Clerk (optional for backward compatibility)
     firstName: v.string(),
     lastName: v.string(),
     avatarUrl: v.optional(v.string()),
@@ -646,11 +647,57 @@ export default defineSchema({
   emailTemplates: defineTable({
     name: v.string(), // Unique template identifier
     subject: v.string(),
-    content: v.string(), // HTML template with variable placeholders
+    content: v.string(), // Markdown template with variable placeholders
     description: v.optional(v.string()),
     variables: v.array(v.string()), // Available template variables
+    category: v.optional(
+      v.union(
+        v.literal("onboarding"),
+        v.literal("retargeting"),
+        v.literal("announcements"),
+        v.literal("legacy"),
+        v.literal("invitations"),
+        v.literal("digest"),
+        v.literal("system"),
+        v.literal("other"),
+      ),
+    ),
     updatedAt: v.number(),
   }).index("by_name", ["name"]),
+
+  /**
+   * Sent emails - log of all emails sent through the admin system
+   */
+  sentEmails: defineTable({
+    subject: v.string(),
+    content: v.string(), // Stored markdown content
+    htmlContent: v.string(), // Rendered HTML sent to Resend
+    templateId: v.optional(v.id("emailTemplates")),
+    recipientType: v.union(
+      v.literal("individual"),
+      v.literal("all_users"),
+      v.literal("by_tier"),
+      v.literal("household_owners"),
+    ),
+    recipientFilter: v.optional(
+      v.object({
+        tiers: v.optional(v.array(v.string())),
+        userIds: v.optional(v.array(v.id("profiles"))),
+      }),
+    ),
+    recipientCount: v.number(),
+    sentBy: v.id("profiles"), // Admin who sent
+    status: v.union(
+      v.literal("sent"),
+      v.literal("partial"), // Some failed
+      v.literal("failed"),
+    ),
+    errorMessage: v.optional(v.string()),
+    resendBatchId: v.optional(v.string()), // For tracking with Resend
+  })
+    .index("by_sentBy", ["sentBy"])
+    .index("by_status", ["status"])
+    .index("by_templateId", ["templateId"]),
 
   // ============================================================================
   // GUIDED TOURS

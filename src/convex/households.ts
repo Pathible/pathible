@@ -128,6 +128,15 @@ export const list = query({
           v.literal("cancelled"),
           v.literal("past_due"),
         ),
+        tierOverride: v.optional(
+          v.union(
+            v.literal("foundations"),
+            v.literal("heritage"),
+            v.literal("legacy"),
+            v.literal("founders"),
+          ),
+        ),
+        tierOverrideReason: v.optional(v.string()),
         updatedAt: v.number(),
         // Include the user's role in this household
         userRole: v.union(
