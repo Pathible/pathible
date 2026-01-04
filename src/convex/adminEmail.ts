@@ -37,16 +37,19 @@ export const listTemplates = query({
           v.literal("invitations"),
           v.literal("digest"),
           v.literal("system"),
-          v.literal("other"),
-        ),
+          v.literal("other")
+        )
       ),
       updatedAt: v.number(),
-    }),
+    })
   ),
   handler: async (ctx) => {
     await requireAdmin(ctx);
 
-    const templates = await ctx.db.query("emailTemplates").order("desc").collect();
+    const templates = await ctx.db
+      .query("emailTemplates")
+      .order("desc")
+      .collect();
 
     return templates.map((t) => ({
       _id: t._id,
@@ -83,12 +86,12 @@ export const getTemplate = query({
           v.literal("invitations"),
           v.literal("digest"),
           v.literal("system"),
-          v.literal("other"),
-        ),
+          v.literal("other")
+        )
       ),
       updatedAt: v.number(),
     }),
-    v.null(),
+    v.null()
   ),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -135,8 +138,8 @@ export const createTemplate = mutation({
         v.literal("invitations"),
         v.literal("digest"),
         v.literal("system"),
-        v.literal("other"),
-      ),
+        v.literal("other")
+      )
     ),
   },
   returns: v.id("emailTemplates"),
@@ -189,8 +192,8 @@ export const updateTemplate = mutation({
         v.literal("invitations"),
         v.literal("digest"),
         v.literal("system"),
-        v.literal("other"),
-      ),
+        v.literal("other")
+      )
     ),
   },
   returns: v.object({ success: v.boolean() }),
@@ -279,10 +282,10 @@ export const getSentEmail = query({
         v.object({
           tiers: v.optional(v.array(v.string())),
           userIds: v.optional(v.array(v.id("profiles"))),
-        }),
+        })
       ),
     }),
-    v.null(),
+    v.null()
   ),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -299,7 +302,9 @@ export const getSentEmail = query({
 
     // Get sender name
     const sender = await ctx.db.get(email.sentBy);
-    const sentByName = sender ? `${sender.firstName} ${sender.lastName}` : "Unknown";
+    const sentByName = sender
+      ? `${sender.firstName} ${sender.lastName}`
+      : "Unknown";
 
     return {
       _id: email._id,
@@ -336,7 +341,7 @@ export const listSentEmails = query({
         templateName: v.optional(v.string()),
         sentByName: v.string(),
         status: v.string(),
-      }),
+      })
     ),
     isDone: v.boolean(),
     continueCursor: v.string(),
@@ -344,7 +349,10 @@ export const listSentEmails = query({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
 
-    const results = await ctx.db.query("sentEmails").order("desc").paginate(args.paginationOpts);
+    const results = await ctx.db
+      .query("sentEmails")
+      .order("desc")
+      .paginate(args.paginationOpts);
 
     const enrichedEmails = await Promise.all(
       results.page.map(async (email) => {
@@ -357,7 +365,9 @@ export const listSentEmails = query({
 
         // Get sender name
         const sender = await ctx.db.get(email.sentBy);
-        const sentByName = sender ? `${sender.firstName} ${sender.lastName}` : "Unknown";
+        const sentByName = sender
+          ? `${sender.firstName} ${sender.lastName}`
+          : "Unknown";
 
         return {
           _id: email._id,
@@ -369,7 +379,7 @@ export const listSentEmails = query({
           sentByName,
           status: email.status,
         };
-      }),
+      })
     );
 
     return {
@@ -393,7 +403,7 @@ export const getRecipientCount = query({
       v.literal("individual"),
       v.literal("all_users"),
       v.literal("by_tier"),
-      v.literal("household_owners"),
+      v.literal("household_owners")
     ),
     tiers: v.optional(v.array(v.string())),
     userIds: v.optional(v.array(v.id("profiles"))),
@@ -429,16 +439,18 @@ export const getRecipientCount = query({
       let total = 0;
 
       for (const tier of selectedTiers) {
-        const tierHouseholds = households.filter((h) => h.subscriptionTier === tier);
+        const tierHouseholds = households.filter(
+          (h) => h.subscriptionTier === tier
+        );
         const tierMemberships = await Promise.all(
           tierHouseholds.map((h) =>
             ctx.db
               .query("householdMemberships")
               .withIndex("by_household_and_status", (q) =>
-                q.eq("householdId", h._id).eq("status", "active"),
+                q.eq("householdId", h._id).eq("status", "active")
               )
-              .collect(),
-          ),
+              .collect()
+          )
         );
 
         // Get unique user IDs
@@ -458,7 +470,9 @@ export const getRecipientCount = query({
 
     if (args.recipientType === "household_owners") {
       const memberships = await ctx.db.query("householdMemberships").collect();
-      const owners = memberships.filter((m) => m.role === "owner" && m.status === "active");
+      const owners = memberships.filter(
+        (m) => m.role === "owner" && m.status === "active"
+      );
       const uniqueOwners = new Set(owners.map((o) => o.userId.toString()));
       return {
         count: uniqueOwners.size,
@@ -481,7 +495,7 @@ export const searchUsersForEmail = query({
       firstName: v.string(),
       lastName: v.string(),
       email: v.string(),
-    }),
+    })
   ),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -529,17 +543,21 @@ export const recordSentEmail = internalMutation({
       v.literal("individual"),
       v.literal("all_users"),
       v.literal("by_tier"),
-      v.literal("household_owners"),
+      v.literal("household_owners")
     ),
     recipientFilter: v.optional(
       v.object({
         tiers: v.optional(v.array(v.string())),
         userIds: v.optional(v.array(v.id("profiles"))),
-      }),
+      })
     ),
     recipientCount: v.number(),
     sentBy: v.id("profiles"),
-    status: v.union(v.literal("sent"), v.literal("partial"), v.literal("failed")),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("partial"),
+      v.literal("failed")
+    ),
     errorMessage: v.optional(v.string()),
     resendBatchId: v.optional(v.string()),
   },
@@ -570,7 +588,7 @@ export const getRecipientsForEmail = query({
       v.literal("individual"),
       v.literal("all_users"),
       v.literal("by_tier"),
-      v.literal("household_owners"),
+      v.literal("household_owners")
     ),
     tiers: v.optional(v.array(v.string())),
     userIds: v.optional(v.array(v.id("profiles"))),
@@ -584,7 +602,7 @@ export const getRecipientsForEmail = query({
       clerkUserId: v.string(),
       householdName: v.optional(v.string()),
       subscriptionTier: v.optional(v.string()),
-    }),
+    })
   ),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -659,7 +677,9 @@ export const getRecipientsForEmail = query({
       }
     } else if (args.recipientType === "by_tier" && args.tiers) {
       const households = await ctx.db.query("households").collect();
-      const tierHouseholds = households.filter((h) => args.tiers?.includes(h.subscriptionTier));
+      const tierHouseholds = households.filter((h) =>
+        args.tiers?.includes(h.subscriptionTier)
+      );
 
       const seenUserIds = new Set<string>();
 
@@ -667,7 +687,7 @@ export const getRecipientsForEmail = query({
         const memberships = await ctx.db
           .query("householdMemberships")
           .withIndex("by_household_and_status", (q) =>
-            q.eq("householdId", household._id).eq("status", "active"),
+            q.eq("householdId", household._id).eq("status", "active")
           )
           .collect();
 
@@ -691,7 +711,9 @@ export const getRecipientsForEmail = query({
       }
     } else if (args.recipientType === "household_owners") {
       const memberships = await ctx.db.query("householdMemberships").collect();
-      const owners = memberships.filter((m) => m.role === "owner" && m.status === "active");
+      const owners = memberships.filter(
+        (m) => m.role === "owner" && m.status === "active"
+      );
 
       const seenUserIds = new Set<string>();
 
@@ -732,7 +754,7 @@ export const sendEmail = action({
       v.literal("individual"),
       v.literal("all_users"),
       v.literal("by_tier"),
-      v.literal("household_owners"),
+      v.literal("household_owners")
     ),
     tiers: v.optional(v.array(v.string())),
     userIds: v.optional(v.array(v.id("profiles"))),
@@ -741,7 +763,7 @@ export const sendEmail = action({
         email: v.string(),
         firstName: v.string(),
         lastName: v.string(),
-      }),
+      })
     ),
   },
   returns: v.object({
@@ -751,7 +773,10 @@ export const sendEmail = action({
   }),
   handler: async (ctx, args) => {
     // Get current admin profile
-    const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal, {});
+    const { profile } = await ctx.runQuery(
+      internal.auth.requireAuthInternal,
+      {}
+    );
 
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -787,7 +812,8 @@ export const sendEmail = action({
         for (const recipient of batch) {
           try {
             // Substitute variables for this recipient
-            const fullName = `${recipient.firstName} ${recipient.lastName}`.trim();
+            const fullName =
+              `${recipient.firstName} ${recipient.lastName}`.trim();
             const personalizedSubject = args.subject
               .replace(/\{\{firstName\}\}/g, recipient.firstName || "")
               .replace(/\{\{lastName\}\}/g, recipient.lastName || "")
@@ -812,6 +838,7 @@ export const sendEmail = action({
 
             const response = await resend.emails.send({
               from: "Pathible <noreply@app.pathible.com>",
+              replyTo: "support@pathible.com",
               to: recipient.email,
               subject: personalizedSubject,
               html: personalizedHtml,
@@ -881,7 +908,10 @@ export const sendTestEmail = action({
   returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
   handler: async (ctx, args) => {
     // Verify admin access
-    const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal, {});
+    const { profile } = await ctx.runQuery(
+      internal.auth.requireAuthInternal,
+      {}
+    );
 
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -926,6 +956,7 @@ export const sendTestEmail = action({
     try {
       const response = await resend.emails.send({
         from: "Pathible <noreply@app.pathible.com>",
+        replyTo: "support@pathible.com",
         to: args.toEmail,
         subject: `[TEST] ${personalizedSubject}`,
         html: personalizedHtml,
