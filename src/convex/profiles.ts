@@ -26,6 +26,7 @@ export const get = query({
       userId: v.string(), // Better Auth user ID
       firstName: v.string(),
       lastName: v.string(),
+      email: v.optional(v.string()),
       avatarUrl: v.optional(v.string()),
       phone: v.optional(v.string()),
       dateOfBirth: v.optional(v.number()),
@@ -160,9 +161,10 @@ export const create = mutation({
       }
     }
 
-    // Create the profile
+    // Create the profile with email from Clerk identity
     const profileId = await ctx.db.insert("profiles", {
       userId,
+      email: identity.email ?? undefined,
       firstName: args.firstName.trim(),
       lastName: args.lastName.trim(),
       phone: args.phone,

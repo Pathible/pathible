@@ -223,7 +223,10 @@ export const list = query({
       .order("desc"); // Most recent first
 
     // Apply cursor if provided (for pagination)
-    const paginatedResult = await query.paginate({ numItems: limit, cursor: args.cursor ?? null });
+    const paginatedResult = await query.paginate({
+      numItems: limit,
+      cursor: args.cursor ?? null,
+    });
 
     // Filter by access permissions
     const accessibleDocs = paginatedResult.page.filter((doc) =>
@@ -1116,7 +1119,11 @@ export const recalculateCategoryCounts = mutation({
       .collect();
 
     // Count documents per category
-    const results: { name: string; previousCount: number; calculatedCount: number }[] = [];
+    const results: {
+      name: string;
+      previousCount: number;
+      calculatedCount: number;
+    }[] = [];
 
     for (const category of categories) {
       const calculatedCount = documents.filter((doc) =>
@@ -1196,7 +1203,9 @@ export const checkStorageQuotaInternal = internalQuery({
       };
     }
 
-    const limits = PLAN_LIMITS[household.subscriptionTier];
+    // Use tierOverride if set, otherwise fall back to subscriptionTier
+    const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+    const limits = PLAN_LIMITS[effectiveTier];
 
     // Use pre-computed counter (defaults to 0 for backwards compatibility)
     const currentBytes = household.storageUsedBytes ?? 0;
@@ -1209,7 +1218,9 @@ export const checkStorageQuotaInternal = internalQuery({
         currentBytes,
         maxBytes: limits.storageBytesMax,
         remainingBytes,
-        error: `Storage limit exceeded. Used: ${formatBytesAsGB(currentBytes)}GB of ${formatBytesAsGB(limits.storageBytesMax)}GB. Upgrade your plan for more storage.`,
+        error: `Storage limit exceeded. Used: ${formatBytesAsGB(
+          currentBytes,
+        )}GB of ${formatBytesAsGB(limits.storageBytesMax)}GB. Upgrade your plan for more storage.`,
       };
     }
 

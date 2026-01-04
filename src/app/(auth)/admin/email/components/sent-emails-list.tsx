@@ -2,6 +2,7 @@
 
 import { usePaginatedQuery } from "convex/react";
 import { Loader2, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +30,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export function SentEmailsList() {
+  const router = useRouter();
   const { results, status, loadMore } = usePaginatedQuery(
     api.adminEmail.listSentEmails,
     {},
@@ -94,7 +96,11 @@ export function SentEmailsList() {
           </TableHeader>
           <TableBody>
             {results.map((email) => (
-              <TableRow key={email._id}>
+              <TableRow
+                key={email._id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => router.push(`/admin/email/sent/${email._id}`)}
+              >
                 <TableCell className="font-medium">{email.subject}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {formatRecipients(email.recipientType, email.recipientCount)}

@@ -31,6 +31,8 @@ export const listTemplates = query({
       category: v.optional(
         v.union(
           v.literal("onboarding"),
+          v.literal("retargeting"),
+          v.literal("announcements"),
           v.literal("legacy"),
           v.literal("invitations"),
           v.literal("digest"),
@@ -75,6 +77,8 @@ export const getTemplate = query({
       category: v.optional(
         v.union(
           v.literal("onboarding"),
+          v.literal("retargeting"),
+          v.literal("announcements"),
           v.literal("legacy"),
           v.literal("invitations"),
           v.literal("digest"),
@@ -125,6 +129,8 @@ export const createTemplate = mutation({
     category: v.optional(
       v.union(
         v.literal("onboarding"),
+        v.literal("retargeting"),
+        v.literal("announcements"),
         v.literal("legacy"),
         v.literal("invitations"),
         v.literal("digest"),
@@ -177,6 +183,8 @@ export const updateTemplate = mutation({
     category: v.optional(
       v.union(
         v.literal("onboarding"),
+        v.literal("retargeting"),
+        v.literal("announcements"),
         v.literal("legacy"),
         v.literal("invitations"),
         v.literal("digest"),
@@ -195,10 +203,11 @@ export const updateTemplate = mutation({
     }
 
     // If name is being changed, check for duplicates
-    if (args.name && args.name !== template.name) {
+    const newName = args.name;
+    if (newName && newName !== template.name) {
       const existing = await ctx.db
         .query("emailTemplates")
-        .withIndex("by_name", (q) => q.eq("name", args.name))
+        .withIndex("by_name", (q) => q.eq("name", newName))
         .unique();
 
       if (existing) {
@@ -247,6 +256,67 @@ export const deleteTemplate = mutation({
 // ============================================================================
 // SENT EMAILS QUERIES
 // ============================================================================
+
+/**
+ * Get a single sent email by ID
+ */
+export const getSentEmail = query({
+  args: { emailId: v.id("sentEmails") },
+  returns: v.union(
+    v.object({
+      _id: v.id("sentEmails"),
+      _creationTime: v.number(),
+      subject: v.string(),
+      content: v.string(),
+      htmlContent: v.string(),
+      recipientType: v.string(),
+      recipientCount: v.number(),
+      templateName: v.optional(v.string()),
+      sentByName: v.string(),
+      status: v.string(),
+      errorMessage: v.optional(v.string()),
+      recipientFilter: v.optional(
+        v.object({
+          tiers: v.optional(v.array(v.string())),
+          userIds: v.optional(v.array(v.id("profiles"))),
+        }),
+      ),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const email = await ctx.db.get(args.emailId);
+    if (!email) return null;
+
+    // Get template name if exists
+    let templateName: string | undefined;
+    if (email.templateId) {
+      const template = await ctx.db.get(email.templateId);
+      templateName = template?.name;
+    }
+
+    // Get sender name
+    const sender = await ctx.db.get(email.sentBy);
+    const sentByName = sender ? `${sender.firstName} ${sender.lastName}` : "Unknown";
+
+    return {
+      _id: email._id,
+      _creationTime: email._creationTime,
+      subject: email.subject,
+      content: email.content,
+      htmlContent: email.htmlContent,
+      recipientType: email.recipientType,
+      recipientCount: email.recipientCount,
+      templateName,
+      sentByName,
+      status: email.status,
+      errorMessage: email.errorMessage,
+      recipientFilter: email.recipientFilter,
+    };
+  },
+});
 
 /**
  * List sent emails with pagination
@@ -435,7 +505,7 @@ export const searchUsersForEmail = query({
         _id: p._id,
         firstName: p.firstName,
         lastName: p.lastName,
-        email: "", // Email is in Clerk, not stored in profiles
+        email: p.email ?? "",
       }));
 
     return results;
@@ -510,6 +580,7 @@ export const getRecipientsForEmail = query({
       profileId: v.id("profiles"),
       firstName: v.string(),
       lastName: v.string(),
+      email: v.optional(v.string()),
       clerkUserId: v.string(),
       householdName: v.optional(v.string()),
       subscriptionTier: v.optional(v.string()),
@@ -522,6 +593,7 @@ export const getRecipientsForEmail = query({
       profileId: Id<"profiles">;
       firstName: string;
       lastName: string;
+      email?: string;
       clerkUserId: string;
       householdName?: string;
       subscriptionTier?: string;
@@ -549,6 +621,7 @@ export const getRecipientsForEmail = query({
             profileId: profile._id,
             firstName: profile.firstName,
             lastName: profile.lastName,
+            email: profile.email,
             clerkUserId: profile.userId,
             householdName,
             subscriptionTier,
@@ -577,6 +650,7 @@ export const getRecipientsForEmail = query({
             profileId: profile._id,
             firstName: profile.firstName,
             lastName: profile.lastName,
+            email: profile.email,
             clerkUserId: profile.userId,
             householdName,
             subscriptionTier,
@@ -606,6 +680,7 @@ export const getRecipientsForEmail = query({
                 profileId: profile._id,
                 firstName: profile.firstName,
                 lastName: profile.lastName,
+                email: profile.email,
                 clerkUserId: profile.userId,
                 householdName: household.name,
                 subscriptionTier: household.subscriptionTier,
@@ -630,6 +705,7 @@ export const getRecipientsForEmail = query({
               profileId: profile._id,
               firstName: profile.firstName,
               lastName: profile.lastName,
+              email: profile.email,
               clerkUserId: profile.userId,
               householdName: household?.name,
               subscriptionTier: household?.subscriptionTier,
@@ -698,14 +774,47 @@ export const sendEmail = action({
         batches.push(args.recipientEmails.slice(i, i + batchSize));
       }
 
+      // Platform variables (same for all recipients)
+      const platformVars = {
+        appName: "Pathible",
+        supportEmail: "support@pathible.com",
+        currentYear: new Date().getFullYear().toString(),
+        loginUrl: "https://pathible.com/login",
+        dashboardUrl: "https://pathible.com/dashboard",
+      };
+
       for (const batch of batches) {
         for (const recipient of batch) {
           try {
+            // Substitute variables for this recipient
+            const fullName = `${recipient.firstName} ${recipient.lastName}`.trim();
+            const personalizedSubject = args.subject
+              .replace(/\{\{firstName\}\}/g, recipient.firstName || "")
+              .replace(/\{\{lastName\}\}/g, recipient.lastName || "")
+              .replace(/\{\{fullName\}\}/g, fullName || "")
+              .replace(/\{\{email\}\}/g, recipient.email || "")
+              .replace(/\{\{appName\}\}/g, platformVars.appName)
+              .replace(/\{\{supportEmail\}\}/g, platformVars.supportEmail)
+              .replace(/\{\{currentYear\}\}/g, platformVars.currentYear)
+              .replace(/\{\{loginUrl\}\}/g, platformVars.loginUrl)
+              .replace(/\{\{dashboardUrl\}\}/g, platformVars.dashboardUrl);
+
+            const personalizedHtml = args.htmlContent
+              .replace(/\{\{firstName\}\}/g, recipient.firstName || "")
+              .replace(/\{\{lastName\}\}/g, recipient.lastName || "")
+              .replace(/\{\{fullName\}\}/g, fullName || "")
+              .replace(/\{\{email\}\}/g, recipient.email || "")
+              .replace(/\{\{appName\}\}/g, platformVars.appName)
+              .replace(/\{\{supportEmail\}\}/g, platformVars.supportEmail)
+              .replace(/\{\{currentYear\}\}/g, platformVars.currentYear)
+              .replace(/\{\{loginUrl\}\}/g, platformVars.loginUrl)
+              .replace(/\{\{dashboardUrl\}\}/g, platformVars.dashboardUrl);
+
             const response = await resend.emails.send({
-              from: "Pathible <noreply@pathible.com>",
+              from: "Pathible <noreply@app.pathible.com>",
               to: recipient.email,
-              subject: args.subject,
-              html: args.htmlContent,
+              subject: personalizedSubject,
+              html: personalizedHtml,
             });
 
             if (response.data?.id) {
@@ -766,21 +875,60 @@ export const sendTestEmail = action({
     subject: v.string(),
     htmlContent: v.string(),
     toEmail: v.string(),
+    testFirstName: v.optional(v.string()),
+    testLastName: v.optional(v.string()),
   },
   returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
   handler: async (ctx, args) => {
     // Verify admin access
-    await ctx.runQuery(internal.auth.requireAuthInternal, {});
+    const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal, {});
 
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
 
+    // Use test values or fall back to admin's profile
+    const firstName = args.testFirstName || profile.firstName || "Test";
+    const lastName = args.testLastName || profile.lastName || "User";
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    // Platform variables
+    const platformVars = {
+      appName: "Pathible",
+      supportEmail: "support@pathible.com",
+      currentYear: new Date().getFullYear().toString(),
+      loginUrl: "https://pathible.com/login",
+      dashboardUrl: "https://pathible.com/dashboard",
+    };
+
+    // Substitute variables for test email
+    const personalizedSubject = args.subject
+      .replace(/\{\{firstName\}\}/g, firstName)
+      .replace(/\{\{lastName\}\}/g, lastName)
+      .replace(/\{\{fullName\}\}/g, fullName)
+      .replace(/\{\{email\}\}/g, args.toEmail)
+      .replace(/\{\{appName\}\}/g, platformVars.appName)
+      .replace(/\{\{supportEmail\}\}/g, platformVars.supportEmail)
+      .replace(/\{\{currentYear\}\}/g, platformVars.currentYear)
+      .replace(/\{\{loginUrl\}\}/g, platformVars.loginUrl)
+      .replace(/\{\{dashboardUrl\}\}/g, platformVars.dashboardUrl);
+
+    const personalizedHtml = args.htmlContent
+      .replace(/\{\{firstName\}\}/g, firstName)
+      .replace(/\{\{lastName\}\}/g, lastName)
+      .replace(/\{\{fullName\}\}/g, fullName)
+      .replace(/\{\{email\}\}/g, args.toEmail)
+      .replace(/\{\{appName\}\}/g, platformVars.appName)
+      .replace(/\{\{supportEmail\}\}/g, platformVars.supportEmail)
+      .replace(/\{\{currentYear\}\}/g, platformVars.currentYear)
+      .replace(/\{\{loginUrl\}\}/g, platformVars.loginUrl)
+      .replace(/\{\{dashboardUrl\}\}/g, platformVars.dashboardUrl);
+
     try {
       const response = await resend.emails.send({
-        from: "Pathible <noreply@pathible.com>",
+        from: "Pathible <noreply@app.pathible.com>",
         to: args.toEmail,
-        subject: `[TEST] ${args.subject}`,
-        html: args.htmlContent,
+        subject: `[TEST] ${personalizedSubject}`,
+        html: personalizedHtml,
       });
 
       if (response.error) {

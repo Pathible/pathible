@@ -14,12 +14,13 @@ export default defineSchema({
   // ============================================================================
 
   /**
-   * User profiles - extends Better Auth user data with additional profile information
-   * Better Auth automatically manages the _better_auth_users table
-   * Note: userId is v.string() not v.id() because Better Auth manages user IDs internally
+   * User profiles - extends Clerk user data with additional profile information
+   * Clerk handles authentication and provides user identity via JWT
+   * Note: userId is v.string() because it's the Clerk user ID (subject from JWT)
    */
   profiles: defineTable({
-    userId: v.string(), // Better Auth user ID
+    userId: v.string(), // Clerk user ID
+    email: v.optional(v.string()), // User's email from Clerk (optional for backward compatibility)
     firstName: v.string(),
     lastName: v.string(),
     avatarUrl: v.optional(v.string()),
@@ -652,6 +653,8 @@ export default defineSchema({
     category: v.optional(
       v.union(
         v.literal("onboarding"),
+        v.literal("retargeting"),
+        v.literal("announcements"),
         v.literal("legacy"),
         v.literal("invitations"),
         v.literal("digest"),

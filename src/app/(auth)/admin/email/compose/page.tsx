@@ -117,13 +117,14 @@ export default function ComposeEmailPage() {
       // Generate HTML content
       const htmlContent = markdownToEmailHtml(content, subject);
 
-      // Get recipient emails - in real implementation, you'd fetch emails from Clerk
-      // For now, we'll use placeholder emails based on the recipients
-      const recipientEmails = (recipients || []).map((r) => ({
-        email: `user-${r.clerkUserId}@placeholder.com`, // Placeholder - needs Clerk integration
-        firstName: r.firstName,
-        lastName: r.lastName,
-      }));
+      // Get recipient emails from stored profile data
+      const recipientEmails = (recipients || [])
+        .filter((r): r is typeof r & { email: string } => Boolean(r.email))
+        .map((r) => ({
+          email: r.email,
+          firstName: r.firstName,
+          lastName: r.lastName,
+        }));
 
       const result = await sendEmail({
         subject,

@@ -71,18 +71,12 @@ export const listUsers = query({
 
         const activeHouseholds = memberships.filter((m) => m.status === "active").length;
 
-        // Get email from Better Auth
-        // Note: In Clerk, we can't query Better Auth users from Convex directly
-        // We'll need to get email through a different method or store it in profiles
-        // For now, we'll use the userId as a fallback
-        const email = `user-${profile.userId.substring(0, 8)}@...`; // Placeholder
-
         return {
           _id: profile._id,
           _creationTime: profile._creationTime,
           firstName: profile.firstName,
           lastName: profile.lastName,
-          email,
+          email: profile.email ?? "No email on file",
           status: profile.deletedAt ? ("inactive" as const) : ("active" as const),
           householdCount: activeHouseholds,
         };
@@ -222,7 +216,7 @@ export const getUser = query({
         updatedAt: profile.updatedAt,
         deletedAt: profile.deletedAt,
       },
-      email: `user-${profile.userId.substring(0, 8)}@...`, // Placeholder
+      email: profile.email ?? "No email on file",
       householdMemberships: enrichedMemberships,
       recentActivity: activityList,
     };
@@ -422,7 +416,7 @@ export const getHousehold = query({
           profileId: m.userId,
           firstName: profile?.firstName || "Unknown",
           lastName: profile?.lastName || "User",
-          email: profile ? `user-${profile.userId.substring(0, 8)}@...` : "unknown@...",
+          email: profile?.email ?? "No email on file",
           role: m.role,
           status: m.status,
           joinedAt: m.joinedAt,
