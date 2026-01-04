@@ -812,6 +812,7 @@ export const sendEmail = action({
 
             const response = await resend.emails.send({
               from: "Pathible <noreply@app.pathible.com>",
+              replyTo: "support@pathible.com",
               to: recipient.email,
               subject: personalizedSubject,
               html: personalizedHtml,
@@ -926,6 +927,7 @@ export const sendTestEmail = action({
     try {
       const response = await resend.emails.send({
         from: "Pathible <noreply@app.pathible.com>",
+        replyTo: "support@pathible.com",
         to: args.toEmail,
         subject: `[TEST] ${personalizedSubject}`,
         html: personalizedHtml,
