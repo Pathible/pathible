@@ -9,6 +9,9 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { BookOpen, FileText, LayoutDashboard, Shield, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -37,6 +40,15 @@ type TierAccess = {
 type FeatureAccess = {
   strategy: "anyFeature" | "allFeatures";
   features: FeatureSlug[];
+import { api } from "@/convex/_generated/api";
+
+type SubscriptionTier = "foundations" | "heritage" | "legacy" | "founders";
+
+const TIER_LEVELS: Record<SubscriptionTier, number> = {
+  foundations: 1,
+  heritage: 2,
+  legacy: 3,
+  founders: 4,
 };
 
 type NavAccess = TierAccess | FeatureAccess;
@@ -55,6 +67,7 @@ const navItems: NavItem[] = [
     href: "/dashboard",
     icon: LayoutDashboard,
     tourKey: "nav-dashboard",
+    requiredTier: "foundations" as SubscriptionTier,
   },
   {
     title: "Heritage Vault",
@@ -72,6 +85,7 @@ const navItems: NavItem[] = [
         FEATURE_SLUGS.VAULT_GUIDED_ORGANIZATION,
       ],
     },
+    requiredTier: "foundations" as SubscriptionTier,
   },
   {
     title: "Financial Intelligence",
@@ -88,6 +102,7 @@ const navItems: NavItem[] = [
         FEATURE_SLUGS.FINANCIAL_TRENDS,
       ],
     },
+    requiredTier: "foundations" as SubscriptionTier,
   },
   {
     title: "Family Ecosystem",
@@ -103,6 +118,7 @@ const navItems: NavItem[] = [
         FEATURE_SLUGS.FAMILY_RELATIONSHIPS,
       ],
     },
+    requiredTier: "foundations" as SubscriptionTier,
   },
   {
     title: "Wisdom & Stories",
@@ -113,6 +129,7 @@ const navItems: NavItem[] = [
       strategy: "anyFeature",
       features: [FEATURE_SLUGS.WISDOM_ENTRIES, FEATURE_SLUGS.WISDOM_SHARED_PAGES],
     },
+    requiredTier: "heritage" as SubscriptionTier,
   },
   {
     title: "Legacy Planning",
@@ -123,6 +140,7 @@ const navItems: NavItem[] = [
       strategy: "tier",
       requiredTier: "legacy",
     },
+    requiredTier: "legacy" as SubscriptionTier,
   },
 ];
 
@@ -144,6 +162,22 @@ export function AppSidebar() {
     effectiveTier,
   } = useEffectiveMultipleFeatureAccess(navFeatureRequirements);
   const accessReady = !isLoading && effectiveTier !== null;
+  const { user, isLoaded: isUserLoaded } = useUser();
+
+  // Get user's households to determine effective tier
+  const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
+  const household = households?.[0];
+
+  // Use tierOverride if set, otherwise fall back to subscriptionTier
+  const effectiveTier: SubscriptionTier =
+    household?.tierOverride ?? household?.subscriptionTier ?? "foundations";
+  const currentTierLevel = TIER_LEVELS[effectiveTier];
+
+  // Filter nav items based on effective tier
+  const visibleNavItems = navItems.filter((item) => {
+    const requiredLevel = TIER_LEVELS[item.requiredTier];
+    return currentTierLevel >= requiredLevel;
+  });
 
   return (
     <Sidebar collapsible="icon" className="border-r bg-sidebar border-border">
@@ -154,7 +188,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {navItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 // Check if current path matches or is a sub-page of this nav item
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;

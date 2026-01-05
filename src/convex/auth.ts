@@ -64,6 +64,7 @@ const profileReturnValidator = v.object({
   _id: v.id("profiles"),
   _creationTime: v.number(),
   userId: v.string(),
+  email: v.optional(v.string()),
   firstName: v.string(),
   lastName: v.string(),
   avatarUrl: v.optional(v.string()),
@@ -137,6 +138,18 @@ export async function requireAuth(ctx: QueryCtx | MutationCtx): Promise<Authenti
   // Reject soft-deleted profiles
   if (profile.deletedAt) {
     throw new Error("Account has been deleted");
+  }
+
+  // Backfill email if missing (only in mutation context)
+  // This ensures existing users get their email stored on next login
+  if (!profile.email && user.email && "patch" in ctx.db) {
+    const mutationCtx = ctx as MutationCtx;
+    await mutationCtx.db.patch(profile._id, {
+      email: user.email,
+      updatedAt: Date.now(),
+    });
+    // Update the profile object we return
+    profile.email = user.email;
   }
 
   return {
@@ -310,8 +323,11 @@ export async function requireSubscriptionTier(
 ): Promise<Doc<"households">> {
   const household = await requireActiveSubscription(ctx, householdId);
 
-  // Use effective tier (considers tierOverride for promotional pricing)
-  const effectiveTier = getEffectiveTier(household);
+  // Use tierOverride if set, otherwise fall back to subscriptionTier
+  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const currentLevel = TIER_LEVELS[effectiveTier];
+  const requiredLevel = TIER_LEVELS[requiredTier];
+
 
   if (!tierHasAccess(effectiveTier, requiredTier)) {
     throw new Error(
@@ -379,8 +395,9 @@ export async function checkStorageQuota(
   additionalBytes: number = 0,
 ): Promise<{ currentBytes: number; maxBytes: number; remainingBytes: number }> {
   const household = await requireActiveSubscription(ctx, householdId);
-  // Use effective tier for limit calculation
-  const effectiveTier = getEffectiveTier(household);
+
+  // Use tierOverride if set, otherwise fall back to subscriptionTier
+  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
   const limits = PLAN_LIMITS[effectiveTier];
 
   // Use pre-computed counter (defaults to 0 for backwards compatibility)
@@ -424,8 +441,8 @@ export async function checkFamilyMemberLimit(
   checkingForNewMember: boolean = false,
 ): Promise<{ currentCount: number; maxCount: number; canAddMore: boolean }> {
   const household = await requireActiveSubscription(ctx, householdId);
-  // Use effective tier for limit calculation
-  const effectiveTier = getEffectiveTier(household);
+  // Use tierOverride if set, otherwise fall back to subscriptionTier
+  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
   const limits = PLAN_LIMITS[effectiveTier];
 
   const nonOwnerCount = await getMemberCountFromHousehold(ctx, household);
@@ -433,7 +450,7 @@ export async function checkFamilyMemberLimit(
 
   if (checkingForNewMember && !canAddMore) {
     throw new Error(
-      `Family member limit reached. Your ${household.subscriptionTier} plan allows ${formatLimit(
+      `Family member limit reached. Your ${effectiveTier} plan allows ${formatLimit(
         limits.familyMembersMax,
       )} member(s). Upgrade for more.`,
     );
@@ -467,8 +484,9 @@ export async function checkFamilyUnitLimit(
   checkingForNewUnit: boolean = false,
 ): Promise<{ currentCount: number; maxCount: number; canAddMore: boolean }> {
   const household = await requireActiveSubscription(ctx, householdId);
-  // Use effective tier for limit calculation
-  const effectiveTier = getEffectiveTier(household);
+
+  // Use tierOverride if set, otherwise fall back to subscriptionTier
+  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
   const limits = PLAN_LIMITS[effectiveTier];
 
   const currentCount = await getFamilyUnitCount(ctx, household);

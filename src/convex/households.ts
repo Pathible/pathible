@@ -138,7 +138,6 @@ export const list = query({
           ),
         ),
         tierOverrideReason: v.optional(v.string()),
-        tierOverrideExpiresAt: v.optional(v.number()),
         updatedAt: v.number(),
         // Include the user's role in this household
         userRole: v.union(
