@@ -168,7 +168,7 @@ export function LegacyContent() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="legal-documents" className="gap-2">
+          <TabsTrigger value="legal-documents" className="gap-2" data-tour="legal-documents-tab">
             <ScrollText className="h-4 w-4" />
             Legal Documents
             {legalDocsStats && legalDocsStats.totalDocuments > 0 && (

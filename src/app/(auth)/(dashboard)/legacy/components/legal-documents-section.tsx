@@ -6,8 +6,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardList,
-  Download,
   Edit,
+  Eye,
   FileText,
   Heart,
   Info,
@@ -38,6 +38,8 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { US_STATES } from "@/lib/state-legal-requirements";
 import { LegalDisclaimerModal } from "./legal-disclaimer-modal";
+import type { LegalDocumentPDFData } from "./legal-document-pdf";
+import { PDFPreviewModal } from "./pdf-preview-modal";
 
 type DocumentType =
   | "will"
@@ -118,6 +120,10 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
   const [selectedDocType, setSelectedDocType] = useState<DocumentType | null>(null);
   const [deletingDocument, setDeletingDocument] = useState<Id<"legalDocuments"> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<{
+    data: LegalDocumentPDFData;
+    name: string;
+  } | null>(null);
 
   // Queries
   const profile = useQuery(api.profiles.get, isUserLoaded && user ? {} : "skip");
@@ -183,6 +189,30 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
     }
   };
 
+  const handlePreviewDocument = (
+    doc: {
+      documentType: string;
+      state: string;
+      responses: string;
+    },
+    docName: string,
+  ) => {
+    try {
+      const responses = JSON.parse(doc.responses || "{}");
+      const pdfData: LegalDocumentPDFData = {
+        documentType: doc.documentType as LegalDocumentPDFData["documentType"],
+        state: doc.state,
+        responses,
+        userName: responses.fullName || user?.fullName || "User",
+        generatedDate: new Date(),
+      };
+      setPreviewDocument({ data: pdfData, name: docName });
+    } catch (error) {
+      console.error("Failed to parse document responses:", error);
+      toast.error("Failed to load document preview");
+    }
+  };
+
   // Loading state
   if (!isUserLoaded || documents === undefined || stats === undefined) {
     return (
@@ -230,7 +260,8 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
               <p className="text-amber-700 dark:text-amber-400 mt-1">
                 These templates help you understand estate planning concepts and organize your
                 information. For legally binding documents, please consult with a qualified attorney
-                in your state.
+                in your state. Estate planning laws vary by state and change frequently. Use of
+                these templates does not create an attorney-client relationship.
               </p>
             </div>
           </div>
@@ -238,7 +269,10 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
       </Card>
 
       {/* Document Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        data-tour="legal-documents-grid"
+      >
         {DOCUMENT_ORDER.map((docType) => {
           const meta = DOCUMENT_TYPES[docType];
           const Icon = meta.icon;
@@ -289,9 +323,14 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
                       <Edit className="h-4 w-4 mr-1" />
                       {existingDoc.status === "draft" ? "Continue" : "Edit"}
                     </Button>
-                    {existingDoc.status === "generated" && (
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4" />
+                    {(existingDoc.status === "complete" || existingDoc.status === "generated") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePreviewDocument(existingDoc, meta.name)}
+                        title="Preview document"
+                      >
+                        <Eye className="h-4 w-4" />
                       </Button>
                     )}
                     <Button
@@ -368,6 +407,14 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* PDF Preview Modal */}
+      <PDFPreviewModal
+        open={!!previewDocument}
+        onOpenChange={(open) => !open && setPreviewDocument(null)}
+        documentData={previewDocument?.data ?? null}
+        documentName={previewDocument?.name ?? ""}
+      />
     </div>
   );
 }

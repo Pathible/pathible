@@ -269,20 +269,6 @@ function Checkbox({ checked, label }: { checked: boolean; label: string }) {
   );
 }
 
-// Legal disclaimer component
-function LegalDisclaimer() {
-  return (
-    <View style={styles.disclaimerBox}>
-      <Text style={styles.disclaimerText}>
-        IMPORTANT: This document is a template for informational purposes only and does not
-        constitute legal advice. This document should be reviewed by a licensed attorney in your
-        state before execution. Estate planning laws vary by state and change frequently. Use of
-        this template does not create an attorney-client relationship.
-      </Text>
-    </View>
-  );
-}
-
 // Enhanced witness attestation clause
 function WitnessAttestation({
   count,
@@ -412,7 +398,8 @@ function SelfProvingAffidavit({
         first duly sworn, declare to the undersigned officer that:
         {"\n\n"}
         1. The Testator/Principal signed this instrument as their{" "}
-        {documentType === "will" ? "Last Will and Testament" : documentType};{"\n"}
+        {documentType === "will" ? "Last Will and Testament" : documentType}
+        {"\n"}
         2. The Testator/Principal willingly signed and executed it as a free and voluntary act for
         the purposes therein expressed;
         {"\n"}
@@ -476,6 +463,9 @@ function WillDocument({ data }: { data: LegalDocumentPDFData }) {
   const stateName = STATE_NAMES[data.state as USState] || data.state;
   const survivalPeriod = (r.survivalPeriod as string) || "30";
 
+  // Calculate page count: 3 base pages + 1 if notary/self-proving required
+  const pageCount = willReqs?.notaryRequired || willReqs?.selfProvingAllowed ? 4 : 3;
+
   // Calculate article numbers dynamically
   let articleNum = 1;
   const getArticleNum = () => {
@@ -493,8 +483,6 @@ function WillDocument({ data }: { data: LegalDocumentPDFData }) {
           <Text style={styles.subtitle}>of {r.fullName || "[YOUR FULL LEGAL NAME]"}</Text>
           <Text style={styles.stateInfo}>State of {stateName}</Text>
         </View>
-
-        <LegalDisclaimer />
 
         {/* Preamble and Declaration */}
         <View style={styles.section}>
@@ -592,7 +580,8 @@ function WillDocument({ data }: { data: LegalDocumentPDFData }) {
               (e) To compromise, settle, or abandon any claims by or against my estate;{"\n"}
               (f) To employ attorneys, accountants, investment advisors, and other professionals;
               {"\n"}
-              (g) To make distributions in cash or in kind, or partly in each;{"\n"}
+              (g) To make distributions in cash or in kind, or partly in each;
+              {"\n"}
               (h) To exercise all rights with respect to digital assets as permitted by applicable
               law including the Revised Uniform Fiduciary Access to Digital Assets Act;{"\n"}
               (i) To perform all other acts necessary for proper administration of my estate.
@@ -606,8 +595,8 @@ function WillDocument({ data }: { data: LegalDocumentPDFData }) {
 
         <View style={styles.footer}>
           <Text>
-            DRAFT - FOR ATTORNEY REVIEW | Last Will and Testament of {r.fullName || "[YOUR NAME]"} |
-            Generated {data.generatedDate.toLocaleDateString()}
+            Last Will and Testament of {r.fullName || "[YOUR NAME]"} | Generated{" "}
+            {data.generatedDate.toLocaleDateString()}
           </Text>
         </View>
       </Page>
@@ -646,9 +635,12 @@ function WillDocument({ data }: { data: LegalDocumentPDFData }) {
               Estate, if they survive me by {survivalPeriod} days.
             </Text>
             {r.additionalBeneficiaries && (
-              <Text style={[styles.articleContent, { marginTop: 4 }]}>
-                (b) ADDITIONAL BENEFICIARIES: {r.additionalBeneficiaries}
-              </Text>
+              <View style={{ marginTop: 4 }}>
+                <Text style={styles.articleContent}>(b) ADDITIONAL BENEFICIARIES:</Text>
+                <Text style={[styles.articleContent, { marginLeft: 16 }]}>
+                  {r.additionalBeneficiaries}
+                </Text>
+              </View>
             )}
             <Text style={[styles.articleContent, { marginTop: 4 }]}>
               ({r.additionalBeneficiaries ? "c" : "b"}) CONTINGENT DISTRIBUTION: If the primary
@@ -745,10 +737,7 @@ function WillDocument({ data }: { data: LegalDocumentPDFData }) {
         )}
 
         <View style={styles.footer}>
-          <Text>
-            DRAFT - FOR ATTORNEY REVIEW | Last Will and Testament of {r.fullName || "[YOUR NAME]"} |
-            Page 2
-          </Text>
+          <Text>Last Will and Testament of {r.fullName || "[YOUR NAME]"} | Page 2</Text>
         </View>
       </Page>
 
@@ -844,7 +833,7 @@ function WillDocument({ data }: { data: LegalDocumentPDFData }) {
           <Text style={styles.sectionTitle}>Testator's Signature</Text>
           <Text style={styles.legalClause}>
             IN WITNESS WHEREOF, I, {r.fullName || "[YOUR NAME]"}, have signed this, my Last Will and
-            Testament, consisting of _____ pages, including this page, on this _____ day of
+            Testament, consisting of {pageCount} pages, including this page, on this _____ day of
             _______________, 20___, at _______________, {stateName}, and declare that I sign it
             willingly, that I execute it as my free and voluntary act for the purposes expressed
             herein, and that I am of legal age and sound mind.
@@ -866,10 +855,7 @@ function WillDocument({ data }: { data: LegalDocumentPDFData }) {
         />
 
         <View style={styles.footer}>
-          <Text>
-            DRAFT - FOR ATTORNEY REVIEW | Last Will and Testament of {r.fullName || "[YOUR NAME]"} |
-            Page 3
-          </Text>
+          <Text>Last Will and Testament of {r.fullName || "[YOUR NAME]"} | Page 3</Text>
         </View>
       </Page>
 
@@ -892,10 +878,7 @@ function WillDocument({ data }: { data: LegalDocumentPDFData }) {
           )}
 
           <View style={styles.footer}>
-            <Text>
-              DRAFT - FOR ATTORNEY REVIEW | Last Will and Testament of {r.fullName || "[YOUR NAME]"}{" "}
-              | Page 4
-            </Text>
+            <Text>Last Will and Testament of {r.fullName || "[YOUR NAME]"} | Page 4</Text>
           </View>
         </Page>
       )}
@@ -921,8 +904,6 @@ function HealthcarePOADocument({ data }: { data: LegalDocumentPDFData }) {
           <Text style={styles.subtitle}>with HIPAA Authorization</Text>
           <Text style={styles.stateInfo}>State of {stateName}</Text>
         </View>
-
-        <LegalDisclaimer />
 
         {/* Part I: Designation */}
         <View style={styles.section}>
@@ -1042,7 +1023,7 @@ function HealthcarePOADocument({ data }: { data: LegalDocumentPDFData }) {
 
         <View style={styles.footer}>
           <Text>
-            DRAFT - FOR ATTORNEY REVIEW | {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 1
+            {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 1
           </Text>
         </View>
       </Page>
@@ -1153,7 +1134,7 @@ function HealthcarePOADocument({ data }: { data: LegalDocumentPDFData }) {
 
         <View style={styles.footer}>
           <Text>
-            DRAFT - FOR ATTORNEY REVIEW | {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 2
+            {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 2
           </Text>
         </View>
       </Page>
@@ -1179,8 +1160,6 @@ function FinancialPOADocument({ data }: { data: LegalDocumentPDFData }) {
           <Text style={styles.subtitle}>for Financial Matters</Text>
           <Text style={styles.stateInfo}>State of {stateName}</Text>
         </View>
-
-        <LegalDisclaimer />
 
         {/* Principal Information */}
         <View style={styles.section}>
@@ -1278,7 +1257,7 @@ function FinancialPOADocument({ data }: { data: LegalDocumentPDFData }) {
 
         <View style={styles.footer}>
           <Text>
-            DRAFT - FOR ATTORNEY REVIEW | {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 1
+            {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 1
           </Text>
         </View>
       </Page>
@@ -1400,7 +1379,7 @@ function FinancialPOADocument({ data }: { data: LegalDocumentPDFData }) {
 
         <View style={styles.footer}>
           <Text>
-            DRAFT - FOR ATTORNEY REVIEW | {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 2
+            {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 2
           </Text>
         </View>
       </Page>
@@ -1426,8 +1405,6 @@ function AdvanceDirectiveDocument({ data }: { data: LegalDocumentPDFData }) {
           <Text style={styles.subtitle}>(Living Will Declaration)</Text>
           <Text style={styles.stateInfo}>State of {stateName}</Text>
         </View>
-
-        <LegalDisclaimer />
 
         {/* Part I: Declaration */}
         <View style={styles.section}>
@@ -1530,7 +1507,7 @@ function AdvanceDirectiveDocument({ data }: { data: LegalDocumentPDFData }) {
 
         <View style={styles.footer}>
           <Text>
-            DRAFT - FOR ATTORNEY REVIEW | {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 1
+            {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 1
           </Text>
         </View>
       </Page>
@@ -1680,7 +1657,7 @@ function AdvanceDirectiveDocument({ data }: { data: LegalDocumentPDFData }) {
 
         <View style={styles.footer}>
           <Text>
-            DRAFT - FOR ATTORNEY REVIEW | {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 2
+            {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 2
           </Text>
         </View>
       </Page>
@@ -1705,8 +1682,6 @@ function TrustDocument({ data }: { data: LegalDocumentPDFData }) {
           <Text style={styles.subtitle}>{r.trustName || "The [YOUR NAME] Living Trust"}</Text>
           <Text style={styles.stateInfo}>State of {stateName}</Text>
         </View>
-
-        <LegalDisclaimer />
 
         {/* Preamble */}
         <View style={styles.section}>
@@ -1778,7 +1753,7 @@ function TrustDocument({ data }: { data: LegalDocumentPDFData }) {
         </View>
 
         <View style={styles.footer}>
-          <Text>DRAFT - FOR ATTORNEY REVIEW | {r.trustName || "Living Trust"} | Page 1</Text>
+          <Text>{r.trustName || "Living Trust"} | Page 1</Text>
         </View>
       </Page>
 
@@ -1871,7 +1846,7 @@ function TrustDocument({ data }: { data: LegalDocumentPDFData }) {
         </View>
 
         <View style={styles.footer}>
-          <Text>DRAFT - FOR ATTORNEY REVIEW | {r.trustName || "Living Trust"} | Page 2</Text>
+          <Text>{r.trustName || "Living Trust"} | Page 2</Text>
         </View>
       </Page>
 
@@ -1939,7 +1914,7 @@ function TrustDocument({ data }: { data: LegalDocumentPDFData }) {
         </View>
 
         <View style={styles.footer}>
-          <Text>DRAFT - FOR ATTORNEY REVIEW | {r.trustName || "Living Trust"} | Page 3</Text>
+          <Text>{r.trustName || "Living Trust"} | Page 3</Text>
         </View>
       </Page>
     </Document>
@@ -1963,8 +1938,6 @@ function PourOverWillDocument({ data }: { data: LegalDocumentPDFData }) {
           <Text style={styles.subtitle}>of {r.fullName || "[YOUR FULL LEGAL NAME]"}</Text>
           <Text style={styles.stateInfo}>State of {stateName}</Text>
         </View>
-
-        <LegalDisclaimer />
 
         {/* Declaration */}
         <View style={styles.section}>

@@ -325,9 +325,6 @@ export async function requireSubscriptionTier(
 
   // Use tierOverride if set, otherwise fall back to subscriptionTier
   const effectiveTier = household.tierOverride ?? household.subscriptionTier;
-  const currentLevel = TIER_LEVELS[effectiveTier];
-  const requiredLevel = TIER_LEVELS[requiredTier];
-
 
   if (!tierHasAccess(effectiveTier, requiredTier)) {
     throw new Error(
