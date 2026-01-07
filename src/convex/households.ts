@@ -56,6 +56,17 @@ export const get = query({
         v.literal("cancelled"),
         v.literal("past_due"),
       ),
+      // Tier override fields (for promotional pricing)
+      tierOverride: v.optional(
+        v.union(
+          v.literal("foundations"),
+          v.literal("heritage"),
+          v.literal("legacy"),
+          v.literal("founders"),
+        ),
+      ),
+      tierOverrideReason: v.optional(v.string()),
+      tierOverrideExpiresAt: v.optional(v.number()),
       updatedAt: v.number(),
       // Include the user's role in this household
       userRole: v.union(
@@ -128,6 +139,7 @@ export const list = query({
           v.literal("cancelled"),
           v.literal("past_due"),
         ),
+        // Tier override fields for promotional pricing
         tierOverride: v.optional(
           v.union(
             v.literal("foundations"),

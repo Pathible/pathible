@@ -274,6 +274,8 @@ export const createFirstHousehold = mutation({
       dateOfBirth: profile.dateOfBirth,
       city: profile.city,
       state: profile.state,
+      address: profile.address,
+      zipCode: profile.zipCode,
       relationshipType: "parent", // Default - user can update later
       roles: ["Family Admin"],
       status: "active",

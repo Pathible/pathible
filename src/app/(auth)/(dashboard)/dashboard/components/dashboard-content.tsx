@@ -2,29 +2,62 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { ArrowRight, FileText, Heart, Loader2, Shield, Sparkles, Users } from "lucide-react";
+import {
+  ArrowRight,
+  FileText,
+  Heart,
+  Loader2,
+  Shield,
+  Sparkles,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { DashboardStatCard } from "@/app/(auth)/(dashboard)/dashboard/components/dashboard-stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
+import {
+  FEATURE_SLUGS,
+  useEffectiveFeatureAccess,
+  useEffectiveTierAccess,
+} from "@/lib/feature-access";
 
 export function DashboardContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
+
+  // Check feature access for tier-gated sections
+  const { hasAccess: hasWisdomAccess, isLoading: wisdomAccessLoading } = useEffectiveFeatureAccess(
+    FEATURE_SLUGS.WISDOM_ENTRIES,
+  );
+  const { hasAccess: hasLegacyAccess, isLoading: legacyAccessLoading } =
+    useEffectiveTierAccess("legacy");
 
   // Get user's households
   const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
 
   const householdId = households?.[0]?._id;
 
-  // Get vault stats
+  // Get vault stats (available to all tiers)
   const vaultStats = useQuery(api.vault.getStats, householdId ? { householdId } : "skip");
 
-  // Get wisdom stats (entries + core beliefs)
-  const wisdomStats = useQuery(api.wisdom.getStats, householdId ? { householdId } : "skip");
-  const coreBeliefsData = useQuery(api.coreBeliefs.list, householdId ? { householdId } : "skip");
+  // Get financial stats (available to all tiers - financial_overview is foundations)
+  const financialStats = useQuery(api.financial.getStats, householdId ? { householdId } : "skip");
 
-  // Get legacy plan stats
-  const legacyStats = useQuery(api.legacy.getStats, householdId ? { householdId } : "skip");
+  // Get wisdom stats only if user has access (Heritage+)
+  const wisdomStats = useQuery(
+    api.wisdom.getStats,
+    householdId && hasWisdomAccess ? { householdId } : "skip",
+  );
+  const coreBeliefsData = useQuery(
+    api.coreBeliefs.list,
+    householdId && hasWisdomAccess ? { householdId } : "skip",
+  );
+
+  // Get legacy plan stats only if user has access (Legacy+)
+  const legacyStats = useQuery(
+    api.legacy.getStats,
+    householdId && hasLegacyAccess ? { householdId } : "skip",
+  );
 
   // Daily devotional/quote
   const dailyQuote = {
@@ -37,9 +70,12 @@ export function DashboardContent() {
   // Stats with real data
   const wisdomEntriesCount = wisdomStats?.totalEntries ?? 0;
   const coreBeliefsCount = coreBeliefsData?.beliefs?.length ?? 0;
+  const netWorth =
+    (financialStats?.totalAccountBalance ?? 0) + (financialStats?.totalPropertyValue ?? 0);
 
   const stats = {
     vaultItemsCount: vaultStats?.totalDocuments ?? 0,
+    netWorth,
     wisdomEntriesCount: wisdomEntriesCount + coreBeliefsCount,
     legacyPlanCompletion: legacyStats?.completionPercentage ?? 0,
   };
@@ -47,57 +83,81 @@ export function DashboardContent() {
   // Check if profile already exists
   const profile = useQuery(api.profiles.get, isUserLoaded && user ? {} : "skip");
 
-  // Determine next step based on progress
+  // Determine next step based on progress (only suggest features user has access to)
   const getNextStep = () => {
-    if (stats.wisdomEntriesCount === 0) {
+    // Wisdom is only suggested if user has access (Heritage+)
+    if (hasWisdomAccess && stats.wisdomEntriesCount === 0) {
       return {
         title: "Share your first piece of wisdom",
         description: "Pass down what matters most to those who matter most",
         route: "/wisdom/create-entry",
         icon: Sparkles,
       };
-    } else if (stats.vaultItemsCount < 5) {
+    }
+
+    // Vault is available to all tiers
+    if (stats.vaultItemsCount < 5) {
       return {
         title: "Organize important documents",
         description: "Add the documents your family will need someday",
         route: "/vault",
         icon: Shield,
       };
-    } else if (stats.legacyPlanCompletion < 50) {
+    }
+
+    // Financial is available to all tiers
+    if (stats.netWorth === 0) {
+      return {
+        title: "Add your financial picture",
+        description: "Help your family understand what you have and where it is",
+        route: "/financial",
+        icon: TrendingUp,
+      };
+    }
+
+    // Legacy is only suggested if user has access (Legacy+)
+    if (hasLegacyAccess && stats.legacyPlanCompletion < 50) {
       return {
         title: "Continue your Legacy Plan",
         description: "Give your family clarity, not confusion",
         route: "/legacy",
         icon: FileText,
       };
-    } else {
-      return {
-        title: "Check on your family",
-        description: "Make sure the right people have access when it matters",
-        route: "/family",
-        icon: Users,
-      };
     }
+
+    // Default: family is available to all
+    return {
+      title: "Check on your family",
+      description: "Make sure the right people have access when it matters",
+      route: "/family",
+      icon: Users,
+    };
   };
 
   const nextStep = getNextStep();
   const NextStepIcon = nextStep.icon;
 
-  // Loading state - wait for all data before rendering to prevent stale "Next Step" CTA
+  // Loading state - wait for access checks and data before rendering
+  const isAccessLoading = wisdomAccessLoading || legacyAccessLoading;
   const isLoadingHouseholdData =
     householdId &&
     (vaultStats === undefined ||
-      wisdomStats === undefined ||
-      coreBeliefsData === undefined ||
-      legacyStats === undefined);
+      financialStats === undefined ||
+      // Only wait for wisdom stats if user has access
+      (hasWisdomAccess && (wisdomStats === undefined || coreBeliefsData === undefined)) ||
+      // Only wait for legacy stats if user has access
+      (hasLegacyAccess && legacyStats === undefined));
 
-  if (!isUserLoaded || households === undefined || isLoadingHouseholdData) {
+  if (!isUserLoaded || households === undefined || isAccessLoading || isLoadingHouseholdData) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
+
+  // Count visible stat cards for dynamic grid (Vault + Financial always visible)
+  const visibleCardCount = 2 + (hasWisdomAccess ? 1 : 0) + (hasLegacyAccess ? 1 : 0);
 
   return (
     <>
@@ -107,12 +167,21 @@ export function DashboardContent() {
         <p className="text-muted-foreground text-lg">Here&apos;s how your legacy is taking shape</p>
       </div>
 
-      {/* Progress Cards */}
+      {/* Progress Cards - dynamically sized grid based on accessible features */}
       <div
-        className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+        className={`grid grid-cols-1 gap-6 mb-8 ${
+          visibleCardCount === 1
+            ? "md:grid-cols-1 max-w-md"
+            : visibleCardCount === 2
+              ? "md:grid-cols-2"
+              : visibleCardCount === 3
+                ? "md:grid-cols-3"
+                : "md:grid-cols-2 lg:grid-cols-4"
+        }`}
         data-testid="dashboard-stats"
         data-tour="dashboard-stats"
       >
+        {/* Heritage Vault - available to all tiers */}
         <DashboardStatCard
           href="/vault"
           icon="shield"
@@ -121,21 +190,36 @@ export function DashboardContent() {
           description="Safe and ready for your family someday"
         />
 
+        {/* Financial Clarity - available to all tiers */}
         <DashboardStatCard
-          href="/wisdom"
-          icon="bookOpen"
-          value={stats.wisdomEntriesCount}
-          title="Wisdom & Stories"
-          description="Passed down to future generations"
+          href="/financial"
+          icon="trendingUp"
+          value={stats.netWorth > 0 ? `$${stats.netWorth.toLocaleString()}` : "—"}
+          title="Financial Clarity"
+          description="Your family's financial picture"
         />
 
-        <DashboardStatCard
-          href="/legacy"
-          icon="fileText"
-          value={`${stats.legacyPlanCompletion}%`}
-          title="Legacy Plan"
-          description="Your story, your heart, your intentions"
-        />
+        {/* Wisdom & Stories - Heritage+ only */}
+        {hasWisdomAccess && (
+          <DashboardStatCard
+            href="/wisdom"
+            icon="bookOpen"
+            value={stats.wisdomEntriesCount}
+            title="Wisdom & Stories"
+            description="Passed down to future generations"
+          />
+        )}
+
+        {/* Legacy Plan - Legacy+ only */}
+        {hasLegacyAccess && (
+          <DashboardStatCard
+            href="/legacy"
+            icon="fileText"
+            value={`${stats.legacyPlanCompletion}%`}
+            title="Legacy Plan"
+            description="Your story, your heart, your intentions"
+          />
+        )}
       </div>
 
       {/* Next Step CTA */}

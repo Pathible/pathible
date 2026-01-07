@@ -6,6 +6,7 @@ import { ArrowLeft, Heart, Loader2, Plus, Zap } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { FeatureGate } from "@/components/feature-gate";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +20,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { FEATURES } from "@/lib/feature-access";
 import { BeliefCard } from "./components/BeliefCard";
 import { CreateBeliefDialog } from "./components/CreateBeliefDialog";
 
@@ -85,147 +87,149 @@ function CoreBeliefsContent() {
   const maxBeliefs = beliefsData?.maxBeliefs ?? 5;
 
   return (
-    <div className="px-6 py-8 max-w-screen-2xl mx-auto">
-      {/* Back link */}
-      <Link
-        href="/wisdom"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Wisdom Hub
-      </Link>
+    <FeatureGate feature={FEATURES.WISDOM_ENTRIES}>
+      <div className="px-6 py-8 max-w-screen-2xl mx-auto">
+        {/* Back link */}
+        <Link
+          href="/wisdom"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Wisdom Hub
+        </Link>
 
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <Heart className="h-8 w-8 text-primary" />
-          <h1 className="text-4xl font-bold">Core Beliefs</h1>
-        </div>
-        <p className="text-muted-foreground text-lg">
-          The truths you&apos;ve built your life on, written down for the generations that follow.
-          These become part of your legacy and can be shared with your family.
-        </p>
-      </div>
-
-      {/* Beliefs List */}
-      <div className="space-y-4 mb-6">
-        {beliefsData === undefined ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-2">
+            <Heart className="h-8 w-8 text-primary" />
+            <h1 className="text-4xl font-bold">Core Beliefs</h1>
           </div>
-        ) : beliefs.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="p-8 text-center">
-              <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">What do you believe?</h3>
-              <p className="text-muted-foreground mb-6">
-                Start with the truths that have shaped who you are.
-              </p>
-              <Link
-                href="/wisdom/core-beliefs/create"
-                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
-              >
-                <Plus className="h-5 w-5" />
-                Add Your First Belief
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          beliefs.map((belief) => (
-            <BeliefCard key={belief._id} belief={belief} onDelete={setDeleteId} />
-          ))
-        )}
-      </div>
+          <p className="text-muted-foreground text-lg">
+            The truths you&apos;ve built your life on, written down for the generations that follow.
+            These become part of your legacy and can be shared with your family.
+          </p>
+        </div>
 
-      {/* Add Buttons */}
-      {canAddMore && householdId && (
-        <div className="space-y-3">
-          {/* Guided mode - primary action */}
-          <Link href="/wisdom/core-beliefs/create">
-            <Card className="border-dashed cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                      <Plus className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium">Add Core Belief</h3>
-                      <p className="text-sm text-muted-foreground">
-                        We'll guide you through the process
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    {beliefs.length}/{maxBeliefs}
-                  </span>
-                </div>
+        {/* Beliefs List */}
+        <div className="space-y-4 mb-6">
+          {beliefsData === undefined ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : beliefs.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="p-8 text-center">
+                <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">What do you believe?</h3>
+                <p className="text-muted-foreground mb-6">
+                  Start with the truths that have shaped who you are.
+                </p>
+                <Link
+                  href="/wisdom/core-beliefs/create"
+                  className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="h-5 w-5" />
+                  Add Your First Belief
+                </Link>
               </CardContent>
             </Card>
-          </Link>
-
-          {/* Quick mode - secondary action */}
-          <button
-            type="button"
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-          >
-            <Zap className="h-4 w-4 inline mr-1" />
-            Quick add (skip the guide)
-          </button>
+          ) : (
+            beliefs.map((belief) => (
+              <BeliefCard key={belief._id} belief={belief} onDelete={setDeleteId} />
+            ))
+          )}
         </div>
-      )}
 
-      {/* About Section */}
-      <Card className="mt-8 bg-muted/30">
-        <CardContent className="p-6">
-          <p className="text-sm text-muted-foreground">
-            <strong>Why Core Beliefs Matter:</strong> These are the guiding principles that have
-            shaped your decisions, relationships, and life purpose. They help your family understand
-            not just what you did, but why. And carry those values forward.
-          </p>
-        </CardContent>
-      </Card>
+        {/* Add Buttons */}
+        {canAddMore && householdId && (
+          <div className="space-y-3">
+            {/* Guided mode - primary action */}
+            <Link href="/wisdom/core-beliefs/create">
+              <Card className="border-dashed cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                        <Plus className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">Add Core Belief</h3>
+                        <p className="text-sm text-muted-foreground">
+                          We'll guide you through the process
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {beliefs.length}/{maxBeliefs}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
 
-      {/* Create Dialog */}
-      {householdId && (
-        <CreateBeliefDialog
-          open={isCreateDialogOpen}
-          onOpenChange={setIsCreateDialogOpen}
-          householdId={householdId}
-        />
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this core belief?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Once removed, this belief can&apos;t be recovered. Your family won&apos;t be able to
-              see it.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90"
+            {/* Quick mode - secondary action */}
+            <button
+              type="button"
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
             >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+              <Zap className="h-4 w-4 inline mr-1" />
+              Quick add (skip the guide)
+            </button>
+          </div>
+        )}
+
+        {/* About Section */}
+        <Card className="mt-8 bg-muted/30">
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">
+              <strong>Why Core Beliefs Matter:</strong> These are the guiding principles that have
+              shaped your decisions, relationships, and life purpose. They help your family
+              understand not just what you did, but why. And carry those values forward.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Create Dialog */}
+        {householdId && (
+          <CreateBeliefDialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+            householdId={householdId}
+          />
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove this core belief?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Once removed, this belief can&apos;t be recovered. Your family won&apos;t be able to
+                see it.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </FeatureGate>
   );
 }
 

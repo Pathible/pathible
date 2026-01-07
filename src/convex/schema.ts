@@ -111,6 +111,18 @@ export default defineSchema({
       v.literal("cancelled"),
       v.literal("past_due"),
     ),
+    // Tier override - allows granting higher tier access than what user pays for
+    // Use case: Promotional pricing (pay $9.99 for foundations, get legacy features)
+    tierOverride: v.optional(
+      v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+        v.literal("founders"),
+      ),
+    ),
+    tierOverrideReason: v.optional(v.string()), // Audit trail: "promo_2025", "customer_support", etc.
+    tierOverrideExpiresAt: v.optional(v.number()), // Unix timestamp - null means permanent
     // Storage usage counter (updated atomically on document create/delete)
     // This avoids O(n) full table scans when checking storage quota
     storageUsedBytes: v.optional(v.number()), // Optional for backwards compatibility with existing data
@@ -120,17 +132,6 @@ export default defineSchema({
     // Vault document count counter (updated atomically on document create/delete)
     // Avoids O(n) full table scans for stats queries
     vaultDocumentCount: v.optional(v.number()),
-    // Admin tier override fields
-    tierOverride: v.optional(
-      v.union(
-        v.literal("foundations"),
-        v.literal("heritage"),
-        v.literal("legacy"),
-        v.literal("founders"),
-      ),
-    ),
-    tierOverrideExpiresAt: v.optional(v.number()), // Unix timestamp, optional for permanent overrides
-    tierOverrideReason: v.optional(v.string()), // Reason for the override
     updatedAt: v.number(),
   }).index("by_primaryContactId", ["primaryContactId"]),
 
@@ -219,7 +220,20 @@ export default defineSchema({
       v.union(v.literal("male"), v.literal("female"), v.literal("prefer_not_to_say")),
     ),
     city: v.optional(v.string()),
+    county: v.optional(v.string()), // County of residence (for legal documents)
     state: v.optional(v.string()),
+    address: v.optional(v.string()), // Street address
+    zipCode: v.optional(v.string()), // ZIP/postal code
+    maritalStatus: v.optional(
+      v.union(
+        v.literal("single"),
+        v.literal("married"),
+        v.literal("divorced"),
+        v.literal("widowed"),
+        v.literal("domestic_partnership"),
+        v.literal("separated"),
+      ),
+    ),
     relationshipType: v.union(
       v.literal("parent"),
       v.literal("child"),
@@ -412,24 +426,128 @@ export default defineSchema({
    */
   keyContacts: defineTable({
     householdId: v.id("households"),
-    legacyPlanId: v.id("legacyPlans"),
+    legacyPlanId: v.optional(v.id("legacyPlans")), // Optional - contacts can exist without legacy plan
     name: v.string(),
     role: v.union(
+      // Professional roles
       v.literal("attorney"),
       v.literal("financial_advisor"),
       v.literal("executor"),
       v.literal("trustee"),
       v.literal("guardian"),
       v.literal("healthcare_proxy"),
+      // Personal contact roles
+      v.literal("friend"),
+      v.literal("neighbor"),
+      v.literal("business_partner"),
+      v.literal("caregiver"),
+      v.literal("charitable_org"),
+      v.literal("religious_org"),
       v.literal("other"),
     ),
+    relationship: v.optional(v.string()), // e.g., "college roommate", "neighbor of 20 years"
     phone: v.optional(v.string()),
     email: v.optional(v.string()),
     address: v.optional(v.string()),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    zipCode: v.optional(v.string()),
+    dateOfBirth: v.optional(v.number()), // For age calculations (executor must be 18+)
     notes: v.optional(v.string()),
   })
     .index("by_household", ["householdId"])
     .index("by_legacyPlan", ["legacyPlanId"]),
+
+  /**
+   * Legal documents - user-generated legal document drafts
+   * Stores responses to guided wizards for wills, trusts, POAs, etc.
+   *
+   * IMPORTANT: These are educational templates, not legal advice.
+   * Users must acknowledge disclaimers before generating documents.
+   */
+  legalDocuments: defineTable({
+    householdId: v.id("households"),
+    profileId: v.id("profiles"),
+    documentType: v.union(
+      v.literal("will"),
+      v.literal("trust"),
+      v.literal("pour_over_will"),
+      v.literal("financial_poa"),
+      v.literal("healthcare_poa"),
+      v.literal("advance_directive"),
+    ),
+    // State determines jurisdiction and specific requirements
+    state: v.string(), // 2-letter state code (e.g., "CA")
+    status: v.union(
+      v.literal("draft"), // User is still filling out
+      v.literal("complete"), // All required fields filled
+      v.literal("generated"), // PDF has been generated at least once
+    ),
+    // JSON blob containing all wizard responses
+    // Structure varies by documentType
+    responses: v.string(),
+    // Track document history
+    completedAt: v.optional(v.number()), // When marked complete
+    lastGeneratedAt: v.optional(v.number()), // Last PDF generation
+    generationCount: v.optional(v.number()), // How many times generated
+    // User acknowledged legal disclaimers
+    disclaimerAcknowledgedAt: v.number(),
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_household", ["householdId"])
+    .index("by_profile", ["profileId"])
+    .index("by_household_and_profile", ["householdId", "profileId"])
+    .index("by_household_and_type", ["householdId", "documentType"]),
+
+  /**
+   * Legal document contacts - people referenced in legal documents
+   * Links to keyContacts where possible, but can store independent entries
+   * for document-specific roles (witnesses, notary, etc.)
+   */
+  legalDocumentContacts: defineTable({
+    householdId: v.id("households"),
+    legalDocumentId: v.id("legalDocuments"),
+    // If linked to an existing key contact
+    keyContactId: v.optional(v.id("keyContacts")),
+    // Role in this specific document
+    role: v.union(
+      // Will roles
+      v.literal("executor"),
+      v.literal("alternate_executor"),
+      v.literal("guardian"),
+      v.literal("alternate_guardian"),
+      v.literal("beneficiary"),
+      v.literal("witness"),
+      // Trust roles
+      v.literal("trustee"),
+      v.literal("successor_trustee"),
+      v.literal("trust_beneficiary"),
+      // POA roles
+      v.literal("agent"),
+      v.literal("alternate_agent"),
+      v.literal("healthcare_agent"),
+      v.literal("alternate_healthcare_agent"),
+      // Other
+      v.literal("notary"),
+      v.literal("other"),
+    ),
+    // Contact details (used if keyContactId is not set)
+    name: v.string(),
+    relationship: v.optional(v.string()), // e.g., "spouse", "daughter", "friend"
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    address: v.optional(v.string()),
+    // Role-specific fields
+    distributionPercentage: v.optional(v.number()), // For beneficiaries
+    specificBequest: v.optional(v.string()), // For specific item bequests
+    isPrimary: v.optional(v.boolean()), // Primary vs alternate
+    notes: v.optional(v.string()),
+  })
+    .index("by_household", ["householdId"])
+    .index("by_document", ["legalDocumentId"])
+    .index("by_document_and_role", ["legalDocumentId", "role"]),
 
   // ============================================================================
   // FINANCIAL INTELLIGENCE
@@ -826,6 +944,12 @@ export default defineSchema({
       v.literal("family_member_deleted"),
       // Suggestion actions
       v.literal("suggestion_completed"),
+      // Legal document actions
+      v.literal("legal_document_created"),
+      v.literal("legal_document_updated"),
+      v.literal("legal_document_completed"),
+      v.literal("legal_document_generated"),
+      v.literal("legal_document_deleted"),
       // Fallback
       v.literal("other"),
     ),
@@ -850,6 +974,9 @@ export default defineSchema({
         // Family entities
         v.literal("family_unit"),
         v.literal("family_member"),
+        // Legal document entities
+        v.literal("legal_document"),
+        v.literal("legal_document_contact"),
         // Other
         v.literal("suggestion"),
         v.literal("other"),

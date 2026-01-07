@@ -2,18 +2,14 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { AlertCircle, Loader2, Mic, Settings, Shield, Sparkles } from "lucide-react";
+import { AlertCircle, Loader2, Settings, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ComingSoonCard } from "@/components/coming-soon";
-import { FeatureGate } from "@/components/feature-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
-import { FEATURES } from "@/lib/feature-access";
 import { CategoryManager } from "./category-manager";
 import { DocumentList } from "./document-list";
 import { SearchAndFilter } from "./search-and-filter";
-import { TagsCollections } from "./tags-collections";
 import { UploadButton } from "./upload-button";
 import { VaultStats } from "./vault-stats";
 
@@ -195,12 +191,14 @@ export function VaultContent() {
       />
 
       {/* Tags & Collections (Heritage+ feature) */}
-      <FeatureGate feature={FEATURES.VAULT_TAGS_COLLECTIONS}>
+      {/* TODO Think about how this works more in the future */}
+      {/* <FeatureGate feature={FEATURES.VAULT_TAGS_COLLECTIONS}>
         <TagsCollections />
-      </FeatureGate>
+      </FeatureGate> */}
 
       {/* Coming Soon Features */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* TODO Hiding this for now until these features for now until ready */}
+      {/* <div className="grid gap-4 md:grid-cols-2">
         <ComingSoonCard
           feature={FEATURES.VAULT_VOICE_UPLOADS}
           title="Voice Recordings"
@@ -213,7 +211,7 @@ export function VaultContent() {
           description="Step-by-step wizards to help you organize important documents like wills, insurance, and medical records."
           icon={<Sparkles className="h-5 w-5" />}
         />
-      </div>
+      </div> */}
 
       {/* Documents List */}
       <DocumentList

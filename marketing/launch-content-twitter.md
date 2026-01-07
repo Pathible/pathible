@@ -264,7 +264,7 @@ Founders Rate update:
 
 24 hours left.
 
-$19.99/month forever ends tomorrow night.
+$19.99/month forever ends tomorrow night. Soon it will return to $49.99.
 
 If you've been thinking about it—this is the moment.
 

@@ -4,6 +4,15 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalQuery, query } from "./_generated/server";
 import { formatBytesAsGB, formatLimit } from "./shared/constants";
 import { getFamilyUnitCount, getMemberCountFromHousehold } from "./shared/counters";
+import {
+  FEATURE_TIERS,
+  type FeatureSlug,
+  getEffectiveTier,
+  PLAN_LIMITS,
+  type SubscriptionTier,
+  TIER_LEVELS,
+  tierHasAccess,
+} from "./shared/subscriptionTiers";
 import { checkDocumentAccess } from "./vaultHelpers";
 
 /**
@@ -14,104 +23,8 @@ import { checkDocumentAccess } from "./vaultHelpers";
  * We look up the user's profile and enforce access control.
  */
 
-// ============================================================================
-// SUBSCRIPTION TIERS & PLAN LIMITS
-// ============================================================================
-
-/**
- * Subscription tier hierarchy (higher number = more features)
- *
- * Founders tier: Special launch offer (first 7 days of 2025).
- * Matches Legacy features forever, with priority support instead of concierge.
- */
-export const TIER_LEVELS = {
-  foundations: 1,
-  heritage: 2,
-  legacy: 3,
-  founders: 3, // Same level as Legacy - full feature access
-} as const;
-
-export type SubscriptionTier = keyof typeof TIER_LEVELS;
-
-/**
- * Plan limits by tier
- *
- * These limits are enforced server-side in Convex mutations.
- * Must match the limits defined in Clerk Dashboard and UI.
- */
-export const PLAN_LIMITS = {
-  foundations: {
-    storageBytesMax: 5 * 1024 * 1024 * 1024, // 5GB
-    familyMembersMax: 1, // 1 viewer
-    familyUnitsMax: 1, // Primary family only
-  },
-  heritage: {
-    storageBytesMax: 25 * 1024 * 1024 * 1024, // 25GB
-    familyMembersMax: 3, // 3 members
-    familyUnitsMax: 3, // Up to 3 family units
-  },
-  legacy: {
-    storageBytesMax: Number.MAX_SAFE_INTEGER, // Unlimited
-    familyMembersMax: Number.MAX_SAFE_INTEGER, // Unlimited
-    familyUnitsMax: Number.MAX_SAFE_INTEGER, // Unlimited
-  },
-  founders: {
-    // Same as Legacy - exclusive launch offer
-    storageBytesMax: Number.MAX_SAFE_INTEGER, // Unlimited
-    familyMembersMax: Number.MAX_SAFE_INTEGER, // Unlimited
-    familyUnitsMax: Number.MAX_SAFE_INTEGER, // Unlimited
-  },
-} as const;
-
-/**
- * Feature-to-minimum-tier mapping
- *
- * Defines which subscription tier is required for each feature.
- * Used by requireFeatureAccess() for server-side enforcement.
- *
- * IMPORTANT: These slugs MUST match exactly what's configured in Clerk Dashboard.
- * See /api/debug/clerk-billing to verify the current Clerk configuration.
- */
-export const FEATURE_TIERS = {
-  // Heritage Vault
-  vault_document_storage: "foundations",
-  vault_photo_video: "foundations",
-  vault_folders: "foundations",
-  vault_tags_collections: "heritage",
-  vault_voice_uploads: "heritage",
-  vault_guided_organization: "heritage",
-
-  // Financial Intelligence
-  financial_overview: "foundations",
-  financial_summaries: "heritage",
-  financial_insights: "heritage",
-  financial_spending_categories: "legacy",
-  financial_trends: "legacy",
-
-  // Family Network
-  family_members: "foundations",
-  family_profiles: "heritage",
-  family_messaging: "heritage",
-  family_relationships: "legacy",
-
-  // Legacy Builder - Premium only
-  legacy_questionnaires: "legacy",
-  legacy_story_templates: "legacy",
-
-  // Wisdom
-  wisdom_entries: "heritage",
-  wisdom_shared_pages: "legacy",
-
-  // Support
-  standard_support: "foundations",
-  support_priority: "heritage",
-  support_concierge: "legacy",
-
-  // Early Access
-  early_access_features: "heritage",
-} as const satisfies Record<string, SubscriptionTier>;
-
-export type FeatureSlug = keyof typeof FEATURE_TIERS;
+// Re-export types and constants for backwards compatibility
+export { FEATURE_TIERS, PLAN_LIMITS, TIER_LEVELS, type FeatureSlug, type SubscriptionTier };
 
 /**
  * Type for authenticated context with user and profile
@@ -125,6 +38,7 @@ export interface AuthenticatedContext {
     _id: Id<"profiles">;
     _creationTime: number;
     userId: string;
+    email?: string;
     firstName: string;
     lastName: string;
     avatarUrl?: string;
@@ -390,7 +304,8 @@ export async function requireActiveSubscription(
 /**
  * Require minimum subscription tier
  *
- * Verifies that the household has at least the required subscription tier.
+ * Verifies that the household's EFFECTIVE tier meets the required tier.
+ * The effective tier considers tier overrides (for promotional pricing).
  * Also checks that the subscription is active.
  *
  * @example
@@ -411,10 +326,8 @@ export async function requireSubscriptionTier(
 
   // Use tierOverride if set, otherwise fall back to subscriptionTier
   const effectiveTier = household.tierOverride ?? household.subscriptionTier;
-  const currentLevel = TIER_LEVELS[effectiveTier];
-  const requiredLevel = TIER_LEVELS[requiredTier];
 
-  if (currentLevel < requiredLevel) {
+  if (!tierHasAccess(effectiveTier, requiredTier)) {
     throw new Error(
       `This feature requires the ${requiredTier} plan or higher. Current plan: ${effectiveTier}`,
     );
@@ -461,8 +374,9 @@ export async function requireFeatureAccess(
 /**
  * Check storage quota
  *
- * Uses the pre-computed `storageUsedBytes` counter on the household document
+ * Uses the pre-computed storageUsedBytes counter on the household document
  * for O(1) performance instead of scanning all documents.
+ * Uses EFFECTIVE tier for limit calculation (considers tier overrides).
  *
  * @example
  * export const uploadDocument = mutation({
@@ -479,6 +393,7 @@ export async function checkStorageQuota(
   additionalBytes: number = 0,
 ): Promise<{ currentBytes: number; maxBytes: number; remainingBytes: number }> {
   const household = await requireActiveSubscription(ctx, householdId);
+
   // Use tierOverride if set, otherwise fall back to subscriptionTier
   const effectiveTier = household.tierOverride ?? household.subscriptionTier;
   const limits = PLAN_LIMITS[effectiveTier];
@@ -506,6 +421,7 @@ export async function checkStorageQuota(
  * Check family member limit
  *
  * Verifies that the household has not exceeded their family member limit.
+ * Uses EFFECTIVE tier for limit calculation (considers tier overrides).
  * Returns the current count and limit.
  *
  * @example
@@ -549,6 +465,7 @@ export async function checkFamilyMemberLimit(
  * Check family unit limit
  *
  * Verifies that the household has not exceeded their family unit limit.
+ * Uses EFFECTIVE tier for limit calculation (considers tier overrides).
  *
  * @example
  * export const createFamilyUnit = mutation({
@@ -565,6 +482,7 @@ export async function checkFamilyUnitLimit(
   checkingForNewUnit: boolean = false,
 ): Promise<{ currentCount: number; maxCount: number; canAddMore: boolean }> {
   const household = await requireActiveSubscription(ctx, householdId);
+
   // Use tierOverride if set, otherwise fall back to subscriptionTier
   const effectiveTier = household.tierOverride ?? household.subscriptionTier;
   const limits = PLAN_LIMITS[effectiveTier];
@@ -642,6 +560,95 @@ export const getCurrentUserWithProfile = query({
 });
 
 /**
+ * Query: Get effective subscription tier for current user's household
+ *
+ * This is the CLIENT-SIDE source of truth for subscription tier.
+ * Returns the effective tier (considering overrides) for use in UI feature gates.
+ *
+ * @returns Object with effectiveTier, subscriptionTier (actual), and feature access
+ */
+export const getEffectiveSubscription = query({
+  args: {},
+  returns: v.union(
+    v.object({
+      effectiveTier: v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+        v.literal("founders"),
+      ),
+      subscriptionTier: v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+        v.literal("founders"),
+      ),
+      subscriptionStatus: v.union(
+        v.literal("active"),
+        v.literal("inactive"),
+        v.literal("cancelled"),
+        v.literal("past_due"),
+      ),
+      hasOverride: v.boolean(),
+      overrideReason: v.optional(v.string()),
+      overrideExpiresAt: v.optional(v.number()),
+      householdId: v.id("households"),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx) => {
+    // Get authenticated user
+    const user = await getClerkUser(ctx);
+    if (!user) {
+      return null;
+    }
+
+    // Get user's profile (check deletedAt in code to avoid filter after index)
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .first();
+
+    if (!profile || profile.deletedAt) {
+      return null;
+    }
+
+    // Get user's household membership (check status in code to avoid filter after index)
+    const membership = await ctx.db
+      .query("householdMemberships")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .first();
+
+    if (!membership || membership.status !== "active") {
+      return null;
+    }
+
+    // Get household
+    const household = await ctx.db.get(membership.householdId);
+    if (!household) {
+      return null;
+    }
+
+    // Calculate effective tier
+    const effectiveTier = getEffectiveTier(household);
+    const hasOverride =
+      household.tierOverride !== undefined &&
+      household.tierOverride !== null &&
+      effectiveTier === household.tierOverride;
+
+    return {
+      effectiveTier,
+      subscriptionTier: household.subscriptionTier,
+      subscriptionStatus: household.subscriptionStatus,
+      hasOverride,
+      overrideReason: household.tierOverrideReason ?? undefined,
+      overrideExpiresAt: household.tierOverrideExpiresAt ?? undefined,
+      householdId: household._id,
+    };
+  },
+});
+
+/**
  * Internal Query: Require authentication (for use in actions)
  * Throws if not authenticated
  */
@@ -686,50 +693,6 @@ export const requireHouseholdAccessInternal = internalQuery({
     return await requireHouseholdAccess(ctx, args.householdId);
   },
 });
-
-// /**
-//  * Internal Query: Get a document by ID (for use in actions)
-//  *
-//  * @deprecated Use getDocumentWithAccessInternal instead for safer access control.
-//  * This function does NOT verify access permissions and may expose documents
-//  * to unauthorized access if callers forget to check permissions.
-//  *
-//  * SECURITY WARNING: This query does NOT verify access permissions.
-//  * Callers MUST:
-//  * 1. Call requireHouseholdAccessInternal to verify household membership
-//  * 2. Check document-level access using checkDocumentAccess from vaultHelpers
-//  *
-//  * Consider using getDocumentWithAccessInternal for a safer combined approach.
-//  */
-// export const getDocumentInternal = internalQuery({
-//   args: {
-//     documentId: v.id("vaultDocuments"),
-//   },
-//   returns: v.union(
-//     v.object({
-//       _id: v.id("vaultDocuments"),
-//       _creationTime: v.number(),
-//       householdId: v.id("households"),
-//       uploadedBy: v.id("profiles"),
-//       name: v.string(),
-//       description: v.optional(v.string()),
-//       b2FileId: v.string(),
-//       b2FileName: v.string(),
-//       b2BucketName: v.string(),
-//       fileHash: v.optional(v.string()),
-//       fileSize: v.number(),
-//       fileType: v.string(),
-//       categories: v.array(v.string()),
-//       accessLevel: v.union(v.literal("household"), v.literal("admins"), v.literal("custom")),
-//       sharedWithUsers: v.array(v.id("profiles")),
-//       updatedAt: v.number(),
-//     }),
-//     v.null(),
-//   ),
-//   handler: async (ctx, args) => {
-//     return await ctx.db.get(args.documentId);
-//   },
-// });
 
 /**
  * Internal Query: Get a document with access verification (PREFERRED)

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ComingSoonBadge } from "@/components/coming-soon";
+import { FeatureGate } from "@/components/feature-gate";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { FEATURES } from "@/lib/feature-access";
 import { MemberCard } from "./member-card";
 
 interface FamilyUnitDetailProps {
@@ -222,7 +224,7 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
   }
 
   return (
-    <>
+    <FeatureGate feature={FEATURES.FAMILY_MEMBERS}>
       <div className="space-y-6">
         {/* Back Button */}
         <Button variant="ghost" onClick={() => router.push("/family")} className="gap-2">
@@ -552,6 +554,6 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </FeatureGate>
   );
 }

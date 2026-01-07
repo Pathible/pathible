@@ -1407,3 +1407,117 @@ export const seedContentManagerTour = internalMutation({
     return { tourId, created, stepsUpdated };
   },
 });
+
+/**
+ * Seed Legal Documents Tour (internal - run via CLI)
+ * Creates or updates the tour for the legal documents section
+ *
+ * Usage: npx convex run tours:seedLegalDocumentsTour
+ */
+export const seedLegalDocumentsTour = internalMutation({
+  args: {},
+  returns: v.object({
+    tourId: v.id("tours"),
+    created: v.boolean(),
+    stepsUpdated: v.number(),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    let created = false;
+
+    // Check if tour already exists
+    const existing = await ctx.db
+      .query("tours")
+      .withIndex("by_key", (q) => q.eq("key", "legal-documents-tour"))
+      .unique();
+
+    let tourId: Id<"tours">;
+
+    if (existing) {
+      tourId = existing._id;
+      // Update tour metadata
+      await ctx.db.patch(existing._id, {
+        name: "Legal Documents Tour",
+        description: "Learn how to create and manage essential estate planning documents.",
+        status: "published",
+        priority: 50,
+        updatedAt: now,
+      });
+    } else {
+      // Create the tour
+      tourId = await ctx.db.insert("tours", {
+        key: "legal-documents-tour",
+        name: "Legal Documents Tour",
+        description: "Learn how to create and manage essential estate planning documents.",
+        status: "published",
+        version: 1,
+        priority: 50,
+        createdBy: "system",
+        createdAt: now,
+        updatedAt: now,
+      });
+      created = true;
+    }
+
+    // Define the tour steps
+    const steps = [
+      {
+        stepKey: "legal-documents-tab",
+        route: "/legacy",
+        anchorKey: "legal-documents-tab",
+        title: "Legal Documents",
+        body: "Click this tab to access your legal document templates. Create essential estate planning documents like wills, trusts, and powers of attorney.",
+      },
+      {
+        stepKey: "legal-documents-grid",
+        route: "/legacy?tab=legal-documents",
+        anchorKey: "legal-documents-grid",
+        title: "Document Templates",
+        body: "Browse available document types here. Each card shows a different legal document you can create. Click any card to start building that document with our step-by-step wizard.",
+      },
+    ];
+
+    // Create or update each step
+    let stepsUpdated = 0;
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+
+      // Check if step exists
+      const existingStep = await ctx.db
+        .query("tourSteps")
+        .withIndex("by_tour_and_stepKey", (q) => q.eq("tourId", tourId).eq("stepKey", step.stepKey))
+        .unique();
+
+      if (existingStep) {
+        // Update existing step
+        await ctx.db.patch(existingStep._id, {
+          order: i,
+          route: step.route,
+          anchorKey: step.anchorKey,
+          title: step.title,
+          body: step.body,
+          enabled: true,
+          updatedAt: now,
+        });
+      } else {
+        // Create new step
+        await ctx.db.insert("tourSteps", {
+          tourId,
+          stepKey: step.stepKey,
+          order: i,
+          route: step.route,
+          anchorKey: step.anchorKey,
+          title: step.title,
+          body: step.body,
+          enabled: true,
+          versionIntroduced: 1,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      stepsUpdated++;
+    }
+
+    return { tourId, created, stepsUpdated };
+  },
+});

@@ -7,7 +7,6 @@ import {
   Key,
   LayoutDashboard,
   Mail,
-  Settings,
   Shield,
   Users,
 } from "lucide-react";
@@ -69,11 +68,6 @@ const settingsNavItems = [
     title: "Roles & Permissions",
     href: "/admin/roles",
     icon: Shield,
-  },
-  {
-    title: "System Settings",
-    href: "/admin/settings",
-    icon: Settings,
   },
 ];
 

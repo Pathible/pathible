@@ -27,7 +27,7 @@
  *
  * // Generate presigned download URL
  * const { downloadUrl } = await client.getPresignedDownloadUrl(key);
- * window.location.href = downloadUrl;
+ * router.push(downloadUrl;
  * ```
  *
  * @example Using Native B2 API (Legacy)

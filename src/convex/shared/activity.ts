@@ -13,7 +13,7 @@ const MODULE_ENTITY_MAP: Record<
   wisdom: ["wisdom_entry", "core_belief"],
   financial: ["financial_account", "property", "insurance_policy"],
   family: ["family_unit", "family_member"],
-  legacy: ["plan", "letter"],
+  legacy: ["plan", "letter", "legal_document", "legal_document_contact"],
   household: ["household"],
   suggestion: ["suggestion"],
 };

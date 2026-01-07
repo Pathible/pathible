@@ -18,12 +18,14 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FeatureGate } from "@/components/feature-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import { FEATURES } from "@/lib/feature-access";
 
 // Intent types with guided prompts
 const INTENTS = [
@@ -255,62 +257,64 @@ export default function CreateWisdomEntryPage() {
   // ==================== INTENT SELECTION STEP ====================
   if (currentStep === "intent") {
     return (
-      <div className="min-h-[80vh] flex flex-col">
-        <div className="px-6 py-4">
-          <Link
-            href="/wisdom"
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Wisdom Hub
-          </Link>
-        </div>
+      <FeatureGate feature={FEATURES.WISDOM_ENTRIES}>
+        <div className="min-h-[80vh] flex flex-col">
+          <div className="px-6 py-4">
+            <Link
+              href="/wisdom"
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Wisdom Hub
+            </Link>
+          </div>
 
-        <div className="flex-1 flex items-center justify-center px-6 pb-12">
-          <div className="w-full max-w-3xl">
-            <div className="text-center mb-8">
-              <Heart className="h-12 w-12 mx-auto text-primary mb-6" />
-              <h1 className="text-3xl font-bold mb-3">What would you like to share today?</h1>
-              <p className="text-muted-foreground max-w-xl mx-auto">
-                Choose the type of wisdom you want to preserve. We'll guide you through with simple
-                questions.
+          <div className="flex-1 flex items-center justify-center px-6 pb-12">
+            <div className="w-full max-w-3xl">
+              <div className="text-center mb-8">
+                <Heart className="h-12 w-12 mx-auto text-primary mb-6" />
+                <h1 className="text-3xl font-bold mb-3">What would you like to share today?</h1>
+                <p className="text-muted-foreground max-w-xl mx-auto">
+                  Choose the type of wisdom you want to preserve. We'll guide you through with
+                  simple questions.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {INTENTS.map((intent) => {
+                  const Icon = intent.icon;
+                  return (
+                    <Card
+                      key={intent.id}
+                      className="cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all"
+                      onClick={() => handleIntentSelect(intent)}
+                    >
+                      <CardContent className="p-5">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 text-left min-w-0">
+                            <h3 className="font-semibold">{intent.title}</h3>
+                            <p className="text-sm text-muted-foreground">{intent.description}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <p className="mt-8 text-center text-sm text-muted-foreground">
+                Want to write freely?{" "}
+                <Link href="/wisdom/create-entry/quick" className="text-primary hover:underline">
+                  Use quick mode
+                </Link>
               </p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {INTENTS.map((intent) => {
-                const Icon = intent.icon;
-                return (
-                  <Card
-                    key={intent.id}
-                    className="cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all"
-                    onClick={() => handleIntentSelect(intent)}
-                  >
-                    <CardContent className="p-5">
-                      <div className="flex items-start gap-4">
-                        <div className="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1 text-left min-w-0">
-                          <h3 className="font-semibold">{intent.title}</h3>
-                          <p className="text-sm text-muted-foreground">{intent.description}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-
-            <p className="mt-8 text-center text-sm text-muted-foreground">
-              Want to write freely?{" "}
-              <Link href="/wisdom/create-entry/quick" className="text-primary hover:underline">
-                Use quick mode
-              </Link>
-            </p>
           </div>
         </div>
-      </div>
+      </FeatureGate>
     );
   }
 
@@ -319,239 +323,245 @@ export default function CreateWisdomEntryPage() {
     const Icon = selectedIntent.icon;
 
     return (
-      <div className="min-h-[80vh] flex flex-col">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={handlePrevGuidedStep}
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </button>
-          {hasAnyContent() && (
+      <FeatureGate feature={FEATURES.WISDOM_ENTRIES}>
+        <div className="min-h-[80vh] flex flex-col">
+          <div className="px-6 py-4 flex items-center justify-between">
             <button
               type="button"
-              onClick={handleSkipToFinish}
-              className="text-sm text-muted-foreground hover:text-foreground"
+              onClick={handlePrevGuidedStep}
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
             >
-              Skip to finish
+              <ArrowLeft className="h-4 w-4" />
+              Back
             </button>
-          )}
-        </div>
+            {hasAnyContent() && (
+              <button
+                type="button"
+                onClick={handleSkipToFinish}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Skip to finish
+              </button>
+            )}
+          </div>
 
-        <div className="flex-1 flex items-center justify-center px-6 pb-12">
-          <div className="w-full max-w-2xl space-y-6">
-            {/* Progress */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Step {guidedStep} of 4</span>
-                <span className="font-medium">{STEP_LABELS[guidedStep - 1]}</span>
-              </div>
-              <Progress value={getProgressPercent()} className="h-2" />
-            </div>
-
-            {/* Intent badge */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Icon className="h-4 w-4" />
-              <span>{selectedIntent.title}</span>
-            </div>
-
-            {/* Main prompt card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">{getCurrentPrompt()}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Textarea
-                  placeholder="Take your time. Write as little or as much as feels right..."
-                  value={getCurrentResponse()}
-                  onChange={(e) => handleResponseChange(getGuidedPromptKey(), e.target.value)}
-                  className="min-h-[200px] resize-none text-base leading-relaxed"
-                />
-
-                {/* Example hint */}
-                <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Example
-                  </p>
-                  <p className="text-sm italic">
-                    {guidedStep === 1
-                      ? selectedIntent.examples.opening
-                      : guidedStep === 4
-                        ? selectedIntent.examples.closing
-                        : "Take a moment to reflect. There's no right or wrong answer."}
-                  </p>
+          <div className="flex-1 flex items-center justify-center px-6 pb-12">
+            <div className="w-full max-w-2xl space-y-6">
+              {/* Progress */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Step {guidedStep} of 4</span>
+                  <span className="font-medium">{STEP_LABELS[guidedStep - 1]}</span>
                 </div>
+                <Progress value={getProgressPercent()} className="h-2" />
+              </div>
 
-                {/* Actions */}
-                <Button onClick={handleNextGuidedStep} className="w-full py-6 text-lg">
-                  {guidedStep < 4 ? "Continue" : "Finish Entry"}
-                  <ChevronRight className="h-5 w-5 ml-2" />
-                </Button>
+              {/* Intent badge */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Icon className="h-4 w-4" />
+                <span>{selectedIntent.title}</span>
+              </div>
 
-                <p className="text-center text-sm text-muted-foreground">
-                  You can stop at any step. What you've written will be saved.
-                </p>
-              </CardContent>
-            </Card>
+              {/* Main prompt card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">{getCurrentPrompt()}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Textarea
+                    placeholder="Take your time. Write as little or as much as feels right..."
+                    value={getCurrentResponse()}
+                    onChange={(e) => handleResponseChange(getGuidedPromptKey(), e.target.value)}
+                    className="min-h-[200px] resize-none text-base leading-relaxed"
+                  />
+
+                  {/* Example hint */}
+                  <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Example
+                    </p>
+                    <p className="text-sm italic">
+                      {guidedStep === 1
+                        ? selectedIntent.examples.opening
+                        : guidedStep === 4
+                          ? selectedIntent.examples.closing
+                          : "Take a moment to reflect. There's no right or wrong answer."}
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <Button onClick={handleNextGuidedStep} className="w-full py-6 text-lg">
+                    {guidedStep < 4 ? "Continue" : "Finish Entry"}
+                    <ChevronRight className="h-5 w-5 ml-2" />
+                  </Button>
+
+                  <p className="text-center text-sm text-muted-foreground">
+                    You can stop at any step. What you've written will be saved.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
-      </div>
+      </FeatureGate>
     );
   }
 
   // ==================== FINISH STEP ====================
   return (
-    <div className="min-h-[80vh] flex flex-col">
-      <div className="px-6 py-4">
-        <button
-          type="button"
-          onClick={handleBackToGuided}
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to editing
-        </button>
-      </div>
+    <FeatureGate feature={FEATURES.WISDOM_ENTRIES}>
+      <div className="min-h-[80vh] flex flex-col">
+        <div className="px-6 py-4">
+          <button
+            type="button"
+            onClick={handleBackToGuided}
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to editing
+          </button>
+        </div>
 
-      <div className="flex-1 px-6 pb-12">
-        <div className="w-full max-w-2xl mx-auto space-y-6">
-          {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Final step</span>
-              <span className="font-medium">Save your wisdom</span>
+        <div className="flex-1 px-6 pb-12">
+          <div className="w-full max-w-2xl mx-auto space-y-6">
+            {/* Progress */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Final step</span>
+                <span className="font-medium">Save your wisdom</span>
+              </div>
+              <Progress value={100} className="h-2" />
             </div>
-            <Progress value={100} className="h-2" />
-          </div>
 
-          {error && (
-            <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">{error}</div>
-          )}
+            {error && (
+              <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                {error}
+              </div>
+            )}
 
-          {/* Preview of content */}
-          <Card className="bg-muted/30">
-            <CardHeader>
-              <CardTitle className="text-lg">What you've written</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {responses.starter && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                    The Moment
-                  </p>
-                  <p>{responses.starter}</p>
-                </div>
-              )}
-              {responses.context && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                    The Context
-                  </p>
-                  <p>{responses.context}</p>
-                </div>
-              )}
-              {responses.meaning && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                    The Meaning
-                  </p>
-                  <p>{responses.meaning}</p>
-                </div>
-              )}
-              {responses.blessing && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                    The Hope
-                  </p>
-                  <p>{responses.blessing}</p>
-                </div>
-              )}
-              {!hasAnyContent() && (
-                <p className="text-muted-foreground italic">No content written yet.</p>
-              )}
-            </CardContent>
-          </Card>
+            {/* Preview of content */}
+            <Card className="bg-muted/30">
+              <CardHeader>
+                <CardTitle className="text-lg">What you've written</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {responses.starter && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                      The Moment
+                    </p>
+                    <p>{responses.starter}</p>
+                  </div>
+                )}
+                {responses.context && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                      The Context
+                    </p>
+                    <p>{responses.context}</p>
+                  </div>
+                )}
+                {responses.meaning && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                      The Meaning
+                    </p>
+                    <p>{responses.meaning}</p>
+                  </div>
+                )}
+                {responses.blessing && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                      The Hope
+                    </p>
+                    <p>{responses.blessing}</p>
+                  </div>
+                )}
+                {!hasAnyContent() && (
+                  <p className="text-muted-foreground italic">No content written yet.</p>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Required: Title */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Give it a title *</CardTitle>
-              <CardDescription>A short, memorable name for this wisdom entry</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Input
-                placeholder="e.g., The Day I Learned to Let Go"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-lg"
-                maxLength={200}
-              />
-            </CardContent>
-          </Card>
+            {/* Required: Title */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Give it a title *</CardTitle>
+                <CardDescription>A short, memorable name for this wisdom entry</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Input
+                  placeholder="e.g., The Day I Learned to Let Go"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="text-lg"
+                  maxLength={200}
+                />
+              </CardContent>
+            </Card>
 
-          {/* Save Options */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">How would you like to save this?</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <SaveOptionCard
-                selected={saveOption === "draft"}
-                onClick={() => setSaveOption("draft")}
-                icon={null}
-                title="Save as Draft"
-                description="Continue editing later. Only you can see this."
-              />
-              <SaveOptionCard
-                selected={saveOption === "private"}
-                onClick={() => setSaveOption("private")}
-                icon={<Lock className="w-4 h-4 text-primary" />}
-                title="Save Private"
-                description="Complete and saved. Only you can see this."
-              />
-              <SaveOptionCard
-                selected={saveOption === "family"}
-                onClick={() => setSaveOption("family")}
-                icon={<Users className="w-4 h-4 text-primary" />}
-                title="Share with Family"
-                description="Your family members can view this wisdom."
-              />
-            </CardContent>
-          </Card>
+            {/* Save Options */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">How would you like to save this?</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <SaveOptionCard
+                  selected={saveOption === "draft"}
+                  onClick={() => setSaveOption("draft")}
+                  icon={null}
+                  title="Save as Draft"
+                  description="Continue editing later. Only you can see this."
+                />
+                <SaveOptionCard
+                  selected={saveOption === "private"}
+                  onClick={() => setSaveOption("private")}
+                  icon={<Lock className="w-4 h-4 text-primary" />}
+                  title="Save Private"
+                  description="Complete and saved. Only you can see this."
+                />
+                <SaveOptionCard
+                  selected={saveOption === "family"}
+                  onClick={() => setSaveOption("family")}
+                  icon={<Users className="w-4 h-4 text-primary" />}
+                  title="Share with Family"
+                  description="Your family members can view this wisdom."
+                />
+              </CardContent>
+            </Card>
 
-          {/* Save Button */}
-          <div className="flex gap-3">
-            <Button
-              onClick={handleSave}
-              className="flex-1 py-6 text-lg"
-              disabled={isSubmitting || !title.trim() || !hasAnyContent()}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  Saving...
-                </>
-              ) : saveOption === "draft" ? (
-                "Save Draft"
-              ) : saveOption === "family" ? (
-                "Save & Share"
-              ) : (
-                "Save Entry"
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push("/wisdom")}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
+            {/* Save Button */}
+            <div className="flex gap-3">
+              <Button
+                onClick={handleSave}
+                className="flex-1 py-6 text-lg"
+                disabled={isSubmitting || !title.trim() || !hasAnyContent()}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Saving...
+                  </>
+                ) : saveOption === "draft" ? (
+                  "Save Draft"
+                ) : saveOption === "family" ? (
+                  "Save & Share"
+                ) : (
+                  "Save Entry"
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/wisdom")}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </FeatureGate>
   );
 }
 

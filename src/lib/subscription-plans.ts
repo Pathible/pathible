@@ -1,38 +1,54 @@
 /**
  * Subscription Plan Constants
  *
- * Single source of truth for plan identifiers used across the app.
- * Use these constants to avoid hardcoding plan names in multiple places.
+ * Re-exports subscription tier utilities from the single source of truth.
+ * Provides backwards-compatible exports for existing code.
+ *
+ * @see src/convex/shared/subscription-tiers.ts for the source of truth
  */
+
+import {
+  SUBSCRIPTION_TIERS,
+  type SubscriptionTier,
+  TIER_DISPLAY,
+  TIER_LEVELS,
+} from "@/convex/shared/subscriptionTiers";
+
+// Re-export for backwards compatibility
+export { SUBSCRIPTION_TIERS, TIER_LEVELS, type SubscriptionTier };
 
 /**
  * Available subscription plan tiers
+ * @deprecated Use SUBSCRIPTION_TIERS from @/convex/shared/subscriptionTiers
  */
-export const PLAN_TIERS = ["foundations", "heritage", "legacy", "founders"] as const;
+export const PLAN_TIERS = SUBSCRIPTION_TIERS;
 
 /**
  * Type for valid plan tier names
+ * @deprecated Use SubscriptionTier from @/convex/shared/subscriptionTiers
  */
-export type PlanTier = (typeof PLAN_TIERS)[number];
+export type PlanTier = SubscriptionTier;
 
 /**
  * Display labels for each plan tier
+ * Derived from TIER_DISPLAY for backwards compatibility
  */
-export const PLAN_LABELS: Record<PlanTier, string> = {
-  foundations: "Foundations",
-  heritage: "Heritage",
-  legacy: "Legacy",
-  founders: "Founders",
+export const PLAN_LABELS: Record<SubscriptionTier, string> = {
+  foundations: TIER_DISPLAY.foundations.label,
+  heritage: TIER_DISPLAY.heritage.label,
+  legacy: TIER_DISPLAY.legacy.label,
+  founders: TIER_DISPLAY.founders.label,
 };
 
 /**
  * Plan descriptions for UI display
+ * Derived from TIER_DISPLAY for backwards compatibility
  */
-export const PLAN_DESCRIPTIONS: Record<PlanTier, string> = {
-  foundations: "Essential features for getting started",
-  heritage: "Advanced features for growing families",
-  legacy: "Premium features for comprehensive legacy planning",
-  founders: "Exclusive launch offer with Legacy features forever",
+export const PLAN_DESCRIPTIONS: Record<SubscriptionTier, string> = {
+  foundations: TIER_DISPLAY.foundations.shortDescription,
+  heritage: TIER_DISPLAY.heritage.shortDescription,
+  legacy: TIER_DISPLAY.legacy.shortDescription,
+  founders: TIER_DISPLAY.founders.shortDescription,
 };
 
 /**
@@ -56,7 +72,7 @@ export function checkHasActivePlan(
   has: ((params: { plan: string }) => boolean) | undefined,
 ): boolean {
   if (!has) return false;
-  return PLAN_TIERS.some((plan) => has({ plan }));
+  return SUBSCRIPTION_TIERS.some((plan) => has({ plan }));
 }
 
 /**
@@ -67,7 +83,7 @@ export function checkHasActivePlan(
  */
 export function getCurrentPlanTier(
   has: ((params: { plan: string }) => boolean) | undefined,
-): PlanTier | null {
+): SubscriptionTier | null {
   if (!has) return null;
 
   // Check in descending order (highest tier first)

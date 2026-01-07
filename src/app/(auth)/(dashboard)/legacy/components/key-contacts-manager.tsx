@@ -34,18 +34,29 @@ type ContactRole =
   | "trustee"
   | "guardian"
   | "healthcare_proxy"
+  | "friend"
+  | "neighbor"
+  | "business_partner"
+  | "caregiver"
+  | "charitable_org"
+  | "religious_org"
   | "other";
 
 interface KeyContact {
   _id: Id<"keyContacts">;
   _creationTime: number;
   householdId: Id<"households">;
-  legacyPlanId: Id<"legacyPlans">;
+  legacyPlanId?: Id<"legacyPlans">;
   name: string;
   role: ContactRole;
+  relationship?: string;
   phone?: string;
   email?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  dateOfBirth?: number;
   notes?: string;
 }
 
@@ -62,6 +73,12 @@ const roleLabels: Record<ContactRole, string> = {
   trustee: "Trustee",
   guardian: "Guardian",
   healthcare_proxy: "Healthcare Proxy",
+  friend: "Friend",
+  neighbor: "Neighbor",
+  business_partner: "Business Partner",
+  caregiver: "Caregiver",
+  charitable_org: "Charitable Organization",
+  religious_org: "Religious Organization",
   other: "Other",
 };
 
@@ -72,6 +89,12 @@ const roleColors: Record<ContactRole, string> = {
   trustee: "bg-orange-100 text-orange-800",
   guardian: "bg-pink-100 text-pink-800",
   healthcare_proxy: "bg-red-100 text-red-800",
+  friend: "bg-cyan-100 text-cyan-800",
+  neighbor: "bg-teal-100 text-teal-800",
+  business_partner: "bg-indigo-100 text-indigo-800",
+  caregiver: "bg-rose-100 text-rose-800",
+  charitable_org: "bg-amber-100 text-amber-800",
+  religious_org: "bg-violet-100 text-violet-800",
   other: "bg-gray-100 text-gray-800",
 };
 
