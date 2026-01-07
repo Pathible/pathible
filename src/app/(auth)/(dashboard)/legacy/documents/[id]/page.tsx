@@ -4,6 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { FeatureGate } from "@/components/feature-gate";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ interface PageProps {
 export default function LegalDocumentEditorPage({ params }: PageProps) {
   const { id } = use(params);
   const documentId = id as Id<"legalDocuments">;
+  const router = useRouter();
 
   // Track retry attempts for auth sync
   const [retryCount, setRetryCount] = useState(0);
@@ -118,7 +120,7 @@ export default function LegalDocumentEditorPage({ params }: PageProps) {
         {/* Back Navigation */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/legacy">
+            <Link href="/legacy?tab=legal-documents">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Legacy Planning
             </Link>
@@ -131,7 +133,7 @@ export default function LegalDocumentEditorPage({ params }: PageProps) {
           documentId={documentId}
           onClose={() => {
             // Navigate back to legacy page
-            window.location.href = "/legacy";
+            router.push("/legacy?tab=legal-documents");
           }}
         />
       </div>

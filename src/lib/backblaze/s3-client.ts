@@ -169,7 +169,7 @@ export class BackblazeS3Client {
    * );
    *
    * // Client-side download:
-   * window.location.href = downloadUrl;
+   * router.push(downloadUrl;
    * // or
    * const response = await fetch(downloadUrl);
    * const blob = await response.blob();

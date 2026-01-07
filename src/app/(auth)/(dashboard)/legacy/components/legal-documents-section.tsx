@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { flattenResponsesForPDF } from "@/lib/person-utils";
 import { US_STATES } from "@/lib/state-legal-requirements";
 import { LegalDisclaimerModal } from "./legal-disclaimer-modal";
 import type { LegalDocumentPDFData } from "./legal-document-pdf";
@@ -103,8 +104,8 @@ const DOCUMENT_TYPES: Record<
   },
 };
 
-// Order for display
-const DOCUMENT_ORDER: DocumentType[] = [
+// Full order for display (all document types)
+const ALL_DOCUMENT_TYPES: DocumentType[] = [
   "will",
   "trust",
   "pour_over_will",
@@ -112,6 +113,22 @@ const DOCUMENT_ORDER: DocumentType[] = [
   "healthcare_poa",
   "advance_directive",
 ];
+
+// Document types available for production release
+// TODO: Gradually enable more document types as they are tested
+const ENABLED_DOCUMENT_TYPES: DocumentType[] = [
+  "will",
+  // "trust",           // Coming soon - needs asset integration testing
+  // "pour_over_will",  // Coming soon - depends on trust
+  // "financial_poa",   // Coming soon
+  // "healthcare_poa",  // Coming soon
+  // "advance_directive", // Coming soon
+];
+
+// Use enabled types for display (filter to preserve order)
+const DOCUMENT_ORDER: DocumentType[] = ALL_DOCUMENT_TYPES.filter((type) =>
+  ENABLED_DOCUMENT_TYPES.includes(type),
+);
 
 export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProps) {
   const router = useRouter();
@@ -198,12 +215,14 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
     docName: string,
   ) => {
     try {
-      const responses = JSON.parse(doc.responses || "{}");
+      const rawResponses = JSON.parse(doc.responses || "{}");
+      // Flatten PersonReference objects to strings for PDF compatibility
+      const flattenedResponses = flattenResponsesForPDF(rawResponses);
       const pdfData: LegalDocumentPDFData = {
         documentType: doc.documentType as LegalDocumentPDFData["documentType"],
         state: doc.state,
-        responses,
-        userName: responses.fullName || user?.fullName || "User",
+        responses: flattenedResponses,
+        userName: (flattenedResponses.fullName as string) || user?.fullName || "User",
         generatedDate: new Date(),
       };
       setPreviewDocument({ data: pdfData, name: docName });

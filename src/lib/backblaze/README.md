@@ -21,6 +21,7 @@ B2_S3_BUCKET_NAME=your_bucket_name
 ```
 
 **Important:** Update the endpoint and region based on your bucket's location:
+
 - Find your region in the Backblaze B2 dashboard
 - Common regions: `us-west-004`, `us-west-001`, `eu-central-003`
 - Endpoint format: `https://s3.<region>.backblazeb2.com`
@@ -28,7 +29,7 @@ B2_S3_BUCKET_NAME=your_bucket_name
 ### 2. Generate Presigned Upload URL (Server-Side)
 
 ```typescript
-import { getBackblazeS3Client, generateB2FileName } from '@/lib/backblaze';
+import { getBackblazeS3Client, generateB2FileName } from "@/lib/backblaze";
 
 // In your Next.js API route or Server Action
 const client = getBackblazeS3Client();
@@ -39,7 +40,7 @@ const b2FileName = generateB2FileName(householdId, originalFileName);
 // Generate presigned upload URL
 const { uploadUrl, key } = await client.getPresignedUploadUrl(
   b2FileName,
-  'application/pdf',
+  "application/pdf",
   { expiresIn: 3600 } // 1 hour
 );
 
@@ -53,15 +54,15 @@ return { uploadUrl, key };
 // Client-side upload using the presigned URL
 async function uploadFile(file: File, uploadUrl: string) {
   const response = await fetch(uploadUrl, {
-    method: 'PUT',
+    method: "PUT",
     body: file,
     headers: {
-      'Content-Type': file.type,
+      "Content-Type": file.type,
     },
   });
 
   if (!response.ok) {
-    throw new Error('Upload failed');
+    throw new Error("Upload failed");
   }
 
   return { success: true };
@@ -85,7 +86,7 @@ return { downloadUrl };
 
 ```typescript
 // Option 1: Direct download
-window.location.href = downloadUrl;
+router.push(downloadUrl;
 
 // Option 2: Fetch and process
 const response = await fetch(downloadUrl);
@@ -105,6 +106,7 @@ await client.deleteObject(key);
 ### S3-Compatible API (Recommended)
 
 **Pros:**
+
 - ✅ Presigned URLs work seamlessly with browsers (no CORS issues)
 - ✅ No custom authorization headers required
 - ✅ Standard S3 API semantics
@@ -113,11 +115,13 @@ await client.deleteObject(key);
 - ✅ Direct browser uploads/downloads without server proxy
 
 **How It Works:**
+
 ```
 Client Request → Server generates presigned URL → Client uses URL directly with B2
 ```
 
 **Use Cases:**
+
 - Direct browser uploads (forms, drag-and-drop)
 - Secure file downloads without exposing credentials
 - Large file transfers without server bandwidth
@@ -126,17 +130,20 @@ Client Request → Server generates presigned URL → Client uses URL directly w
 ### Native B2 API (Legacy)
 
 **Cons:**
+
 - ⚠️ Requires custom CORS configuration
 - ⚠️ Custom authorization token management
 - ⚠️ More complex client-side implementation
 - ⚠️ Server must proxy all uploads/downloads
 
 **How It Works:**
+
 ```
 Client Request → Server gets auth token → Server proxies to B2 → Server returns result
 ```
 
 **When to Use:**
+
 - Existing implementations (backward compatibility)
 - Server-side only operations
 - Migration period before switching to S3 API
@@ -158,8 +165,9 @@ B2_S3_BUCKET_NAME=<same as BACKBLAZE_BUCKET_NAME>
 ### Step 2: Update Server-Side Code
 
 **Before (Native API):**
+
 ```typescript
-import { getBackblazeClient } from '@/lib/backblaze';
+import { getBackblazeClient } from "@/lib/backblaze";
 
 const client = getBackblazeClient();
 const uploadData = await client.getUploadUrl();
@@ -167,8 +175,9 @@ const uploadData = await client.getUploadUrl();
 ```
 
 **After (S3 API):**
+
 ```typescript
-import { getBackblazeS3Client } from '@/lib/backblaze';
+import { getBackblazeS3Client } from "@/lib/backblaze";
 
 const client = getBackblazeS3Client();
 const { uploadUrl, key } = await client.getPresignedUploadUrl(
@@ -181,25 +190,27 @@ const { uploadUrl, key } = await client.getPresignedUploadUrl(
 ### Step 3: Update Client-Side Code
 
 **Before (Native API):**
+
 ```typescript
 await fetch(uploadUrl, {
-  method: 'POST',
+  method: "POST",
   headers: {
-    'Authorization': authToken,
-    'X-Bz-File-Name': encodeURIComponent(fileName),
-    'Content-Type': contentType,
-    'X-Bz-Content-Sha1': sha1Hash,
+    Authorization: authToken,
+    "X-Bz-File-Name": encodeURIComponent(fileName),
+    "Content-Type": contentType,
+    "X-Bz-Content-Sha1": sha1Hash,
   },
   body: file,
 });
 ```
 
 **After (S3 API):**
+
 ```typescript
 await fetch(uploadUrl, {
-  method: 'PUT',
+  method: "PUT",
   headers: {
-    'Content-Type': contentType,
+    "Content-Type": contentType,
   },
   body: file,
 });
@@ -215,6 +226,7 @@ await fetch(uploadUrl, {
 ### Step 5: Remove Legacy Code (Optional)
 
 Once fully migrated, you can:
+
 1. Remove old `BACKBLAZE_*` environment variables
 2. Remove `client.ts` imports
 3. Clean up legacy code paths
@@ -228,16 +240,18 @@ Once fully migrated, you can:
 Generate a presigned URL for uploading a file.
 
 **Parameters:**
+
 - `key` (string) - Object key/path in bucket (e.g., "household_123/doc.pdf")
 - `contentType` (string) - MIME type (e.g., "application/pdf")
 - `options.expiresIn` (number, optional) - Expiration in seconds (default: 3600)
 
 **Returns:**
+
 ```typescript
 {
-  uploadUrl: string;    // Presigned URL for PUT request
-  key: string;          // The object key
-  expiresIn: number;    // Expiration time in seconds
+  uploadUrl: string; // Presigned URL for PUT request
+  key: string; // The object key
+  expiresIn: number; // Expiration time in seconds
 }
 ```
 
@@ -246,14 +260,16 @@ Generate a presigned URL for uploading a file.
 Generate a presigned URL for downloading a file.
 
 **Parameters:**
+
 - `key` (string) - Object key/path in bucket
 - `options.expiresIn` (number, optional) - Expiration in seconds (default: 3600)
 
 **Returns:**
+
 ```typescript
 {
-  downloadUrl: string;  // Presigned URL for GET request
-  expiresIn: number;    // Expiration time in seconds
+  downloadUrl: string; // Presigned URL for GET request
+  expiresIn: number; // Expiration time in seconds
 }
 ```
 
@@ -262,6 +278,7 @@ Generate a presigned URL for downloading a file.
 Delete an object from B2 storage (server-side operation).
 
 **Parameters:**
+
 - `key` (string) - Object key/path to delete
 
 **Returns:** `Promise<void>`
@@ -287,14 +304,16 @@ Generate a unique, sanitized file name for B2 storage.
 **Format:** `household_<householdId>/<timestamp>_<uuid>_<sanitized-filename>`
 
 **Parameters:**
+
 - `householdId` (string) - Household identifier
 - `originalFileName` (string) - Original file name
 
 **Returns:** `string` - Generated file name
 
 **Example:**
+
 ```typescript
-generateB2FileName('abc123', 'My Document.pdf')
+generateB2FileName("abc123", "My Document.pdf");
 // Returns: "household_abc123/1701234567890_a1b2c3d4_my_document.pdf"
 ```
 
@@ -303,6 +322,7 @@ generateB2FileName('abc123', 'My Document.pdf')
 Validate file upload parameters before processing.
 
 **Parameters:**
+
 ```typescript
 {
   fileName: string;
@@ -317,22 +337,22 @@ Validate file upload parameters before processing.
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `B2_S3_ENDPOINT` | Yes | S3-compatible endpoint URL |
-| `B2_S3_REGION` | Yes | AWS region format (e.g., us-west-004) |
-| `B2_S3_ACCESS_KEY_ID` | Yes | Your B2 key ID |
-| `B2_S3_SECRET_ACCESS_KEY` | Yes | Your B2 application key |
-| `B2_S3_BUCKET_NAME` | Yes | Your bucket name |
+| Variable                  | Required | Description                           |
+| ------------------------- | -------- | ------------------------------------- |
+| `B2_S3_ENDPOINT`          | Yes      | S3-compatible endpoint URL            |
+| `B2_S3_REGION`            | Yes      | AWS region format (e.g., us-west-004) |
+| `B2_S3_ACCESS_KEY_ID`     | Yes      | Your B2 key ID                        |
+| `B2_S3_SECRET_ACCESS_KEY` | Yes      | Your B2 application key               |
+| `B2_S3_BUCKET_NAME`       | Yes      | Your bucket name                      |
 
 ### Constants
 
 ```typescript
 B2_CONSTANTS = {
-  MAX_FILE_SIZE: 100 * 1024 * 1024,        // 100MB
-  DOWNLOAD_URL_EXPIRATION: 3600,            // 1 hour
-  UPLOAD_URL_EXPIRATION: 3600,              // 1 hour
-}
+  MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB
+  DOWNLOAD_URL_EXPIRATION: 3600, // 1 hour
+  UPLOAD_URL_EXPIRATION: 3600, // 1 hour
+};
 ```
 
 ## Security Considerations
@@ -351,6 +371,7 @@ B2_CONSTANTS = {
 **Cause:** Invalid credentials or configuration
 
 **Solution:**
+
 1. Verify environment variables are set correctly
 2. Check endpoint format matches your region
 3. Ensure credentials have proper permissions
@@ -380,6 +401,7 @@ Presigned URLs should work without CORS configuration, but if needed:
 **Cause:** Bucket permissions or wrong bucket name
 
 **Solution:**
+
 1. Verify bucket name matches in all configs
 2. Check bucket is in correct region
 3. Verify file was uploaded using correct key
@@ -388,6 +410,7 @@ Presigned URLs should work without CORS configuration, but if needed:
 ## Examples
 
 See the `/examples` directory (coming soon) for complete working examples:
+
 - Next.js App Router API Route
 - Server Actions with upload
 - React component with file picker

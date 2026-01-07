@@ -172,8 +172,12 @@ export const get = query({
 
     const document = await ctx.db.get(args.documentId);
 
-    // Verify ownership
-    if (!document || document.profileId !== profile._id) {
+    // Verify ownership and household match (belt-and-suspenders security)
+    if (
+      !document ||
+      document.profileId !== profile._id ||
+      document.householdId !== args.householdId
+    ) {
       return null;
     }
 
@@ -574,6 +578,9 @@ export const addContact = mutation({
     if (!trimmedName) {
       throw new Error("Contact name is required");
     }
+    if (trimmedName.length > 200) {
+      throw new Error("Name is too long (max 200 characters)");
+    }
 
     // If linking to a key contact, validate it exists
     if (args.keyContactId) {
@@ -727,6 +734,12 @@ export const importFromKeyContacts = mutation({
     const document = await ctx.db.get(args.documentId);
     if (!document || document.profileId !== profile._id) {
       throw new Error("Document not found");
+    }
+
+    // Validate legacyPlan belongs to the same household (prevent IDOR)
+    const legacyPlan = await ctx.db.get(args.legacyPlanId);
+    if (!legacyPlan || legacyPlan.householdId !== args.householdId) {
+      throw new Error("Invalid legacy plan");
     }
 
     // Get key contacts from legacy plan

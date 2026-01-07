@@ -9,17 +9,22 @@ import {
   CheckCircle2,
   ClipboardList,
   Download,
+  Eye,
   FileText,
   Heart,
   Info,
   Landmark,
   Loader2,
+  PanelRightClose,
+  PanelRightOpen,
   ScrollText,
   Shield,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { type BeneficiaryEntry, BeneficiaryList } from "@/components/beneficiary-list";
+import { PersonPicker } from "@/components/person-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,11 +42,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { flattenResponsesForPDF, type PersonReference } from "@/lib/person-utils";
 import {
   getFriendlyRequirementsSummary,
   STATE_NAMES,
   type USState,
 } from "@/lib/state-legal-requirements";
+import { DocumentPreview } from "./document-preview";
 import { LegalDocumentPDF } from "./legal-document-pdf";
 
 interface LegalDocumentWizardProps {
@@ -85,15 +92,35 @@ interface WizardStep {
   fields: WizardField[];
 }
 
+interface PersonConfig {
+  filterRelationships?: string[];
+  excludeMinors?: boolean;
+  autoSelectRelationship?: string;
+  autoSelectCurrentUser?: boolean;
+}
+
 interface WizardField {
   id: string;
   label: string;
-  type: "text" | "textarea" | "select" | "checkbox" | "date" | "number" | "heading" | "info";
+  type:
+    | "text"
+    | "textarea"
+    | "select"
+    | "checkbox"
+    | "date"
+    | "number"
+    | "heading"
+    | "info"
+    | "person"
+    | "personList"
+    | "beneficiaryList"
+    | "existingAssets";
   placeholder?: string;
   required?: boolean;
   options?: { value: string; label: string }[];
   helpText?: string;
   dependsOn?: { field: string; value: string | boolean };
+  personConfig?: PersonConfig;
 }
 
 // Will wizard steps
@@ -104,18 +131,14 @@ const WILL_STEPS: WizardStep[] = [
     description: "Your basic information for the will",
     fields: [
       {
-        id: "fullName",
-        label: "Full Legal Name",
-        type: "text",
+        id: "testator",
+        label: "Your Information",
+        type: "person",
         required: true,
-        helpText: "Enter your name exactly as it appears on official documents",
-      },
-      {
-        id: "address",
-        label: "Current Address",
-        type: "textarea",
-        required: true,
-        helpText: "Include city, county, state, and ZIP code",
+        helpText: "Pre-filled from your profile. Edit if needed.",
+        personConfig: {
+          autoSelectCurrentUser: true,
+        },
       },
       {
         id: "county",
@@ -123,12 +146,6 @@ const WILL_STEPS: WizardStep[] = [
         type: "text",
         required: true,
         helpText: "Required for legal documents in most states",
-      },
-      {
-        id: "dateOfBirth",
-        label: "Date of Birth",
-        type: "date",
-        required: true,
       },
       {
         id: "maritalStatus",
@@ -144,10 +161,14 @@ const WILL_STEPS: WizardStep[] = [
         ],
       },
       {
-        id: "spouseName",
-        label: "Spouse/Partner Full Legal Name",
-        type: "text",
+        id: "spouse",
+        label: "Spouse/Partner",
+        type: "person",
         dependsOn: { field: "maritalStatus", value: "married" },
+        personConfig: {
+          filterRelationships: ["spouse", "partner"],
+          autoSelectRelationship: "spouse",
+        },
       },
     ],
   },
@@ -164,28 +185,23 @@ const WILL_STEPS: WizardStep[] = [
           "Your executor (also called personal representative) is responsible for gathering your assets, paying debts and taxes, and distributing property according to your wishes. Choose someone trustworthy and organized.",
       },
       {
-        id: "executorName",
-        label: "Primary Executor Full Name",
-        type: "text",
+        id: "executor",
+        label: "Primary Executor",
+        type: "person",
         required: true,
+        helpText: "Must be 18 or older",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
       {
-        id: "executorRelationship",
-        label: "Relationship to You",
-        type: "text",
-      },
-      { id: "executorAddress", label: "Executor Address", type: "textarea" },
-      { id: "executorPhone", label: "Executor Phone", type: "text" },
-      {
-        id: "alternateExecutorName",
-        label: "Alternate Executor Name",
-        type: "text",
+        id: "alternateExecutor",
+        label: "Alternate Executor",
+        type: "person",
         helpText: "Who should serve if the primary executor cannot or will not serve",
-      },
-      {
-        id: "alternateExecutorRelationship",
-        label: "Alternate's Relationship",
-        type: "text",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
       {
         id: "bondWaiver",
@@ -230,10 +246,10 @@ const WILL_STEPS: WizardStep[] = [
       {
         id: "residuaryBeneficiary",
         label: "Primary Beneficiary (receives remainder of estate)",
-        type: "text",
+        type: "person",
         required: true,
+        personConfig: {},
       },
-      { id: "residuaryRelationship", label: "Relationship", type: "text" },
       {
         id: "residuaryPercentage",
         label: "Percentage",
@@ -242,9 +258,9 @@ const WILL_STEPS: WizardStep[] = [
       },
       {
         id: "additionalBeneficiaries",
-        label: "Additional Beneficiaries (one per line: Name - Relationship - Percentage)",
-        type: "textarea",
-        placeholder: "Jane Doe - Sister - 25%\nJohn Smith - Friend - 10%",
+        label: "Additional Beneficiaries",
+        type: "beneficiaryList",
+        helpText: "Add beneficiaries from your family or contacts, or enter names manually",
       },
       {
         id: "specificBequests",
@@ -257,9 +273,10 @@ const WILL_STEPS: WizardStep[] = [
       {
         id: "contingentBeneficiary",
         label: "Final Contingent Beneficiary",
-        type: "text",
+        type: "person",
         helpText:
           "Who receives your estate if ALL primary beneficiaries predecease you? Consider naming a charity.",
+        personConfig: {},
       },
       {
         id: "perStirpes",
@@ -313,9 +330,15 @@ const WILL_STEPS: WizardStep[] = [
         label: "Source for Estate Tax Payment",
         type: "select",
         options: [
-          { value: "residuary", label: "Pay from residuary estate (recommended)" },
+          {
+            value: "residuary",
+            label: "Pay from residuary estate (recommended)",
+          },
           { value: "apportioned", label: "Apportion among beneficiaries" },
-          { value: "specific", label: "Pay from specific fund (specify below)" },
+          {
+            value: "specific",
+            label: "Pay from specific fund (specify below)",
+          },
         ],
         helpText: "How should estate and inheritance taxes be paid?",
       },
@@ -346,28 +369,23 @@ const WILL_STEPS: WizardStep[] = [
         type: "checkbox",
       },
       {
-        id: "guardianName",
+        id: "guardian",
         label: "Guardian for Minor Children",
-        type: "text",
+        type: "person",
         dependsOn: { field: "hasMinorChildren", value: true },
+        helpText: "Must be 18 or older",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
       {
-        id: "guardianRelationship",
-        label: "Guardian's Relationship",
-        type: "text",
-        dependsOn: { field: "hasMinorChildren", value: true },
-      },
-      {
-        id: "guardianAddress",
-        label: "Guardian's Address",
-        type: "textarea",
-        dependsOn: { field: "hasMinorChildren", value: true },
-      },
-      {
-        id: "alternateGuardianName",
+        id: "alternateGuardian",
         label: "Alternate Guardian",
-        type: "text",
+        type: "person",
         dependsOn: { field: "hasMinorChildren", value: true },
+        personConfig: {
+          excludeMinors: true,
+        },
       },
       {
         id: "childrenNames",
@@ -375,6 +393,8 @@ const WILL_STEPS: WizardStep[] = [
         type: "textarea",
         placeholder: "John Smith Jr. - DOB: January 15, 2015\nJane Smith - DOB: March 22, 2018",
         dependsOn: { field: "hasMinorChildren", value: true },
+        helpText:
+          "Your minor children from your family profile will be used. Add additional details here if needed.",
       },
       {
         id: "childrenTrustAge",
@@ -442,7 +462,10 @@ const WILL_STEPS: WizardStep[] = [
         type: "select",
         options: [
           { value: "delete", label: "Delete all accounts" },
-          { value: "memorialize", label: "Memorialize/legacy mode where available" },
+          {
+            value: "memorialize",
+            label: "Memorialize/legacy mode where available",
+          },
           { value: "download_delete", label: "Download content then delete" },
           { value: "agent_decides", label: "Let executor decide" },
         ],
@@ -518,29 +541,19 @@ const HEALTHCARE_POA_STEPS: WizardStep[] = [
     description: "Your basic information",
     fields: [
       {
-        id: "fullName",
-        label: "Full Legal Name",
-        type: "text",
+        id: "principal",
+        label: "Your Information",
+        type: "person",
         required: true,
-        helpText: "Enter your name exactly as it appears on official documents",
-      },
-      {
-        id: "address",
-        label: "Current Address",
-        type: "textarea",
-        required: true,
-        helpText: "Include city, county, state, and ZIP code",
+        helpText: "Pre-filled from your profile. Edit if needed.",
+        personConfig: {
+          autoSelectCurrentUser: true,
+        },
       },
       {
         id: "county",
         label: "County of Residence",
         type: "text",
-        required: true,
-      },
-      {
-        id: "dateOfBirth",
-        label: "Date of Birth",
-        type: "date",
         required: true,
       },
       {
@@ -569,31 +582,32 @@ const HEALTHCARE_POA_STEPS: WizardStep[] = [
           "Your healthcare agent (also called healthcare proxy or surrogate) will make medical decisions for you if you become unable to communicate your wishes. Choose someone you trust completely who understands your values.",
       },
       {
-        id: "agentName",
-        label: "Primary Healthcare Agent Full Name",
-        type: "text",
+        id: "healthcareAgent",
+        label: "Primary Healthcare Agent",
+        type: "person",
         required: true,
+        helpText: "Must be 18 or older",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
-      { id: "agentRelationship", label: "Relationship to You", type: "text" },
-      { id: "agentAddress", label: "Agent's Address", type: "textarea" },
-      { id: "agentPhone", label: "Agent's Daytime Phone", type: "text" },
-      { id: "agentPhoneEvening", label: "Agent's Evening Phone", type: "text" },
-      { id: "agentPhoneCell", label: "Agent's Cell Phone", type: "text" },
-      { id: "agentEmail", label: "Agent's Email", type: "text" },
       {
-        id: "alternateAgentName",
+        id: "alternateHealthcareAgent",
         label: "First Alternate Healthcare Agent",
-        type: "text",
+        type: "person",
         helpText: "Who should serve if primary agent is unavailable",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
-      { id: "alternateAgentRelationship", label: "Alternate's Relationship", type: "text" },
-      { id: "alternateAgentPhone", label: "Alternate's Phone", type: "text" },
       {
-        id: "secondAlternateAgentName",
+        id: "secondAlternateHealthcareAgent",
         label: "Second Alternate Healthcare Agent",
-        type: "text",
+        type: "person",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
-      { id: "secondAlternateAgentPhone", label: "Second Alternate's Phone", type: "text" },
     ],
   },
   {
@@ -668,8 +682,14 @@ const HEALTHCARE_POA_STEPS: WizardStep[] = [
         label: "Mental Health Treatment Authority",
         type: "select",
         options: [
-          { value: "full", label: "Full authority for mental health decisions" },
-          { value: "limited", label: "Limited authority (cannot commit to psychiatric facility)" },
+          {
+            value: "full",
+            label: "Full authority for mental health decisions",
+          },
+          {
+            value: "limited",
+            label: "Limited authority (cannot commit to psychiatric facility)",
+          },
           { value: "none", label: "No mental health decision authority" },
         ],
         helpText: "Mental health treatment powers may be subject to additional state requirements",
@@ -710,9 +730,18 @@ const HEALTHCARE_POA_STEPS: WizardStep[] = [
         label: "How should incapacity be determined?",
         type: "select",
         options: [
-          { value: "one_physician", label: "One physician determines I lack capacity" },
-          { value: "two_physicians", label: "Two physicians determine I lack capacity" },
-          { value: "attending", label: "My attending physician determines I lack capacity" },
+          {
+            value: "one_physician",
+            label: "One physician determines I lack capacity",
+          },
+          {
+            value: "two_physicians",
+            label: "Two physicians determine I lack capacity",
+          },
+          {
+            value: "attending",
+            label: "My attending physician determines I lack capacity",
+          },
         ],
         helpText:
           "Most healthcare POAs become effective when your attending physician determines you lack capacity",
@@ -793,9 +822,18 @@ const HEALTHCARE_POA_STEPS: WizardStep[] = [
         label: "General Treatment Philosophy",
         type: "select",
         options: [
-          { value: "prolong", label: "Prolong life as long as possible, regardless of quality" },
-          { value: "balanced", label: "Balance between prolonging life and quality of life" },
-          { value: "comfort", label: "Focus on comfort and quality rather than prolonging life" },
+          {
+            value: "prolong",
+            label: "Prolong life as long as possible, regardless of quality",
+          },
+          {
+            value: "balanced",
+            label: "Balance between prolonging life and quality of life",
+          },
+          {
+            value: "comfort",
+            label: "Focus on comfort and quality rather than prolonging life",
+          },
         ],
       },
       {
@@ -807,8 +845,14 @@ const HEALTHCARE_POA_STEPS: WizardStep[] = [
             value: "maximum",
             label: "Maximum pain relief, even if it affects consciousness or hastens death",
           },
-          { value: "balanced", label: "Balance pain relief with maintaining alertness" },
-          { value: "minimal", label: "Minimal medication to remain as alert as possible" },
+          {
+            value: "balanced",
+            label: "Balance pain relief with maintaining alertness",
+          },
+          {
+            value: "minimal",
+            label: "Minimal medication to remain as alert as possible",
+          },
         ],
       },
       {
@@ -872,29 +916,19 @@ const FINANCIAL_POA_STEPS: WizardStep[] = [
     description: "Your basic information",
     fields: [
       {
-        id: "fullName",
-        label: "Full Legal Name",
-        type: "text",
+        id: "principal",
+        label: "Your Information",
+        type: "person",
         required: true,
-        helpText: "Enter your name exactly as it appears on official documents",
-      },
-      {
-        id: "address",
-        label: "Current Address",
-        type: "textarea",
-        required: true,
-        helpText: "Include city, county, state, and ZIP code",
+        helpText: "Pre-filled from your profile. Edit if needed.",
+        personConfig: {
+          autoSelectCurrentUser: true,
+        },
       },
       {
         id: "county",
         label: "County of Residence",
         type: "text",
-        required: true,
-      },
-      {
-        id: "dateOfBirth",
-        label: "Date of Birth",
-        type: "date",
         required: true,
       },
       {
@@ -917,25 +951,33 @@ const FINANCIAL_POA_STEPS: WizardStep[] = [
         helpText:
           "Your agent (also called attorney-in-fact) will have the power to handle your financial matters. This is a significant responsibility - choose someone trustworthy with good financial judgment. Your agent is a fiduciary who must act in your best interest.",
       },
-      { id: "agentName", label: "Primary Agent Full Name", type: "text", required: true },
-      { id: "agentRelationship", label: "Relationship to You", type: "text" },
-      { id: "agentAddress", label: "Agent's Address", type: "textarea" },
-      { id: "agentPhone", label: "Agent's Phone", type: "text" },
-      { id: "agentEmail", label: "Agent's Email", type: "text" },
       {
-        id: "alternateAgentName",
+        id: "financialAgent",
+        label: "Primary Agent",
+        type: "person",
+        required: true,
+        helpText: "Must be 18 or older",
+        personConfig: {
+          excludeMinors: true,
+        },
+      },
+      {
+        id: "alternateFinancialAgent",
         label: "First Successor Agent",
-        type: "text",
+        type: "person",
         helpText: "Who should serve if primary agent is unavailable",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
-      { id: "alternateAgentRelationship", label: "Successor's Relationship", type: "text" },
-      { id: "alternateAgentPhone", label: "Successor's Phone", type: "text" },
       {
-        id: "secondAlternateAgentName",
+        id: "secondAlternateFinancialAgent",
         label: "Second Successor Agent",
-        type: "text",
+        type: "person",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
-      { id: "secondAlternateAgentPhone", label: "Second Successor's Phone", type: "text" },
       {
         id: "coAgents",
         label: "Appoint co-agents (both must act together)",
@@ -1036,7 +1078,10 @@ const FINANCIAL_POA_STEPS: WizardStep[] = [
             value: "annual_exclusion",
             label: "Up to annual gift tax exclusion per person ($18,000 in 2024)",
           },
-          { value: "pattern", label: "Consistent with my established pattern of giving" },
+          {
+            value: "pattern",
+            label: "Consistent with my established pattern of giving",
+          },
           { value: "specific", label: "Specific amount (specify below)" },
           { value: "unlimited", label: "No limitation on gift amounts" },
         ],
@@ -1077,7 +1122,10 @@ const FINANCIAL_POA_STEPS: WizardStep[] = [
         type: "select",
         required: true,
         options: [
-          { value: "immediate", label: "Immediately upon signing (recommended)" },
+          {
+            value: "immediate",
+            label: "Immediately upon signing (recommended)",
+          },
           {
             value: "incapacity",
             label: "Only upon my incapacity (springing POA)",
@@ -1089,8 +1137,14 @@ const FINANCIAL_POA_STEPS: WizardStep[] = [
         label: "How should incapacity be determined?",
         type: "select",
         options: [
-          { value: "one_physician", label: "One licensed physician certifies incapacity" },
-          { value: "two_physicians", label: "Two licensed physicians certify incapacity" },
+          {
+            value: "one_physician",
+            label: "One licensed physician certifies incapacity",
+          },
+          {
+            value: "two_physicians",
+            label: "Two licensed physicians certify incapacity",
+          },
           { value: "court", label: "Court determination of incapacity" },
         ],
         dependsOn: { field: "effectiveTiming", value: "incapacity" },
@@ -1145,8 +1199,14 @@ const FINANCIAL_POA_STEPS: WizardStep[] = [
         label: "Agent Compensation",
         type: "select",
         options: [
-          { value: "none", label: "No compensation (reimbursement for expenses only)" },
-          { value: "reasonable", label: "Reasonable compensation for services" },
+          {
+            value: "none",
+            label: "No compensation (reimbursement for expenses only)",
+          },
+          {
+            value: "reasonable",
+            label: "Reasonable compensation for services",
+          },
           { value: "specific", label: "Specific compensation (specify below)" },
           { value: "professional", label: "Professional fiduciary rates" },
         ],
@@ -1226,29 +1286,19 @@ const ADVANCE_DIRECTIVE_STEPS: WizardStep[] = [
     description: "Your basic information",
     fields: [
       {
-        id: "fullName",
-        label: "Full Legal Name",
-        type: "text",
+        id: "principal",
+        label: "Your Information",
+        type: "person",
         required: true,
-        helpText: "Enter your name exactly as it appears on official documents",
-      },
-      {
-        id: "address",
-        label: "Current Address",
-        type: "textarea",
-        required: true,
-        helpText: "Include city, county, state, and ZIP code",
+        helpText: "Pre-filled from your profile. Edit if needed.",
+        personConfig: {
+          autoSelectCurrentUser: true,
+        },
       },
       {
         id: "county",
         label: "County of Residence",
         type: "text",
-        required: true,
-      },
-      {
-        id: "dateOfBirth",
-        label: "Date of Birth",
-        type: "date",
         required: true,
       },
       {
@@ -1348,7 +1398,10 @@ const ADVANCE_DIRECTIVE_STEPS: WizardStep[] = [
           { value: "30_days", label: "30 days" },
           { value: "agent_decides", label: "Let my agent decide" },
         ],
-        dependsOn: { field: "terminalConditionPreference", value: "trial_period" },
+        dependsOn: {
+          field: "terminalConditionPreference",
+          value: "trial_period",
+        },
       },
       {
         id: "permanentUnconsciousPreference",
@@ -1448,7 +1501,10 @@ const ADVANCE_DIRECTIVE_STEPS: WizardStep[] = [
         required: true,
         options: [
           { value: "yes", label: "Yes, I want artificial nutrition/hydration" },
-          { value: "no", label: "No, I do not want artificial nutrition/hydration" },
+          {
+            value: "no",
+            label: "No, I do not want artificial nutrition/hydration",
+          },
           { value: "trial", label: "Try for limited time only" },
           { value: "hydration_only", label: "IV fluids only, no feeding tube" },
           { value: "agent", label: "Let my healthcare agent decide" },
@@ -1480,8 +1536,14 @@ const ADVANCE_DIRECTIVE_STEPS: WizardStep[] = [
         label: "Antibiotics",
         type: "select",
         options: [
-          { value: "yes", label: "Yes, I want antibiotics to treat infections" },
-          { value: "comfort_only", label: "Only for comfort (pain/symptom relief)" },
+          {
+            value: "yes",
+            label: "Yes, I want antibiotics to treat infections",
+          },
+          {
+            value: "comfort_only",
+            label: "Only for comfort (pain/symptom relief)",
+          },
           { value: "no", label: "No antibiotics" },
           { value: "agent", label: "Let my healthcare agent decide" },
         ],
@@ -1521,7 +1583,10 @@ const ADVANCE_DIRECTIVE_STEPS: WizardStep[] = [
             value: "maximum",
             label: "Maximum pain relief, even if it may hasten death or affect consciousness",
           },
-          { value: "balanced", label: "Balance pain relief with maintaining alertness" },
+          {
+            value: "balanced",
+            label: "Balance pain relief with maintaining alertness",
+          },
           {
             value: "minimal",
             label: "Minimal medication to stay as alert as possible",
@@ -1670,8 +1735,14 @@ const ADVANCE_DIRECTIVE_STEPS: WizardStep[] = [
         label: "If I am pregnant:",
         type: "select",
         options: [
-          { value: "suspend", label: "Suspend this directive during pregnancy" },
-          { value: "apply", label: "This directive applies regardless of pregnancy" },
+          {
+            value: "suspend",
+            label: "Suspend this directive during pregnancy",
+          },
+          {
+            value: "apply",
+            label: "This directive applies regardless of pregnancy",
+          },
           { value: "viability", label: "Apply only if fetus is not viable" },
           { value: "not_applicable", label: "Not applicable to me" },
         ],
@@ -1695,9 +1766,15 @@ const ADVANCE_DIRECTIVE_STEPS: WizardStep[] = [
         label: "Organ and Tissue Donation",
         type: "select",
         options: [
-          { value: "yes_all", label: "Yes, donate any needed organs and tissues" },
+          {
+            value: "yes_all",
+            label: "Yes, donate any needed organs and tissues",
+          },
           { value: "yes_organs", label: "Yes, but only organs (not tissues)" },
-          { value: "yes_limited", label: "Yes, but only specific organs (specify below)" },
+          {
+            value: "yes_limited",
+            label: "Yes, but only specific organs (specify below)",
+          },
           { value: "research", label: "Yes, for transplant and/or research" },
           { value: "no", label: "No, I do not want to donate" },
           { value: "agent", label: "Let my healthcare agent decide" },
@@ -1757,29 +1834,19 @@ const TRUST_STEPS: WizardStep[] = [
     description: "Information about you as the trust creator",
     fields: [
       {
-        id: "fullName",
-        label: "Full Legal Name (Grantor/Settlor)",
-        type: "text",
+        id: "grantor",
+        label: "Your Information (Grantor/Settlor)",
+        type: "person",
         required: true,
-        helpText: "Enter your name exactly as it appears on official documents",
-      },
-      {
-        id: "address",
-        label: "Current Address",
-        type: "textarea",
-        required: true,
-        helpText: "Include city, county, state, and ZIP code",
+        helpText: "Pre-filled from your profile. Edit if needed.",
+        personConfig: {
+          autoSelectCurrentUser: true,
+        },
       },
       {
         id: "county",
         label: "County of Residence",
         type: "text",
-        required: true,
-      },
-      {
-        id: "dateOfBirth",
-        label: "Date of Birth",
-        type: "date",
         required: true,
       },
       {
@@ -1796,10 +1863,14 @@ const TRUST_STEPS: WizardStep[] = [
         ],
       },
       {
-        id: "spouseName",
-        label: "Spouse/Partner Full Legal Name",
-        type: "text",
+        id: "spouse",
+        label: "Spouse/Partner",
+        type: "person",
         dependsOn: { field: "maritalStatus", value: "married" },
+        personConfig: {
+          filterRelationships: ["spouse", "partner"],
+          autoSelectRelationship: "spouse",
+        },
       },
       {
         id: "jointTrust",
@@ -1833,48 +1904,40 @@ const TRUST_STEPS: WizardStep[] = [
       {
         id: "initialTrustee",
         label: "Initial Trustee",
-        type: "text",
-        placeholder: "Usually yourself",
+        type: "person",
         helpText: "Most people name themselves as initial trustee",
+        personConfig: {
+          autoSelectCurrentUser: true,
+        },
       },
       {
         id: "coTrustee",
         label: "Co-Trustee (if any)",
-        type: "text",
+        type: "person",
         helpText: "Often a spouse for joint trusts",
+        personConfig: {
+          filterRelationships: ["spouse", "partner"],
+          autoSelectRelationship: "spouse",
+        },
       },
       {
         id: "successorTrustee",
         label: "First Successor Trustee",
-        type: "text",
+        type: "person",
         required: true,
-        helpText: "Who takes over when you can no longer serve",
-      },
-      {
-        id: "successorRelationship",
-        label: "Successor's Relationship",
-        type: "text",
-      },
-      {
-        id: "successorAddress",
-        label: "Successor's Address",
-        type: "textarea",
-      },
-      {
-        id: "successorPhone",
-        label: "Successor's Phone",
-        type: "text",
+        helpText: "Who takes over when you can no longer serve. Must be 18 or older.",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
       {
         id: "secondSuccessorTrustee",
         label: "Second Successor Trustee",
-        type: "text",
+        type: "person",
         helpText: "Backup if first successor cannot serve",
-      },
-      {
-        id: "secondSuccessorRelationship",
-        label: "Second Successor's Relationship",
-        type: "text",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
       {
         id: "professionalTrustee",
@@ -1920,25 +1983,43 @@ const TRUST_STEPS: WizardStep[] = [
         type: "select",
         required: true,
         options: [
-          { value: "one_physician", label: "One licensed physician certifies incapacity" },
-          { value: "two_physicians", label: "Two licensed physicians certify incapacity" },
-          { value: "physician_and_person", label: "Physician and named person agree" },
+          {
+            value: "one_physician",
+            label: "One licensed physician certifies incapacity",
+          },
+          {
+            value: "two_physicians",
+            label: "Two licensed physicians certify incapacity",
+          },
+          {
+            value: "physician_and_person",
+            label: "Physician and named person agree",
+          },
         ],
       },
       {
         id: "incapacityConsultPerson",
         label: "Named person to consult (if selected above)",
         type: "text",
-        dependsOn: { field: "incapacityDetermination", value: "physician_and_person" },
+        dependsOn: {
+          field: "incapacityDetermination",
+          value: "physician_and_person",
+        },
       },
       {
         id: "incapacityStandard",
         label: "Standard of care during incapacity",
         type: "select",
         options: [
-          { value: "accustomed", label: "Maintain my accustomed standard of living" },
+          {
+            value: "accustomed",
+            label: "Maintain my accustomed standard of living",
+          },
           { value: "comfortable", label: "Provide for my comfortable care" },
-          { value: "necessary", label: "Provide only necessary care (preserve assets)" },
+          {
+            value: "necessary",
+            label: "Provide only necessary care (preserve assets)",
+          },
         ],
       },
       {
@@ -1977,10 +2058,10 @@ const TRUST_STEPS: WizardStep[] = [
       {
         id: "primaryBeneficiary",
         label: "Primary Beneficiary",
-        type: "text",
+        type: "person",
         required: true,
+        personConfig: {},
       },
-      { id: "primaryRelationship", label: "Relationship", type: "text" },
       {
         id: "primaryPercentage",
         label: "Percentage of Trust",
@@ -1990,9 +2071,8 @@ const TRUST_STEPS: WizardStep[] = [
       {
         id: "additionalBeneficiaries",
         label: "Additional Beneficiaries",
-        type: "textarea",
-        placeholder:
-          "Name - Relationship - Percentage (one per line)\ne.g., John Smith - Son - 50%",
+        type: "beneficiaryList",
+        helpText: "Add beneficiaries from your family or contacts, or enter names manually",
       },
       {
         id: "specificBequests",
@@ -2003,9 +2083,10 @@ const TRUST_STEPS: WizardStep[] = [
       {
         id: "contingentBeneficiary",
         label: "Final Contingent Beneficiary",
-        type: "text",
+        type: "person",
         helpText:
           "Who receives assets if all primary beneficiaries predecease you? Consider naming a charity.",
+        personConfig: {},
       },
       {
         id: "perStirpes",
@@ -2038,6 +2119,13 @@ const TRUST_STEPS: WizardStep[] = [
         type: "info",
         helpText:
           "List the major assets you plan to transfer to the trust. IMPORTANT: After signing, you must re-title these assets in the trust's name (e.g., 'John Smith, Trustee of the Smith Family Trust dated [date]') for the trust to be effective.",
+      },
+      {
+        id: "existingAssetsDisplay",
+        label: "Your Recorded Assets in Pathible",
+        type: "existingAssets",
+        helpText:
+          "These are assets you've already recorded in Pathible. Review them and use the fields below to add any additional assets or specify which ones to include in the trust.",
       },
       {
         id: "realEstate",
@@ -2249,29 +2337,19 @@ const POUR_OVER_WILL_STEPS: WizardStep[] = [
     description: "Your basic information",
     fields: [
       {
-        id: "fullName",
-        label: "Full Legal Name",
-        type: "text",
+        id: "testator",
+        label: "Your Information",
+        type: "person",
         required: true,
-        helpText: "Enter your name exactly as it appears on official documents",
-      },
-      {
-        id: "address",
-        label: "Current Address",
-        type: "textarea",
-        required: true,
-        helpText: "Include city, county, state, and ZIP code",
+        helpText: "Pre-filled from your profile. Edit if needed.",
+        personConfig: {
+          autoSelectCurrentUser: true,
+        },
       },
       {
         id: "county",
         label: "County of Residence",
         type: "text",
-        required: true,
-      },
-      {
-        id: "dateOfBirth",
-        label: "Date of Birth",
-        type: "date",
         required: true,
       },
       {
@@ -2288,10 +2366,14 @@ const POUR_OVER_WILL_STEPS: WizardStep[] = [
         ],
       },
       {
-        id: "spouseName",
-        label: "Spouse/Partner Full Legal Name",
-        type: "text",
+        id: "spouse",
+        label: "Spouse/Partner",
+        type: "person",
         dependsOn: { field: "maritalStatus", value: "married" },
+        personConfig: {
+          filterRelationships: ["spouse", "partner"],
+          autoSelectRelationship: "spouse",
+        },
       },
     ],
   },
@@ -2355,36 +2437,23 @@ const POUR_OVER_WILL_STEPS: WizardStep[] = [
           "Your executor handles the probate process and transfers assets to the trust. This is often the same person as your successor trustee, but doesn't have to be.",
       },
       {
-        id: "executorName",
-        label: "Primary Executor Full Name",
-        type: "text",
+        id: "executor",
+        label: "Primary Executor",
+        type: "person",
         required: true,
-      },
-      {
-        id: "executorRelationship",
-        label: "Relationship to You",
-        type: "text",
-      },
-      {
-        id: "executorAddress",
-        label: "Executor's Address",
-        type: "textarea",
-      },
-      {
-        id: "executorPhone",
-        label: "Executor's Phone",
-        type: "text",
+        helpText: "Must be 18 or older",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
       {
         id: "alternateExecutor",
-        label: "Alternate Executor Full Name",
-        type: "text",
+        label: "Alternate Executor",
+        type: "person",
         helpText: "Who should serve if primary executor cannot or will not serve",
-      },
-      {
-        id: "alternateExecutorRelationship",
-        label: "Alternate's Relationship",
-        type: "text",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
       {
         id: "bondWaiver",
@@ -2469,34 +2538,23 @@ const POUR_OVER_WILL_STEPS: WizardStep[] = [
         type: "checkbox",
       },
       {
-        id: "guardianName",
+        id: "guardian",
         label: "Guardian for Minor Children",
-        type: "text",
+        type: "person",
         dependsOn: { field: "hasMinorChildren", value: true },
-      },
-      {
-        id: "guardianRelationship",
-        label: "Guardian's Relationship",
-        type: "text",
-        dependsOn: { field: "hasMinorChildren", value: true },
-      },
-      {
-        id: "guardianAddress",
-        label: "Guardian's Address",
-        type: "textarea",
-        dependsOn: { field: "hasMinorChildren", value: true },
+        helpText: "Must be 18 or older",
+        personConfig: {
+          excludeMinors: true,
+        },
       },
       {
         id: "alternateGuardian",
         label: "Alternate Guardian",
-        type: "text",
+        type: "person",
         dependsOn: { field: "hasMinorChildren", value: true },
-      },
-      {
-        id: "alternateGuardianRelationship",
-        label: "Alternate Guardian's Relationship",
-        type: "text",
-        dependsOn: { field: "hasMinorChildren", value: true },
+        personConfig: {
+          excludeMinors: true,
+        },
       },
       {
         id: "childrenNames",
@@ -2504,6 +2562,8 @@ const POUR_OVER_WILL_STEPS: WizardStep[] = [
         type: "textarea",
         placeholder: "John Smith Jr. - DOB: January 15, 2015\nJane Smith - DOB: March 22, 2018",
         dependsOn: { field: "hasMinorChildren", value: true },
+        helpText:
+          "Your minor children from your family profile will be used. Add additional details here if needed.",
       },
       {
         id: "guardianBondWaiver",
@@ -2593,9 +2653,12 @@ export function LegalDocumentWizard({
   onClose,
 }: LegalDocumentWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [responses, setResponses] = useState<Record<string, string | boolean>>({});
+  const [responses, setResponses] = useState<
+    Record<string, string | boolean | PersonReference | BeneficiaryEntry[] | null>
+  >({});
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showLivePreview, setShowLivePreview] = useState(true);
   const [hasInitialized, setHasInitialized] = useState(false);
 
   // Queries
@@ -2603,6 +2666,24 @@ export function LegalDocumentWizard({
     householdId,
     documentId,
   });
+  const household = useQuery(api.households.get, { householdId });
+  // Get current user's family member record for county/maritalStatus
+  const currentUserFamilyMember = useQuery(api.persons.getCurrentUserAsFamilyMember, {
+    householdId,
+  });
+  // Fetch financial assets for trust documents
+  const financialAccounts = useQuery(
+    api.financial.listAccounts,
+    document?.documentType === "trust" ? { householdId } : "skip",
+  );
+  const properties = useQuery(
+    api.financial.listProperties,
+    document?.documentType === "trust" ? { householdId } : "skip",
+  );
+  const insurancePolicies = useQuery(
+    api.financial.listInsurancePolicies,
+    document?.documentType === "trust" ? { householdId } : "skip",
+  );
 
   // Mutations
   const updateResponses = useMutation(api.legalDocuments.updateResponses);
@@ -2614,18 +2695,45 @@ export function LegalDocumentWizard({
   const currentStepData = steps[currentStep];
   const progress = steps.length > 0 ? ((currentStep + 1) / steps.length) * 100 : 0;
 
-  // Initialize from existing responses
+  // Initialize from existing responses, with familyMember and household defaults
   useEffect(() => {
-    if (document && !hasInitialized) {
+    if (document && household && !hasInitialized) {
       try {
         const savedResponses = JSON.parse(document.responses || "{}");
-        setResponses(savedResponses);
+        // Pre-populate defaults from familyMember and household if not already set
+        const initialResponses = {
+          ...savedResponses,
+        };
+        // Auto-fill county and maritalStatus from current user's family member record
+        if (!savedResponses.county && currentUserFamilyMember?.county) {
+          initialResponses.county = currentUserFamilyMember.county;
+        }
+        if (!savedResponses.maritalStatus && currentUserFamilyMember?.maritalStatus) {
+          initialResponses.maritalStatus = currentUserFamilyMember.maritalStatus;
+        }
+        // Auto-fill Trust Name from household name for trust documents
+        if (document.documentType === "trust" && !savedResponses.trustName && household.name) {
+          initialResponses.trustName = `${household.name} Revocable Living Trust`;
+        }
+        setResponses(initialResponses);
       } catch {
-        setResponses({});
+        // If parsing fails, still try to use defaults
+        const initialResponses: Record<string, string> = {};
+        if (currentUserFamilyMember?.county) {
+          initialResponses.county = currentUserFamilyMember.county;
+        }
+        if (currentUserFamilyMember?.maritalStatus) {
+          initialResponses.maritalStatus = currentUserFamilyMember.maritalStatus;
+        }
+        // Auto-fill Trust Name from household name for trust documents
+        if (document.documentType === "trust" && household.name) {
+          initialResponses.trustName = `${household.name} Revocable Living Trust`;
+        }
+        setResponses(initialResponses);
       }
       setHasInitialized(true);
     }
-  }, [document, hasInitialized]);
+  }, [document, currentUserFamilyMember, household, hasInitialized]);
 
   // Save responses
   const saveResponses = useCallback(async () => {
@@ -2648,7 +2756,10 @@ export function LegalDocumentWizard({
     }
   }, [document, householdId, documentId, responses, currentStep, updateResponses]);
 
-  const handleFieldChange = (fieldId: string, value: string | boolean) => {
+  const handleFieldChange = (
+    fieldId: string,
+    value: string | boolean | PersonReference | BeneficiaryEntry[] | null,
+  ) => {
     setResponses((prev) => ({ ...prev, [fieldId]: value }));
   };
 
@@ -2702,12 +2813,15 @@ export function LegalDocumentWizard({
       // Save current responses first
       await saveResponses();
 
+      // Flatten PersonReference objects to strings for PDF compatibility
+      const flattenedResponses = flattenResponsesForPDF(responses);
+
       // Prepare PDF data
       const pdfData = {
         documentType: document.documentType as DocumentType,
         state: document.state,
-        responses,
-        userName: (responses.fullName as string) || "User",
+        responses: flattenedResponses,
+        userName: (flattenedResponses.fullName as string) || "User",
         generatedDate: new Date(),
       };
 
@@ -2762,10 +2876,10 @@ export function LegalDocumentWizard({
   const Icon = docMeta?.icon || FileText;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -2778,12 +2892,33 @@ export function LegalDocumentWizard({
                 </CardDescription>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleClose}>
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Toggle Preview Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLivePreview(!showLivePreview)}
+                className="hidden lg:flex"
+              >
+                {showLivePreview ? (
+                  <>
+                    <PanelRightClose className="h-4 w-4 mr-2" />
+                    Hide Preview
+                  </>
+                ) : (
+                  <>
+                    <PanelRightOpen className="h-4 w-4 mr-2" />
+                    Show Preview
+                  </>
+                )}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleClose}>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Progress</span>
             <span className="text-sm text-muted-foreground">
@@ -2794,7 +2929,20 @@ export function LegalDocumentWizard({
         </CardContent>
       </Card>
 
-      {/* State Requirements Info - Using friendly language */}
+      {/* Legal Disclosure - Above both wizard and preview */}
+      <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-800 dark:text-amber-300">
+            <span className="font-medium">Educational Document:</span> This document is for
+            educational and informational purposes only. It does not constitute legal advice. Please
+            consult with a qualified attorney licensed in your state before signing or relying on
+            any legal document.
+          </p>
+        </div>
+      </div>
+
+      {/* State Requirements Info - Full width, under disclosure */}
       {document && currentStep === 0 && (
         <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
           <CardContent className="pt-6">
@@ -2826,220 +2974,367 @@ export function LegalDocumentWizard({
         </Card>
       )}
 
-      {/* Current Step */}
-      {currentStepData && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <Badge variant="outline">Step {currentStep + 1}</Badge>
-              {document.status === "complete" && (
-                <Badge variant="secondary">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Completed
-                </Badge>
-              )}
-            </div>
-            <CardTitle className="text-xl">{currentStepData.title}</CardTitle>
-            <CardDescription>{currentStepData.description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {currentStepData.fields.filter(isFieldVisible).map((field) => (
-              <div key={field.id} className="space-y-2">
-                {field.type === "heading" && (
-                  <h3 className="font-semibold text-lg pt-4">{field.label}</h3>
-                )}
-
-                {field.type === "info" && (
-                  <div className="flex items-start gap-2 p-3 bg-amber-50 border-amber-200 text-amber-900 rounded-lg">
-                    <AlertTriangle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                    <p className="text-sm text-muted-foreground">{field.helpText}</p>
-                  </div>
-                )}
-
-                {field.type === "text" && (
-                  <>
-                    <Label htmlFor={field.id}>
-                      {field.label}
-                      {field.required && <span className="text-destructive ml-1">*</span>}
-                    </Label>
-                    <Input
-                      id={field.id}
-                      placeholder={field.placeholder}
-                      value={(responses[field.id] as string) || ""}
-                      onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                    />
-                    {field.helpText && (
-                      <p className="text-xs text-muted-foreground">{field.helpText}</p>
-                    )}
-                  </>
-                )}
-
-                {field.type === "textarea" && (
-                  <>
-                    <Label htmlFor={field.id}>
-                      {field.label}
-                      {field.required && <span className="text-destructive ml-1">*</span>}
-                    </Label>
-                    <Textarea
-                      id={field.id}
-                      placeholder={field.placeholder}
-                      value={(responses[field.id] as string) || ""}
-                      onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                      className="min-h-[100px]"
-                    />
-                    {field.helpText && (
-                      <p className="text-xs text-muted-foreground">{field.helpText}</p>
-                    )}
-                  </>
-                )}
-
-                {field.type === "date" && (
-                  <>
-                    <Label htmlFor={field.id}>
-                      {field.label}
-                      {field.required && <span className="text-destructive ml-1">*</span>}
-                    </Label>
-                    <Input
-                      id={field.id}
-                      type="date"
-                      value={(responses[field.id] as string) || ""}
-                      onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                    />
-                  </>
-                )}
-
-                {field.type === "number" && (
-                  <>
-                    <Label htmlFor={field.id}>
-                      {field.label}
-                      {field.required && <span className="text-destructive ml-1">*</span>}
-                    </Label>
-                    <Input
-                      id={field.id}
-                      type="number"
-                      placeholder={field.placeholder}
-                      value={(responses[field.id] as string) || ""}
-                      onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                    />
-                  </>
-                )}
-
-                {field.type === "select" && field.options && (
-                  <>
-                    <Label htmlFor={field.id}>
-                      {field.label}
-                      {field.required && <span className="text-destructive ml-1">*</span>}
-                    </Label>
-                    <Select
-                      value={(responses[field.id] as string) || ""}
-                      onValueChange={(value) => handleFieldChange(field.id, value)}
-                    >
-                      <SelectTrigger id={field.id}>
-                        <SelectValue placeholder="Select an option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {field.options.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {field.helpText && (
-                      <p className="text-xs text-muted-foreground">{field.helpText}</p>
-                    )}
-                  </>
-                )}
-
-                {field.type === "checkbox" && (
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id={field.id}
-                      checked={(responses[field.id] as boolean) || false}
-                      onCheckedChange={(checked) => handleFieldChange(field.id, checked === true)}
-                    />
-                    <Label htmlFor={field.id} className="leading-relaxed cursor-pointer">
-                      {field.label}
-                    </Label>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Navigation */}
-            <div className="flex justify-between pt-6 border-t">
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={currentStep === 0 || isSaving}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              <div className="flex gap-2">
-                {document.status === "complete" && (
-                  <Button variant="outline" onClick={handleExportPDF} disabled={isExporting}>
-                    {isExporting ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="h-4 w-4 mr-2" />
-                    )}
-                    {isExporting ? "Generating..." : "Download PDF"}
-                  </Button>
-                )}
-                <Button onClick={handleNext} disabled={isSaving}>
-                  {isSaving ? (
-                    "Saving..."
-                  ) : currentStep === steps.length - 1 ? (
-                    document.status === "complete" ? (
-                      "Save Changes"
-                    ) : (
-                      "Complete Document"
-                    )
-                  ) : (
-                    <>
-                      Next
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </>
+      {/* Main Content - Side by Side Layout */}
+      <div className={`flex gap-6 ${showLivePreview ? "lg:flex-row" : ""} flex-col`}>
+        {/* Left Panel - Wizard Form */}
+        <div className={`space-y-4 ${showLivePreview ? "lg:w-1/2 xl:w-2/5" : "w-full"}`}>
+          {/* Current Step */}
+          {currentStepData && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <Badge variant="outline">Step {currentStep + 1}</Badge>
+                  {document.status === "complete" && (
+                    <Badge variant="secondary">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Completed
+                    </Badge>
                   )}
-                </Button>
+                </div>
+                <CardTitle className="text-xl">{currentStepData.title}</CardTitle>
+                <CardDescription>{currentStepData.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {currentStepData.fields.filter(isFieldVisible).map((field) => (
+                  <div key={field.id} className="space-y-2">
+                    {field.type === "heading" && (
+                      <h3 className="font-semibold text-lg pt-4">{field.label}</h3>
+                    )}
+
+                    {field.type === "info" && (
+                      <div className="flex items-start gap-2 p-3 bg-amber-50 border-amber-200 text-amber-900 rounded-lg">
+                        <AlertTriangle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <p className="text-sm text-muted-foreground">{field.helpText}</p>
+                      </div>
+                    )}
+
+                    {field.type === "text" && (
+                      <>
+                        <Label htmlFor={field.id}>
+                          {field.label}
+                          {field.required && <span className="text-destructive ml-1">*</span>}
+                        </Label>
+                        <Input
+                          id={field.id}
+                          placeholder={field.placeholder}
+                          value={(responses[field.id] as string) || ""}
+                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                        />
+                        {field.helpText && (
+                          <p className="text-xs text-muted-foreground">{field.helpText}</p>
+                        )}
+                      </>
+                    )}
+
+                    {field.type === "textarea" && (
+                      <>
+                        <Label htmlFor={field.id}>
+                          {field.label}
+                          {field.required && <span className="text-destructive ml-1">*</span>}
+                        </Label>
+                        <Textarea
+                          id={field.id}
+                          placeholder={field.placeholder}
+                          value={(responses[field.id] as string) || ""}
+                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                          className="min-h-[100px]"
+                        />
+                        {field.helpText && (
+                          <p className="text-xs text-muted-foreground">{field.helpText}</p>
+                        )}
+                      </>
+                    )}
+
+                    {field.type === "date" && (
+                      <>
+                        <Label htmlFor={field.id}>
+                          {field.label}
+                          {field.required && <span className="text-destructive ml-1">*</span>}
+                        </Label>
+                        <Input
+                          id={field.id}
+                          type="date"
+                          value={(responses[field.id] as string) || ""}
+                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                        />
+                      </>
+                    )}
+
+                    {field.type === "number" && (
+                      <>
+                        <Label htmlFor={field.id}>
+                          {field.label}
+                          {field.required && <span className="text-destructive ml-1">*</span>}
+                        </Label>
+                        <Input
+                          id={field.id}
+                          type="number"
+                          placeholder={field.placeholder}
+                          value={(responses[field.id] as string) || ""}
+                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                        />
+                      </>
+                    )}
+
+                    {field.type === "select" && field.options && (
+                      <>
+                        <Label htmlFor={field.id}>
+                          {field.label}
+                          {field.required && <span className="text-destructive ml-1">*</span>}
+                        </Label>
+                        <Select
+                          value={(responses[field.id] as string) || ""}
+                          onValueChange={(value) => handleFieldChange(field.id, value)}
+                        >
+                          <SelectTrigger id={field.id}>
+                            <SelectValue placeholder="Select an option" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.options.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {field.helpText && (
+                          <p className="text-xs text-muted-foreground">{field.helpText}</p>
+                        )}
+                      </>
+                    )}
+
+                    {field.type === "checkbox" && (
+                      <div className="flex items-start space-x-3">
+                        <Checkbox
+                          id={field.id}
+                          checked={(responses[field.id] as boolean) || false}
+                          onCheckedChange={(checked) =>
+                            handleFieldChange(field.id, checked === true)
+                          }
+                        />
+                        <Label htmlFor={field.id} className="leading-relaxed cursor-pointer">
+                          {field.label}
+                        </Label>
+                      </div>
+                    )}
+
+                    {field.type === "person" && (
+                      <PersonPicker
+                        householdId={householdId}
+                        value={(responses[field.id] as PersonReference | null) ?? null}
+                        onChange={(val) => handleFieldChange(field.id, val)}
+                        label={field.label}
+                        required={field.required}
+                        helpText={field.helpText}
+                        filterRelationships={field.personConfig?.filterRelationships}
+                        excludeMinors={field.personConfig?.excludeMinors}
+                        autoSelectRelationship={field.personConfig?.autoSelectRelationship}
+                        autoSelectCurrentUser={field.personConfig?.autoSelectCurrentUser}
+                      />
+                    )}
+
+                    {field.type === "beneficiaryList" && (
+                      <BeneficiaryList
+                        householdId={householdId}
+                        value={(responses[field.id] as BeneficiaryEntry[]) || []}
+                        onChange={(val) => handleFieldChange(field.id, val)}
+                        label={field.label}
+                        helpText={field.helpText}
+                      />
+                    )}
+
+                    {field.type === "existingAssets" && (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <h4 className="font-medium text-blue-900 mb-3">Your Recorded Assets</h4>
+                          <p className="text-sm text-blue-700 mb-4">
+                            These assets are already in your Pathible account. Reference them below
+                            or add others.
+                          </p>
+
+                          {/* Properties */}
+                          {properties && properties.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-medium text-blue-800 uppercase tracking-wide mb-1">
+                                Real Estate ({properties.length})
+                              </p>
+                              <ul className="text-sm text-blue-700 space-y-1">
+                                {properties.map((prop) => (
+                                  <li key={prop._id} className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                                    {prop.name}
+                                    {prop.address && ` - ${prop.address}`}
+                                    {prop.estimatedValue &&
+                                      ` (Est. $${prop.estimatedValue.toLocaleString()})`}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Financial Accounts */}
+                          {financialAccounts && financialAccounts.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-medium text-blue-800 uppercase tracking-wide mb-1">
+                                Financial Accounts ({financialAccounts.length})
+                              </p>
+                              <ul className="text-sm text-blue-700 space-y-1">
+                                {financialAccounts.map((acct) => (
+                                  <li key={acct._id} className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                                    {acct.institution} - {acct.name} ({acct.type})
+                                    {acct.accountNumberLast4 && ` ****${acct.accountNumberLast4}`}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Insurance Policies */}
+                          {insurancePolicies && insurancePolicies.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-medium text-blue-800 uppercase tracking-wide mb-1">
+                                Insurance Policies ({insurancePolicies.length})
+                              </p>
+                              <ul className="text-sm text-blue-700 space-y-1">
+                                {insurancePolicies.map((policy) => (
+                                  <li key={policy._id} className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                                    {policy.provider} - {policy.type.replace(/_/g, " ")}
+                                    {policy.coverageAmount &&
+                                      ` ($${policy.coverageAmount.toLocaleString()})`}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {(!properties || properties.length === 0) &&
+                            (!financialAccounts || financialAccounts.length === 0) &&
+                            (!insurancePolicies || insurancePolicies.length === 0) && (
+                              <p className="text-sm text-blue-600 italic">
+                                No assets recorded yet. You can add them in the Financial section of
+                                the app, or enter them manually below.
+                              </p>
+                            )}
+                        </div>
+                        {field.helpText && (
+                          <p className="text-xs text-muted-foreground">{field.helpText}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Navigation */}
+                <div className="flex justify-between pt-6 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={handleBack}
+                    disabled={currentStep === 0 || isSaving}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </Button>
+                  <div className="flex gap-2">
+                    {document.status === "complete" && (
+                      <Button variant="outline" onClick={handleExportPDF} disabled={isExporting}>
+                        {isExporting ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4 mr-2" />
+                        )}
+                        {isExporting ? "Generating..." : "Download PDF"}
+                      </Button>
+                    )}
+                    <Button onClick={handleNext} disabled={isSaving}>
+                      {isSaving ? (
+                        "Saving..."
+                      ) : currentStep === steps.length - 1 ? (
+                        document.status === "complete" ? (
+                          "Save Changes"
+                        ) : (
+                          "Complete Document"
+                        )
+                      ) : (
+                        <>
+                          Next
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Quick Navigation */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium">Quick Navigation</span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              <div
+                className={`grid gap-2 ${
+                  showLivePreview
+                    ? "grid-cols-2 lg:grid-cols-3"
+                    : "grid-cols-2 md:grid-cols-3 lg:grid-cols-6"
+                }`}
+              >
+                {steps.map((step, index) => {
+                  const isCurrent = index === currentStep;
+                  const isCompleted = index < currentStep;
 
-      {/* Quick Navigation */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium">Quick Navigation</span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-            {steps.map((step, index) => {
-              const isCurrent = index === currentStep;
-              const isCompleted = index < currentStep;
+                  return (
+                    <Button
+                      key={step.id}
+                      variant={isCurrent ? "default" : isCompleted ? "secondary" : "outline"}
+                      size="sm"
+                      className="justify-start"
+                      onClick={async () => {
+                        await saveResponses();
+                        setCurrentStep(index);
+                      }}
+                      disabled={isSaving}
+                    >
+                      {isCompleted && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                      <span className="truncate text-xs">{step.title}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              return (
-                <Button
-                  key={step.id}
-                  variant={isCurrent ? "default" : isCompleted ? "secondary" : "outline"}
-                  size="sm"
-                  className="justify-start"
-                  onClick={async () => {
-                    await saveResponses();
-                    setCurrentStep(index);
-                  }}
-                  disabled={isSaving}
-                >
-                  {isCompleted && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                  <span className="truncate text-xs">{step.title}</span>
-                </Button>
-              );
-            })}
+        {/* Right Panel - Live Document Preview */}
+        {showLivePreview && (
+          <div className="hidden lg:block lg:w-1/2 xl:w-3/5">
+            <Card className="sticky top-4 h-[calc(100vh-8rem)] overflow-hidden">
+              <CardHeader className="pb-2 border-b">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Eye className="h-4 w-4" />
+                    Live Preview
+                  </CardTitle>
+                  <Badge variant="outline" className="text-xs">
+                    Updates as you type
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0 h-[calc(100%-4rem)] overflow-auto">
+                <DocumentPreview
+                  documentType={document.documentType as DocumentType}
+                  state={document.state}
+                  responses={responses}
+                  currentStepId={currentStepData?.id || ""}
+                />
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   Loader2,
   ScrollText,
 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ComingSoonCard } from "@/components/coming-soon";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,25 @@ import { LegalDocumentsSection } from "./legal-documents-section";
 export function LegacyContent() {
   // Track retry attempts for auth sync
   const [retryCount, setRetryCount] = useState(0);
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const maxRetries = 10;
+
+  // URL-controlled tabs for tour navigation
+  const activeTab = searchParams.get("tab") || "legacy-plan";
+
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "overview") {
+      params.delete("tab");
+    } else {
+      params.set("tab", value);
+    }
+    const query = params.toString();
+    router.push(query ? `/legacy?${query}` : "/legacy", {
+      scroll: false,
+    });
+  };
 
   // Check Clerk session status
   const { user, isLoaded: isUserLoaded } = useUser();
@@ -153,7 +172,7 @@ export function LegacyContent() {
       </div>
 
       {/* Tabbed Interface */}
-      <Tabs defaultValue="legacy-plan" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList>
           <TabsTrigger value="legacy-plan" className="gap-2">
             <Heart className="h-4 w-4" />

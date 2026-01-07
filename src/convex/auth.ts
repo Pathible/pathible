@@ -38,6 +38,7 @@ export interface AuthenticatedContext {
     _id: Id<"profiles">;
     _creationTime: number;
     userId: string;
+    email?: string;
     firstName: string;
     lastName: string;
     avatarUrl?: string;
@@ -602,25 +603,23 @@ export const getEffectiveSubscription = query({
       return null;
     }
 
-    // Get user's profile
+    // Get user's profile (check deletedAt in code to avoid filter after index)
     const profile = await ctx.db
       .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", user._id))
-      .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .first();
 
-    if (!profile) {
+    if (!profile || profile.deletedAt) {
       return null;
     }
 
-    // Get user's household membership
+    // Get user's household membership (check status in code to avoid filter after index)
     const membership = await ctx.db
       .query("householdMemberships")
       .withIndex("by_user", (q) => q.eq("userId", profile._id))
-      .filter((q) => q.eq(q.field("status"), "active"))
       .first();
 
-    if (!membership) {
+    if (!membership || membership.status !== "active") {
       return null;
     }
 

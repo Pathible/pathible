@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import { Loader2, Search } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import {
 import { api } from "@/convex/_generated/api";
 
 export function UsersList() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const users = useQuery(api.admin.users.listUsers, { search: search || undefined });
 
@@ -71,7 +73,7 @@ export function UsersList() {
                   key={user._id}
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => {
-                    window.location.href = `/admin/users/${user._id}`;
+                    router.push(`/admin/users/${user._id}`);
                   }}
                 >
                   <TableCell className="font-medium">

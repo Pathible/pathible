@@ -16,12 +16,20 @@ import { EMAIL_REGEX } from "./shared/validators";
 // ============================================================================
 
 const keyContactRoleValidator = v.union(
+  // Professional roles
   v.literal("attorney"),
   v.literal("financial_advisor"),
   v.literal("executor"),
   v.literal("trustee"),
   v.literal("guardian"),
   v.literal("healthcare_proxy"),
+  // Personal contact roles
+  v.literal("friend"),
+  v.literal("neighbor"),
+  v.literal("business_partner"),
+  v.literal("caregiver"),
+  v.literal("charitable_org"),
+  v.literal("religious_org"),
   v.literal("other"),
 );
 
@@ -44,12 +52,17 @@ const keyContactValidator = v.object({
   _id: v.id("keyContacts"),
   _creationTime: v.number(),
   householdId: v.id("households"),
-  legacyPlanId: v.id("legacyPlans"),
+  legacyPlanId: v.optional(v.id("legacyPlans")),
   name: v.string(),
   role: keyContactRoleValidator,
+  relationship: v.optional(v.string()),
   phone: v.optional(v.string()),
   email: v.optional(v.string()),
   address: v.optional(v.string()),
+  city: v.optional(v.string()),
+  state: v.optional(v.string()),
+  zipCode: v.optional(v.string()),
+  dateOfBirth: v.optional(v.number()),
   notes: v.optional(v.string()),
 });
 
@@ -566,20 +579,22 @@ export const updateKeyContact = mutation({
     // Update the contact
     await ctx.db.patch(args.contactId, updates);
 
-    // Update the legacy plan's updated timestamp
-    await ctx.db.patch(contact.legacyPlanId, {
-      updatedAt: Date.now(),
-    });
+    // Update the legacy plan's updated timestamp (if linked to a plan)
+    if (contact.legacyPlanId) {
+      await ctx.db.patch(contact.legacyPlanId, {
+        updatedAt: Date.now(),
+      });
 
-    await logActivity(ctx, {
-      householdId: args.householdId,
-      userId: profile._id,
-      module: "legacy",
-      actionType: "plan_updated",
-      entityType: "plan",
-      entityId: contact.legacyPlanId,
-      description: `Updated key contact: ${contact.name}`,
-    });
+      await logActivity(ctx, {
+        householdId: args.householdId,
+        userId: profile._id,
+        module: "legacy",
+        actionType: "plan_updated",
+        entityType: "plan",
+        entityId: contact.legacyPlanId,
+        description: `Updated key contact: ${contact.name}`,
+      });
+    }
 
     return null;
   },
@@ -617,10 +632,12 @@ export const deleteKeyContact = mutation({
     // Delete the contact
     await ctx.db.delete(args.contactId);
 
-    // Update the legacy plan's updated timestamp
-    await ctx.db.patch(legacyPlanId, {
-      updatedAt: Date.now(),
-    });
+    // Update the legacy plan's updated timestamp (if linked to a plan)
+    if (legacyPlanId) {
+      await ctx.db.patch(legacyPlanId, {
+        updatedAt: Date.now(),
+      });
+    }
 
     // Log activity
     await logActivity(ctx, {

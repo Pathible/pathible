@@ -220,7 +220,20 @@ export default defineSchema({
       v.union(v.literal("male"), v.literal("female"), v.literal("prefer_not_to_say")),
     ),
     city: v.optional(v.string()),
+    county: v.optional(v.string()), // County of residence (for legal documents)
     state: v.optional(v.string()),
+    address: v.optional(v.string()), // Street address
+    zipCode: v.optional(v.string()), // ZIP/postal code
+    maritalStatus: v.optional(
+      v.union(
+        v.literal("single"),
+        v.literal("married"),
+        v.literal("divorced"),
+        v.literal("widowed"),
+        v.literal("domestic_partnership"),
+        v.literal("separated"),
+      ),
+    ),
     relationshipType: v.union(
       v.literal("parent"),
       v.literal("child"),
@@ -413,20 +426,33 @@ export default defineSchema({
    */
   keyContacts: defineTable({
     householdId: v.id("households"),
-    legacyPlanId: v.id("legacyPlans"),
+    legacyPlanId: v.optional(v.id("legacyPlans")), // Optional - contacts can exist without legacy plan
     name: v.string(),
     role: v.union(
+      // Professional roles
       v.literal("attorney"),
       v.literal("financial_advisor"),
       v.literal("executor"),
       v.literal("trustee"),
       v.literal("guardian"),
       v.literal("healthcare_proxy"),
+      // Personal contact roles
+      v.literal("friend"),
+      v.literal("neighbor"),
+      v.literal("business_partner"),
+      v.literal("caregiver"),
+      v.literal("charitable_org"),
+      v.literal("religious_org"),
       v.literal("other"),
     ),
+    relationship: v.optional(v.string()), // e.g., "college roommate", "neighbor of 20 years"
     phone: v.optional(v.string()),
     email: v.optional(v.string()),
     address: v.optional(v.string()),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    zipCode: v.optional(v.string()),
+    dateOfBirth: v.optional(v.number()), // For age calculations (executor must be 18+)
     notes: v.optional(v.string()),
   })
     .index("by_household", ["householdId"])
