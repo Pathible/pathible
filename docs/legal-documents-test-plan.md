@@ -85,12 +85,14 @@ Each legal document type requires:
 
 **Status:** ⬜ Not yet implemented - PDF generators exist but no unit tests
 
+
 - [ ] PDF renders with all sections
 - [ ] Testator name appears correctly
 - [ ] State-specific language included
 - [ ] Witness signature lines match state requirements
 - [ ] Page numbering correct
 - [ ] Legal disclaimers present
+
 
 ### 1.4 Template Structure Tests
 
@@ -102,6 +104,7 @@ Each legal document type requires:
 - [x] Article sections in correct order (declaration first, executor before bequests)
 - [x] Guardian section has condition (hasMinorChildren)
 - [x] 15 article sections defined with required/optional flags
+
 
 ---
 
@@ -610,6 +613,7 @@ pnpm test:e2e -- --spec "cypress/e2e/legal-documents/**"
 | 10 | Healthcare POA | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | 11 | Advance Directive | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 
+
 **Legend**: ⬜ Not started | 🔄 In progress | ✅ Complete
 
 ---
@@ -784,6 +788,7 @@ Run tests: `pnpm test:run`
 4. **PDF Generation Tests** - Verify PDF output for each document type
 
 ---
+
 
 ## Notes
 
