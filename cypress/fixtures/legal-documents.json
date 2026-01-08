@@ -1,0 +1,136 @@
+{
+  "documentTypes": {
+    "will": {
+      "name": "Last Will and Testament",
+      "shortDescription": "Asset distribution & guardians",
+      "description": "Specifies how your assets will be distributed and names guardians for minor children"
+    },
+    "trust": {
+      "name": "Revocable Living Trust",
+      "shortDescription": "Avoid probate & manage assets",
+      "description": "Holds assets during your lifetime and distributes them after death, avoiding probate"
+    },
+    "pour_over_will": {
+      "name": "Pour-Over Will",
+      "shortDescription": "Trust companion document",
+      "description": "Companion to a trust that transfers any assets not in the trust at death"
+    },
+    "financial_poa": {
+      "name": "Durable Power of Attorney",
+      "shortDescription": "Financial decision-making",
+      "description": "Authorizes someone to handle your financial affairs if you become incapacitated"
+    },
+    "healthcare_poa": {
+      "name": "Healthcare Power of Attorney",
+      "shortDescription": "Medical decision-making",
+      "description": "Designates someone to make medical decisions on your behalf"
+    },
+    "advance_directive": {
+      "name": "Advance Healthcare Directive",
+      "shortDescription": "End-of-life wishes",
+      "description": "Documents your wishes for end-of-life medical treatment"
+    }
+  },
+  "testWillData": {
+    "personal": {
+      "fullName": "John Michael Smith",
+      "state": "CA",
+      "county": "Los Angeles",
+      "maritalStatus": "married"
+    },
+    "spouse": {
+      "name": "Jane Elizabeth Smith",
+      "relationship": "spouse"
+    },
+    "children": [
+      {
+        "name": "Emily Rose Smith",
+        "dateOfBirth": "2015-03-15",
+        "isMinor": true
+      },
+      {
+        "name": "Michael James Smith",
+        "dateOfBirth": "2018-07-22",
+        "isMinor": true
+      }
+    ],
+    "executor": {
+      "primary": {
+        "name": "Robert John Smith",
+        "relationship": "brother",
+        "address": "123 Main St, Los Angeles, CA 90001"
+      },
+      "alternate": {
+        "name": "Sarah Ann Johnson",
+        "relationship": "sister",
+        "address": "456 Oak Ave, San Diego, CA 92101"
+      }
+    },
+    "guardian": {
+      "primary": {
+        "name": "Robert John Smith",
+        "relationship": "brother"
+      },
+      "alternate": {
+        "name": "Sarah Ann Johnson",
+        "relationship": "sister"
+      }
+    },
+    "beneficiaries": [
+      {
+        "name": "Jane Elizabeth Smith",
+        "relationship": "spouse",
+        "share": 50
+      },
+      {
+        "name": "Emily Rose Smith",
+        "relationship": "daughter",
+        "share": 25
+      },
+      {
+        "name": "Michael James Smith",
+        "relationship": "son",
+        "share": 25
+      }
+    ],
+    "specificBequests": [
+      {
+        "item": "1965 Ford Mustang",
+        "beneficiary": "Michael James Smith",
+        "description": "Classic car in garage"
+      },
+      {
+        "item": "Diamond engagement ring",
+        "beneficiary": "Emily Rose Smith",
+        "description": "Family heirloom from grandmother"
+      }
+    ]
+  },
+  "stateWitnessRequirements": {
+    "CA": { "witnessCount": 2, "notarizationRequired": false, "selfProvingAvailable": true },
+    "TX": { "witnessCount": 2, "notarizationRequired": false, "selfProvingAvailable": true },
+    "NY": { "witnessCount": 2, "notarizationRequired": false, "selfProvingAvailable": true },
+    "FL": { "witnessCount": 2, "notarizationRequired": false, "selfProvingAvailable": true },
+    "VT": { "witnessCount": 3, "notarizationRequired": false, "selfProvingAvailable": true },
+    "NH": { "witnessCount": 3, "notarizationRequired": false, "selfProvingAvailable": true },
+    "SC": { "witnessCount": 3, "notarizationRequired": false, "selfProvingAvailable": true },
+    "LA": { "witnessCount": 2, "notarizationRequired": true, "selfProvingAvailable": true }
+  },
+  "holographicWillStates": [
+    "AK", "AZ", "AR", "CA", "CO", "HI", "ID", "KY", "LA", "ME", "MI", "MS",
+    "MT", "NE", "NV", "NJ", "NC", "ND", "OK", "PA", "SD", "TN", "TX", "UT",
+    "VA", "WV", "WY"
+  ],
+  "communityPropertyStates": [
+    "AZ", "CA", "ID", "LA", "NV", "NM", "TX", "WA", "WI"
+  ],
+  "validationRules": {
+    "nameMaxLength": 200,
+    "addressMaxLength": 500,
+    "minBeneficiaryShare": 0,
+    "maxBeneficiaryShare": 100,
+    "totalSharesRequired": 100,
+    "minWitnessAge": 18,
+    "minExecutorAge": 18
+  }
+}
