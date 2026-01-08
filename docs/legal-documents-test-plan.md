@@ -623,12 +623,15 @@ pnpm test:e2e -- --spec "cypress/e2e/legal-documents/**"
 |-------|----------|------|----------|-------------|-----|------------|
 | 1 | Test Infrastructure | ✅ | ✅ | N/A | ✅ | N/A |
 | 2 | State Requirements | ✅ | ✅ | N/A | N/A | ✅ |
-| 3 | Will | ⬜ | ⬜ | ⬜ | ✅ | ✅ |
-| 4 | Trust | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| 5 | Pour-Over | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| 6 | Financial POA | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| 7 | Healthcare POA | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| 8 | Advance Directive | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| 3 | Document Templates | ✅ | ✅ | N/A | N/A | ✅ |
+| 4 | Wizard Steps | ✅ | ✅ | N/A | N/A | N/A |
+| 5 | Person Utilities | ✅ | N/A | N/A | N/A | ✅ |
+| 6 | Will | ✅ | ✅ | ⬜ | ✅ | ✅ |
+| 7 | Trust | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| 8 | Pour-Over | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| 9 | Financial POA | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| 10 | Healthcare POA | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| 11 | Advance Directive | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 
 **Legend**: ⬜ Not started | 🔄 In progress | ✅ Complete
 
@@ -643,6 +646,8 @@ pnpm test:e2e -- --spec "cypress/e2e/legal-documents/**"
 - ✅ Test fixtures created (`cypress/fixtures/legal-documents.json`)
 
 ### State Requirements Tests (28 tests - all passing)
+Location: `src/lib/__tests__/state-legal-requirements.test.ts`
+
 - ✅ Coverage tests (all 51 jurisdictions)
 - ✅ Will requirements structure tests
 - ✅ Holographic will recognition tests
@@ -654,7 +659,120 @@ pnpm test:e2e -- --spec "cypress/e2e/legal-documents/**"
 - ✅ Advance directive requirements tests
 - ✅ Data validation tests
 
+### Document Template Tests (29 tests - all passing)
+Location: `src/lib/__tests__/document-templates.test.ts`
+
+- ✅ Will Template tests
+  - Template info stability (id, name, requiresNotary, requiresWitnesses)
+  - Required fields (fullName, state, executorName, residuaryBeneficiary)
+  - Optional fields (spouseName, guardianName, specificBequests, digitalAssets)
+  - Article sections order and structure
+  - Guardian section conditional logic
+- ✅ Trust Template tests
+  - Template info (id: revocable_trust, requiresNotary: true)
+  - Required fields (fullName, state, trustName, trusteeName)
+  - Optional fields (successorTrusteeRelationship, initialAssets, spendthrift)
+  - Article sections (declaration, trust_property, trustee_powers)
+- ✅ Pour-Over Will Template tests
+  - Template info stability
+  - Trust reference requirement (trustName field)
+- ✅ Financial POA Template tests
+  - Template info (requiresNotary: true, requiresWitnesses: true)
+  - Required fields (fullName, agentName, grantedPowers)
+  - Optional power categories (banking, investment, real estate, tax, gifting)
+  - Article sections for each power type
+- ✅ Healthcare POA Template tests
+  - Template info (requiresNotary: false, requiresWitnesses: true)
+  - Required fields (fullName, agentName, agentAddress)
+  - Article sections (agent_appointment, general_powers, hipaa)
+- ✅ Advance Directive Template tests
+  - Required fields (terminalConditionPreference, permanentUnconsciousnessPreference)
+  - Treatment options in optional fields (CPR, ventilation, nutrition, dialysis)
+  - Article sections (terminal_condition, permanent_unconsciousness, pain_management)
+- ✅ Cross-Template Consistency tests
+  - Unique template IDs
+  - Names and descriptions for all templates
+  - Categories for all templates
+- ✅ Required Fields Consistency tests
+  - fullName required for all document types
+  - state required for estate planning documents
+  - No duplicate fields within templates
+
+### Wizard Step Configuration Tests (25 tests - all passing)
+Location: `src/lib/__tests__/wizard-steps.test.ts`
+
+- ✅ Will Wizard Steps (7 steps)
+  - personal → executor → beneficiaries → provisions → guardians → digital → final
+  - Required fields: testator, executor, residuaryBeneficiary
+- ✅ Trust Wizard Steps (7 steps)
+  - personal → trust_name → trustees → beneficiaries → assets → distributions → provisions
+  - Required fields: grantor, trustName, trustee, primaryBeneficiary
+- ✅ Pour-Over Will Steps (5 steps)
+  - personal → trust_reference → executor → guardians → final
+  - Trust name reference required
+- ✅ Financial POA Steps (5 steps)
+  - personal → agent → powers → effective → limitations
+  - Required fields: principal, agent, grantedPowers
+- ✅ Healthcare POA Steps (5 steps)
+  - personal → agent → powers → preferences → hipaa
+  - Healthcare agent selection required
+- ✅ Advance Directive Steps (7 steps)
+  - personal → terminal → unconscious → treatments → comfort → organ → final
+  - Required preferences for terminal condition and permanent unconsciousness
+- ✅ Wizard Step Consistency tests
+  - Unique step IDs within each wizard
+  - Titles for all steps
+  - All wizards start with personal information
+  - Reasonable step count (3-10 per wizard)
+- ✅ Required Fields Validation tests
+  - At least one step with required fields per wizard
+  - Personal step requires identity field (testator/grantor/principal)
+
+### Person Utilities Tests (63 tests - all passing)
+Location: `src/lib/__tests__/person-utils.test.ts`
+
+- ✅ Age Calculation tests
+  - calculateAge for adults and minors
+  - Birthday edge cases (before, on, after birthday)
+  - isMinor/isAdult validation
+  - getAgeDescription formatting ("Minor (14)" vs "34 years old")
+- ✅ Address Formatting tests
+  - formatFullAddress (single line: "123 Main St, Springfield, CA 90210")
+  - formatAddressLines (multi-line array)
+  - formatLegalAddress (with county for legal documents)
+  - Missing component handling
+- ✅ Relationship Labels tests
+  - getRelationshipLabel (spouse, parent, child, sibling, etc.)
+  - getKeyContactRoleLabel (attorney, executor, trustee, etc.)
+  - getRelationshipTypes (returns value/label pairs)
+  - getKeyContactRoles (returns value/label pairs)
+- ✅ Person Reference Helpers tests
+  - createManualPersonReference
+  - createFamilyMemberReference (with familyMemberId)
+  - createKeyContactReference (with keyContactId)
+  - isPersonReferenceComplete validation
+  - hasAddress check
+  - getPersonDisplayName (fullName or firstName + lastName)
+  - getPersonDisplayWithRelationship ("John Doe (Spouse)")
+- ✅ Role Validation Helpers tests (age-based)
+  - canServeAsExecutor (must be 18+)
+  - canServeAsGuardian (must be 18+)
+  - canServeAsAgent (must be 18+)
+  - canServeAsTrustee (must be 18+)
+  - Null/undefined handling
+  - Assumed adult if no DOB provided
+- ✅ PDF Flattening Utilities tests
+  - String/boolean passthrough
+  - PersonReference → mapped field names (testator → fullName, executor → executorName)
+  - Relationship field mapping
+  - Address field mapping
+  - BeneficiaryEntry[] to text format
+  - Null value skipping
+  - Suffixed fields (guardianPhone, guardianEmail, etc.)
+
 ### E2E Tests (Legal Documents)
+Location: `cypress/e2e/legal-documents.cy.ts`
+
 - ✅ Unauthenticated access tests
 - ✅ Legal documents section tests
 - ✅ Will wizard tests
@@ -663,6 +781,30 @@ pnpm test:e2e -- --spec "cypress/e2e/legal-documents/**"
 - ✅ Data persistence tests
 - ✅ Document deletion tests
 - ✅ Back navigation tests
+
+---
+
+## Test Summary
+
+| Test File | Tests | Status |
+|-----------|-------|--------|
+| `state-legal-requirements.test.ts` | 28 | ✅ Passing |
+| `document-templates.test.ts` | 29 | ✅ Passing |
+| `wizard-steps.test.ts` | 25 | ✅ Passing |
+| `person-utils.test.ts` | 63 | ✅ Passing |
+| **Total** | **145** | ✅ **All Passing** |
+
+Run tests: `pnpm test:run`
+
+---
+
+## Next Steps
+
+### Remaining Work
+1. **Integration Tests** - Test cross-document workflows (e.g., trust → pour-over will linkage)
+2. **E2E Tests for Other Documents** - Trust, POA, Advance Directive wizard flows
+3. **Production Enablement** - Enable Trust, POA, Advance Directive in production
+4. **PDF Generation Tests** - Verify PDF output for each document type
 
 ---
 
