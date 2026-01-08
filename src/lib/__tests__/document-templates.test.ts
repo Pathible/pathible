@@ -1,32 +1,32 @@
 import { describe, expect, it } from "vitest";
 import {
-  // Will
-  WILL_TEMPLATE_INFO,
-  WILL_REQUIRED_FIELDS,
-  WILL_OPTIONAL_FIELDS,
-  WILL_ARTICLE_SECTIONS,
-  // Trust
-  TRUST_TEMPLATE_INFO,
-  TRUST_REQUIRED_FIELDS,
-  TRUST_OPTIONAL_FIELDS,
-  TRUST_ARTICLE_SECTIONS,
-  // Pour-Over Will
-  POUR_OVER_WILL_TEMPLATE_INFO,
-  POUR_OVER_WILL_REQUIRED_FIELDS,
-  // Financial POA
-  FINANCIAL_POA_TEMPLATE_INFO,
-  FINANCIAL_POA_REQUIRED_FIELDS,
-  FINANCIAL_POA_OPTIONAL_FIELDS,
-  FINANCIAL_POA_ARTICLE_SECTIONS,
-  // Healthcare POA
-  HEALTHCARE_POA_TEMPLATE_INFO,
-  HEALTHCARE_POA_REQUIRED_FIELDS,
-  HEALTHCARE_POA_ARTICLE_SECTIONS,
+  ADVANCE_DIRECTIVE_ARTICLE_SECTIONS,
+  ADVANCE_DIRECTIVE_OPTIONAL_FIELDS,
+  ADVANCE_DIRECTIVE_REQUIRED_FIELDS,
   // Advance Directive
   ADVANCE_DIRECTIVE_TEMPLATE_INFO,
-  ADVANCE_DIRECTIVE_REQUIRED_FIELDS,
-  ADVANCE_DIRECTIVE_OPTIONAL_FIELDS,
-  ADVANCE_DIRECTIVE_ARTICLE_SECTIONS,
+  FINANCIAL_POA_ARTICLE_SECTIONS,
+  FINANCIAL_POA_OPTIONAL_FIELDS,
+  FINANCIAL_POA_REQUIRED_FIELDS,
+  // Financial POA
+  FINANCIAL_POA_TEMPLATE_INFO,
+  HEALTHCARE_POA_ARTICLE_SECTIONS,
+  HEALTHCARE_POA_REQUIRED_FIELDS,
+  // Healthcare POA
+  HEALTHCARE_POA_TEMPLATE_INFO,
+  POUR_OVER_WILL_REQUIRED_FIELDS,
+  // Pour-Over Will
+  POUR_OVER_WILL_TEMPLATE_INFO,
+  TRUST_ARTICLE_SECTIONS,
+  TRUST_OPTIONAL_FIELDS,
+  TRUST_REQUIRED_FIELDS,
+  // Trust
+  TRUST_TEMPLATE_INFO,
+  WILL_ARTICLE_SECTIONS,
+  WILL_OPTIONAL_FIELDS,
+  WILL_REQUIRED_FIELDS,
+  // Will
+  WILL_TEMPLATE_INFO,
 } from "../document-templates";
 
 /**
@@ -85,9 +85,7 @@ describe("Document Templates", () => {
     });
 
     it("should have guardian section with condition", () => {
-      const guardianSection = WILL_ARTICLE_SECTIONS.find(
-        (s) => s.id === "guardian"
-      );
+      const guardianSection = WILL_ARTICLE_SECTIONS.find((s) => s.id === "guardian");
       expect(guardianSection).toBeDefined();
       expect(guardianSection?.condition).toBe("hasMinorChildren");
       expect(guardianSection?.required).toBe(false);
@@ -209,21 +207,13 @@ describe("Document Templates", () => {
 
     it("should have required fields", () => {
       expect(ADVANCE_DIRECTIVE_REQUIRED_FIELDS).toContain("fullName");
-      expect(ADVANCE_DIRECTIVE_REQUIRED_FIELDS).toContain(
-        "terminalConditionPreference"
-      );
-      expect(ADVANCE_DIRECTIVE_REQUIRED_FIELDS).toContain(
-        "permanentUnconsciousnessPreference"
-      );
+      expect(ADVANCE_DIRECTIVE_REQUIRED_FIELDS).toContain("terminalConditionPreference");
+      expect(ADVANCE_DIRECTIVE_REQUIRED_FIELDS).toContain("permanentUnconsciousnessPreference");
     });
 
     it("should have treatment options in optional fields", () => {
-      expect(ADVANCE_DIRECTIVE_OPTIONAL_FIELDS).toContain(
-        "cardiopulmonaryResuscitation"
-      );
-      expect(ADVANCE_DIRECTIVE_OPTIONAL_FIELDS).toContain(
-        "mechanicalVentilation"
-      );
+      expect(ADVANCE_DIRECTIVE_OPTIONAL_FIELDS).toContain("cardiopulmonaryResuscitation");
+      expect(ADVANCE_DIRECTIVE_OPTIONAL_FIELDS).toContain("mechanicalVentilation");
       expect(ADVANCE_DIRECTIVE_OPTIONAL_FIELDS).toContain("artificialNutrition");
       expect(ADVANCE_DIRECTIVE_OPTIONAL_FIELDS).toContain("dialysis");
     });
