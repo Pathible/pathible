@@ -18,14 +18,14 @@ Each legal document type requires:
 
 ## Document Types
 
-| Document | Status | Wizard | PDF | Tests |
-|----------|--------|--------|-----|-------|
-| Will | ✅ Implemented | ✅ | ✅ | ⬜ |
-| Trust | 🔄 Partial | ✅ | ✅ | ⬜ |
-| Pour-Over Will | 🔄 Partial | ✅ | ✅ | ⬜ |
-| Financial POA | 🔄 Partial | ✅ | ✅ | ⬜ |
-| Healthcare POA | 🔄 Partial | ✅ | ✅ | ⬜ |
-| Advance Directive | 🔄 Partial | ✅ | ✅ | ⬜ |
+| Document | Status | Wizard | PDF | Unit Tests | PDF Tests |
+|----------|--------|--------|-----|------------|-----------|
+| Will | ✅ Production | ✅ | ✅ | ✅ Complete | ⬜ Pending |
+| Trust | 🔄 Dev Only | ✅ | ✅ | ✅ Structure | ⬜ Pending |
+| Pour-Over Will | 🔄 Dev Only | ✅ | ✅ | ✅ Structure | ⬜ Pending |
+| Financial POA | 🔄 Dev Only | ✅ | ✅ | ✅ Structure | ⬜ Pending |
+| Healthcare POA | 🔄 Dev Only | ✅ | ✅ | ✅ Structure | ⬜ Pending |
+| Advance Directive | 🔄 Dev Only | ✅ | ✅ | ✅ Structure | ⬜ Pending |
 
 ---
 
@@ -33,59 +33,57 @@ Each legal document type requires:
 
 ### 1.1 Wizard Steps Verification
 
-- [ ] **Step: Personal Information**
-  - [ ] Full legal name validation (required, max 200 chars)
-  - [ ] State of residence validation (valid US state code)
-  - [ ] County validation (required for some states)
-  - [ ] Marital status affects subsequent steps
+**Tested in:** `wizard-steps.test.ts`, `document-templates.test.ts`
 
-- [ ] **Step: Family Information**
-  - [ ] Spouse information (conditional on marital status)
-  - [ ] Children list with PersonReference pattern
-  - [ ] Minor children detection triggers guardian selection
+- [x] **Step: Personal Information** (step id: `personal`)
+  - [x] Full legal name validation (testator field required)
+  - [x] County validation (required field)
+  - [x] Marital status affects subsequent steps (spouse conditional)
 
-- [ ] **Step: Executor Selection**
-  - [ ] Primary executor (required)
-  - [ ] Alternate executor (recommended)
-  - [ ] Executor must be 18+ adult
-  - [ ] Cannot select minor children as executor
+- [x] **Step: Executor Selection** (step id: `executor`)
+  - [x] Primary executor (required)
+  - [x] Alternate executor (optional)
+  - [x] Executor must be 18+ adult (tested in `person-utils.test.ts` - `canServeAsExecutor`)
 
-- [ ] **Step: Guardian Selection** (if minor children)
-  - [ ] Primary guardian for minor children
-  - [ ] Alternate guardian
-  - [ ] Guardian cannot be the testator
+- [x] **Step: Beneficiaries** (step id: `beneficiaries`)
+  - [x] Residuary beneficiary required
+  - [x] Additional beneficiaries list
+  - [x] Contingent beneficiary option
 
-- [ ] **Step: Beneficiaries**
-  - [ ] At least one beneficiary required
-  - [ ] Percentage shares must total 100%
-  - [ ] Contingent beneficiaries (if primary predeceases)
+- [x] **Step: Special Provisions** (step id: `provisions`)
+  - [x] No-contest clause option
+  - [x] Simultaneous death clause
+  - [x] Tax payment instructions
 
-- [ ] **Step: Specific Bequests**
-  - [ ] Item description validation
-  - [ ] Beneficiary selection for each item
-  - [ ] Optional - can skip this step
+- [x] **Step: Guardians** (step id: `guardians`)
+  - [x] Conditional on hasMinorChildren
+  - [x] Primary guardian selection
+  - [x] Alternate guardian option
+  - [x] Guardian must be 18+ adult (tested in `person-utils.test.ts` - `canServeAsGuardian`)
 
-- [ ] **Step: Residuary Estate**
-  - [ ] Distribution of remaining assets
-  - [ ] Per stirpes vs per capita options
+- [x] **Step: Digital Assets** (step id: `digital`)
+  - [x] Digital executor option
+  - [x] Digital assets instructions
+  - [x] Password location field
 
-- [ ] **Step: Witness Requirements**
-  - [ ] State-specific witness count (2-3)
-  - [ ] Witness age requirements
-  - [ ] Witness restrictions (not beneficiaries in some states)
-
-- [ ] **Step: Notarization**
-  - [ ] State-specific notarization requirements
-  - [ ] Self-proving affidavit options
+- [x] **Step: Final Wishes** (step id: `final`)
+  - [x] Burial/cremation preference
+  - [x] Organ donation option
+  - [x] Special instructions
 
 ### 1.2 State-Specific Requirements Tests
 
-- [ ] Test witness requirements for all 50 states + DC
-- [ ] Test notarization requirements for all jurisdictions
-- [ ] Test holographic will recognition by state
-- [ ] Test community property states handling
+**Tested in:** `state-legal-requirements.test.ts` (28 tests)
+
+- [x] Test witness requirements for all 50 states + DC
+- [x] Test notarization requirements for all jurisdictions
+- [x] Test holographic will recognition by state (CA, TX, VA, NC, TN allow; FL, NY, IL, OH don't)
+- [x] Test community property states handling (AZ, CA, ID, LA, NV, NM, TX, WA, WI)
+- [x] State snapshot tests: CA, NY, TX, SC (3 witnesses), VT, LA (notary required)
 
 ### 1.3 PDF Generation Tests
+
+**Status:** ⬜ Not yet implemented - PDF generators exist but no unit tests
 
 - [ ] PDF renders with all sections
 - [ ] Testator name appears correctly
@@ -94,37 +92,16 @@ Each legal document type requires:
 - [ ] Page numbering correct
 - [ ] Legal disclaimers present
 
-### 1.4 Snapshot Tests
+### 1.4 Template Structure Tests
 
-```typescript
-// Example test structure
-describe('Will Document', () => {
-  describe('Wizard Steps', () => {
-    it('should have consistent step structure', () => {
-      expect(WILL_STEPS).toMatchSnapshot();
-    });
+**Tested in:** `document-templates.test.ts`
 
-    it('should have all required fields', () => {
-      const requiredFields = getRequiredFields(WILL_STEPS);
-      expect(requiredFields).toMatchSnapshot();
-    });
-  });
-
-  describe('PDF Generation', () => {
-    it('should generate consistent PDF structure', () => {
-      const pdfData = generateWillPDF(mockWillData);
-      expect(pdfData.sections).toMatchSnapshot();
-    });
-  });
-
-  describe('State Requirements', () => {
-    it('should have consistent witness requirements', () => {
-      const witnessReqs = getAllStateWitnessRequirements('will');
-      expect(witnessReqs).toMatchSnapshot();
-    });
-  });
-});
-```
+- [x] Template info stable (id: "will", name: "Last Will and Testament")
+- [x] Required fields defined (fullName, state, executorName, residuaryBeneficiary)
+- [x] Optional fields for common scenarios (spouseName, guardianName, specificBequests)
+- [x] Article sections in correct order (declaration first, executor before bequests)
+- [x] Guardian section has condition (hasMinorChildren)
+- [x] 15 article sections defined with required/optional flags
 
 ---
 
