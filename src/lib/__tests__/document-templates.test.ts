@@ -282,7 +282,7 @@ describe("Required Fields Consistency", () => {
   ];
 
   it("should require fullName for all document types", () => {
-    for (const { name, fields } of allRequiredFields) {
+    for (const { fields } of allRequiredFields) {
       expect(fields).toContain("fullName");
     }
   });
@@ -293,7 +293,7 @@ describe("Required Fields Consistency", () => {
   });
 
   it("should have no duplicate required fields within a template", () => {
-    for (const { name, fields } of allRequiredFields) {
+    for (const { fields } of allRequiredFields) {
       const uniqueFields = new Set(fields);
       expect(uniqueFields.size).toBe(fields.length);
     }

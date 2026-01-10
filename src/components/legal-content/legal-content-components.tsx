@@ -168,18 +168,24 @@ export function DataTable({ headers, rows }: TableProps) {
           </tr>
         </thead>
         <tbody className="divide-y divide-pathible-sage/10">
-          {rows.map((row, rowIndex) => (
-            <tr key={`row-${rowIndex}`} className="transition-colors hover:bg-pathible-sand/30">
-              {row.map((cell, cellIndex) => (
-                <td
-                  key={`cell-${rowIndex}-${cellIndex}`}
-                  className="px-4 py-3 text-muted-foreground text-sm sm:text-base"
-                >
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((row, rowIndex) => {
+            const rowKey = `row-${rowIndex}`;
+            return (
+              <tr key={rowKey} className="transition-colors hover:bg-pathible-sand/30">
+                {row.map((cell, cellIndex) => {
+                  const cellKey = `cell-${rowIndex}-${cellIndex}`;
+                  return (
+                    <td
+                      key={cellKey}
+                      className="px-4 py-3 text-muted-foreground text-sm sm:text-base"
+                    >
+                      {cell}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -221,12 +227,15 @@ export function ContactCard({
           <div>
             <Strong>Address:</Strong>
             <address className="mt-1 not-italic">
-              {address.map((line, i) => (
-                <span key={`addr-${i}`}>
-                  {line}
-                  {i < address.length - 1 && <br />}
-                </span>
-              ))}
+              {address.map((line, i) => {
+                const lineKey = `addr-${i}`;
+                return (
+                  <span key={lineKey}>
+                    {line}
+                    {i < address.length - 1 && <br />}
+                  </span>
+                );
+              })}
             </address>
           </div>
         )}
