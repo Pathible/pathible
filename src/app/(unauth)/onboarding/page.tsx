@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { api } from "@/convex/_generated/api";
-import { checkHasActivePlan } from "@/lib/subscription-plans";
+import { checkHasActivePlan, getCurrentPlanTier } from "@/lib/subscription-plans";
 
 /**
  * Multi-Step Onboarding Wizard
@@ -111,10 +111,16 @@ export default function OnboardingPage() {
           return;
         }
 
-        // Create household
+        // Get the user's subscription tier from Clerk Billing
+        // This ensures the household is created with the correct tier
+        // (not hardcoded to "foundations")
+        const clerkTier = getCurrentPlanTier(has);
+
+        // Create household with the user's actual subscription tier
         await createHouseholdMutation({
           name: householdName,
           description: householdDescription || undefined,
+          subscriptionTier: clerkTier || undefined,
         });
 
         toast.success("Household created!");

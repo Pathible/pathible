@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { internalQuery, query } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 import { maritalStatusValidator, onboardingStatusValidator } from "./shared/commonValidators";
 import { formatBytesAsGB, formatLimit } from "./shared/constants";
 import { getFamilyUnitCount, getMemberCountFromHousehold } from "./shared/counters";
@@ -928,6 +928,83 @@ export const getOnboardingStatus = query({
       hasHousehold,
       needsOnboarding,
       onboardingStatus,
+    };
+  },
+});
+
+// ============================================================================
+// SUBSCRIPTION SYNC (for Clerk webhook integration)
+// ============================================================================
+
+/**
+ * Internal Mutation: Sync subscription tier from Clerk Billing
+ *
+ * Called by the Clerk webhook handler when subscription events occur.
+ * Updates the household's subscriptionTier based on the Clerk user's plan.
+ *
+ * @param clerkUserId - The Clerk user ID (identity.subject)
+ * @param tier - The subscription tier from Clerk Billing
+ */
+export const syncSubscriptionTier = internalMutation({
+  args: {
+    clerkUserId: v.string(),
+    tier: v.union(
+      v.literal("foundations"),
+      v.literal("heritage"),
+      v.literal("legacy"),
+      v.literal("founders"),
+    ),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    householdId: v.optional(v.id("households")),
+  }),
+  handler: async (ctx, args) => {
+    console.log(`[Subscription Sync] Syncing tier ${args.tier} for Clerk user ${args.clerkUserId}`);
+
+    // Find the user's profile by Clerk user ID
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.clerkUserId))
+      .unique();
+
+    if (!profile) {
+      console.log(`[Subscription Sync] No profile found for user ${args.clerkUserId}`);
+      return {
+        success: false,
+        message: "Profile not found for user",
+        householdId: undefined,
+      };
+    }
+
+    // Find the household where user is primary contact
+    const household = await ctx.db
+      .query("households")
+      .withIndex("by_primaryContactId", (q) => q.eq("primaryContactId", profile._id))
+      .first();
+
+    if (!household) {
+      console.log(`[Subscription Sync] No household found for profile ${profile._id}`);
+      return {
+        success: false,
+        message: "Household not found for user",
+        householdId: undefined,
+      };
+    }
+
+    // Update the subscription tier
+    await ctx.db.patch(household._id, {
+      subscriptionTier: args.tier,
+      updatedAt: Date.now(),
+    });
+
+    console.log(`[Subscription Sync] Updated household ${household._id} to tier ${args.tier}`);
+
+    return {
+      success: true,
+      message: `Updated subscription tier to ${args.tier}`,
+      householdId: household._id,
     };
   },
 });
