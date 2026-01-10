@@ -6,12 +6,14 @@ import {
   checkStorageQuota,
   PLAN_LIMITS,
   requireActiveSubscription,
+  requireAdminOrResourceOwner,
   requireAuth,
   requireFeatureAccess,
   requireHouseholdAccess,
   requireHouseholdAdmin,
 } from "./auth";
 import { logActivity } from "./shared/activity";
+import { accessLevelValidator } from "./shared/commonValidators";
 import { formatBytesAsGB } from "./shared/constants";
 import {
   checkDocumentAccess,
@@ -36,12 +38,6 @@ import {
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
-
-const accessLevelValidator = v.union(
-  v.literal("household"),
-  v.literal("admins"),
-  v.literal("custom"),
-);
 
 const documentReturnValidator = v.object({
   _id: v.id("vaultDocuments"),
@@ -548,12 +544,7 @@ export const update = mutation({
     await requireActiveSubscription(ctx, document.householdId);
 
     // Only admins or the uploader can edit
-    const isAdmin = membership.role === "owner" || membership.role === "steward";
-    const isUploader = document.uploadedBy === profile._id;
-
-    if (!isAdmin && !isUploader) {
-      throw new Error("Access denied: You do not have permission to edit this document");
-    }
+    requireAdminOrResourceOwner(membership, profile._id, document.uploadedBy, "edit this document");
 
     // Build update object
     const updates: Partial<Doc<"vaultDocuments">> = {
@@ -659,12 +650,12 @@ export const remove = mutation({
     await requireActiveSubscription(ctx, document.householdId);
 
     // Only admins or the uploader can delete
-    const isAdmin = membership.role === "owner" || membership.role === "steward";
-    const isUploader = document.uploadedBy === profile._id;
-
-    if (!isAdmin && !isUploader) {
-      throw new Error("Access denied: You do not have permission to delete this document");
-    }
+    requireAdminOrResourceOwner(
+      membership,
+      profile._id,
+      document.uploadedBy,
+      "delete this document",
+    );
 
     // Note: B2 file deletion must be handled separately via vaultActions.deleteFile
     // This mutation only deletes the database record

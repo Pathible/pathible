@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
+import { useDialogState, useFormState } from "@/hooks";
 import { FamilyUnitCard } from "./family-unit-card";
 
 export function FamilyEcosystemContent() {
@@ -55,21 +56,24 @@ export function FamilyEcosystemContent() {
   );
 
   // Dialog states
-  const [showAddFamilyDialog, setShowAddFamilyDialog] = useState(false);
-  const [showInviteMemberDialog, setShowInviteMemberDialog] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const addFamilyDialog = useDialogState();
+  const inviteMemberDialog = useDialogState();
 
   // Form states - Add Family
-  const [familyName, setFamilyName] = useState("");
-  const [familyDescription, setFamilyDescription] = useState("");
-  const [familyRelationship, setFamilyRelationship] = useState("");
+  const addFamilyForm = useFormState({
+    name: "",
+    description: "",
+    relationship: "",
+  });
 
   // Form states - Invite Member
-  const [inviteFirstName, setInviteFirstName] = useState("");
-  const [inviteLastName, setInviteLastName] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [invitePhone, setInvitePhone] = useState("");
-  const [inviteRelationship, setInviteRelationship] = useState<string>("other");
+  const inviteMemberForm = useFormState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    relationship: "other" as string,
+  });
 
   // Track if we've ensured current user is in primary family
   const [hasEnsuredUser, setHasEnsuredUser] = useState(false);
@@ -110,25 +114,23 @@ export function FamilyEcosystemContent() {
     e.preventDefault();
     if (!householdId) return;
 
-    setIsSubmitting(true);
+    addFamilyForm.setIsSubmitting(true);
     try {
       await createFamilyUnit({
         householdId,
-        name: familyName,
-        description: familyDescription || undefined,
-        relationshipToHousehold: familyRelationship || undefined,
+        name: addFamilyForm.values.name,
+        description: addFamilyForm.values.description || undefined,
+        relationshipToHousehold: addFamilyForm.values.relationship || undefined,
       });
 
       toast.success("Family unit created successfully");
-      setShowAddFamilyDialog(false);
-      setFamilyName("");
-      setFamilyDescription("");
-      setFamilyRelationship("");
+      addFamilyDialog.close();
+      addFamilyForm.reset();
     } catch (error) {
       console.error("Failed to create family unit:", error);
       toast.error("Failed to create family unit");
     } finally {
-      setIsSubmitting(false);
+      addFamilyForm.setIsSubmitting(false);
     }
   };
 
@@ -136,15 +138,15 @@ export function FamilyEcosystemContent() {
     e.preventDefault();
     if (!householdId) return;
 
-    setIsSubmitting(true);
+    inviteMemberForm.setIsSubmitting(true);
     try {
       await inviteToPrimaryFamily({
         householdId,
-        firstName: inviteFirstName,
-        lastName: inviteLastName,
-        email: inviteEmail,
-        phone: invitePhone || undefined,
-        relationshipType: inviteRelationship as
+        firstName: inviteMemberForm.values.firstName,
+        lastName: inviteMemberForm.values.lastName,
+        email: inviteMemberForm.values.email,
+        phone: inviteMemberForm.values.phone || undefined,
+        relationshipType: inviteMemberForm.values.relationship as
           | "parent"
           | "child"
           | "spouse"
@@ -159,23 +161,15 @@ export function FamilyEcosystemContent() {
           | "other",
       });
 
-      toast.success(`${inviteFirstName} has been added to your family`);
-      setShowInviteMemberDialog(false);
-      resetInviteForm();
+      toast.success(`${inviteMemberForm.values.firstName} has been added to your family`);
+      inviteMemberDialog.close();
+      inviteMemberForm.reset();
     } catch (error) {
       console.error("Failed to invite member:", error);
       toast.error(error instanceof Error ? error.message : "Failed to add family member");
     } finally {
-      setIsSubmitting(false);
+      inviteMemberForm.setIsSubmitting(false);
     }
-  };
-
-  const resetInviteForm = () => {
-    setInviteFirstName("");
-    setInviteLastName("");
-    setInviteEmail("");
-    setInvitePhone("");
-    setInviteRelationship("other");
   };
 
   // Loading state
@@ -252,13 +246,13 @@ export function FamilyEcosystemContent() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={() => setShowInviteMemberDialog(true)}
+                onClick={inviteMemberDialog.open}
                 data-tour="family-invite-member"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Invite Member
               </Button>
-              <Button onClick={() => setShowAddFamilyDialog(true)} data-tour="family-add-unit">
+              <Button onClick={addFamilyDialog.open} data-tour="family-add-unit">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Family
               </Button>
@@ -295,7 +289,7 @@ export function FamilyEcosystemContent() {
               <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
                 Add the people who matter most. They&apos;re the reason you&apos;re doing this.
               </p>
-              <Button onClick={() => setShowAddFamilyDialog(true)}>
+              <Button onClick={addFamilyDialog.open}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Family Unit
               </Button>
@@ -315,7 +309,7 @@ export function FamilyEcosystemContent() {
       </div>
 
       {/* Add Family Dialog */}
-      <Dialog open={showAddFamilyDialog} onOpenChange={setShowAddFamilyDialog}>
+      <Dialog open={addFamilyDialog.isOpen} onOpenChange={addFamilyDialog.setIsOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add a Family Group</DialogTitle>
@@ -330,8 +324,8 @@ export function FamilyEcosystemContent() {
               <Input
                 id="familyName"
                 placeholder="e.g., The Johnson Family"
-                value={familyName}
-                onChange={(e) => setFamilyName(e.target.value)}
+                value={addFamilyForm.values.name}
+                onChange={(e) => addFamilyForm.setField("name", e.target.value)}
                 required
               />
             </div>
@@ -340,8 +334,8 @@ export function FamilyEcosystemContent() {
               <Input
                 id="familyRelationship"
                 placeholder="e.g., In-Laws, Extended Family"
-                value={familyRelationship}
-                onChange={(e) => setFamilyRelationship(e.target.value)}
+                value={addFamilyForm.values.relationship}
+                onChange={(e) => addFamilyForm.setField("relationship", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -349,21 +343,21 @@ export function FamilyEcosystemContent() {
               <Input
                 id="familyDescription"
                 placeholder="Optional description"
-                value={familyDescription}
-                onChange={(e) => setFamilyDescription(e.target.value)}
+                value={addFamilyForm.values.description}
+                onChange={(e) => addFamilyForm.setField("description", e.target.value)}
               />
             </div>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowAddFamilyDialog(false)}
-                disabled={isSubmitting}
+                onClick={addFamilyDialog.close}
+                disabled={addFamilyForm.isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Family Unit"}
+              <Button type="submit" disabled={addFamilyForm.isSubmitting}>
+                {addFamilyForm.isSubmitting ? "Creating..." : "Create Family Unit"}
               </Button>
             </div>
           </form>
@@ -371,7 +365,7 @@ export function FamilyEcosystemContent() {
       </Dialog>
 
       {/* Invite Member Dialog */}
-      <Dialog open={showInviteMemberDialog} onOpenChange={setShowInviteMemberDialog}>
+      <Dialog open={inviteMemberDialog.isOpen} onOpenChange={inviteMemberDialog.setIsOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Someone to Your Family</DialogTitle>
@@ -386,14 +380,14 @@ export function FamilyEcosystemContent() {
                 <Input
                   id="inviteFirstName"
                   placeholder="First name"
-                  value={inviteFirstName}
-                  onChange={(e) => setInviteFirstName(e.target.value)}
+                  value={inviteMemberForm.values.firstName}
+                  onChange={(e) => inviteMemberForm.setField("firstName", e.target.value)}
                   required
                 />
                 <Input
                   placeholder="Last name"
-                  value={inviteLastName}
-                  onChange={(e) => setInviteLastName(e.target.value)}
+                  value={inviteMemberForm.values.lastName}
+                  onChange={(e) => inviteMemberForm.setField("lastName", e.target.value)}
                   required
                 />
               </div>
@@ -404,8 +398,8 @@ export function FamilyEcosystemContent() {
                 id="inviteEmail"
                 type="email"
                 placeholder="member@example.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
+                value={inviteMemberForm.values.email}
+                onChange={(e) => inviteMemberForm.setField("email", e.target.value)}
                 required
               />
             </div>
@@ -415,13 +409,16 @@ export function FamilyEcosystemContent() {
                 id="invitePhone"
                 type="tel"
                 placeholder="(555) 123-4567"
-                value={invitePhone}
-                onChange={(e) => setInvitePhone(e.target.value)}
+                value={inviteMemberForm.values.phone}
+                onChange={(e) => inviteMemberForm.setField("phone", e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="inviteRelationship">Relationship *</Label>
-              <Select value={inviteRelationship} onValueChange={setInviteRelationship}>
+              <Select
+                value={inviteMemberForm.values.relationship}
+                onValueChange={(value) => inviteMemberForm.setField("relationship", value)}
+              >
                 <SelectTrigger id="inviteRelationship">
                   <SelectValue placeholder="Select relationship" />
                 </SelectTrigger>
@@ -446,15 +443,15 @@ export function FamilyEcosystemContent() {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setShowInviteMemberDialog(false);
-                  resetInviteForm();
+                  inviteMemberDialog.close();
+                  inviteMemberForm.reset();
                 }}
-                disabled={isSubmitting}
+                disabled={inviteMemberForm.isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Member"}
+              <Button type="submit" disabled={inviteMemberForm.isSubmitting}>
+                {inviteMemberForm.isSubmitting ? "Adding..." : "Add Member"}
               </Button>
             </div>
           </form>

@@ -1,6 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAuth, requireHouseholdAccess } from "./auth";
+import {
+  keyContactRoleValidator,
+  personSourceTypeValidator,
+  relationshipTypeValidator,
+} from "./shared/commonValidators";
 import { validateStateCode, validateZipCode } from "./shared/validators";
 
 /**
@@ -17,39 +22,8 @@ import { validateStateCode, validateZipCode } from "./shared/validators";
 // VALIDATORS
 // ============================================================================
 
-const relationshipTypeValidator = v.union(
-  v.literal("parent"),
-  v.literal("child"),
-  v.literal("spouse"),
-  v.literal("partner"),
-  v.literal("sibling"),
-  v.literal("grandparent"),
-  v.literal("grandchild"),
-  v.literal("aunt_uncle"),
-  v.literal("niece_nephew"),
-  v.literal("cousin"),
-  v.literal("in_law"),
-  v.literal("other"),
-);
-
-const keyContactRoleValidator = v.union(
-  v.literal("attorney"),
-  v.literal("financial_advisor"),
-  v.literal("executor"),
-  v.literal("trustee"),
-  v.literal("guardian"),
-  v.literal("healthcare_proxy"),
-  v.literal("friend"),
-  v.literal("neighbor"),
-  v.literal("business_partner"),
-  v.literal("caregiver"),
-  v.literal("charitable_org"),
-  v.literal("religious_org"),
-  v.literal("other"),
-);
-
 const personReferenceValidator = v.object({
-  sourceType: v.union(v.literal("familyMember"), v.literal("keyContact"), v.literal("manual")),
+  sourceType: personSourceTypeValidator,
   familyMemberId: v.optional(v.id("familyMembers")),
   keyContactId: v.optional(v.id("keyContacts")),
   // Resolved or manually entered data

@@ -8,6 +8,8 @@ import {
 } from "@/lib/state-legal-requirements";
 import {
   Checkbox,
+  DocumentFooter,
+  DocumentHeader,
   type LegalDocumentPDFData,
   NotaryAcknowledgment,
   styles,
@@ -46,11 +48,11 @@ export function HealthcarePOAPDFGenerator({ data }: { data: LegalDocumentPDFData
     <Document>
       {/* ==================== PAGE 1 ==================== */}
       <Page size="LETTER" style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{documentTitle}</Text>
-          <Text style={styles.subtitle}>with HIPAA Authorization and Advance Directives</Text>
-          <Text style={styles.stateInfo}>State of {stateName}</Text>
-        </View>
+        <DocumentHeader
+          title={documentTitle}
+          subtitle="with HIPAA Authorization and Advance Directives"
+          state={data.state}
+        />
 
         {/* Part I: Designation */}
         <View style={styles.section}>
@@ -191,11 +193,11 @@ export function HealthcarePOAPDFGenerator({ data }: { data: LegalDocumentPDFData
           )}
         </View>
 
-        <View style={styles.footer}>
-          <Text>
-            {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 1
-          </Text>
-        </View>
+        <DocumentFooter
+          documentName={documentTitle}
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={1}
+        />
       </Page>
 
       {/* ==================== PAGE 2 ==================== */}
@@ -290,11 +292,11 @@ export function HealthcarePOAPDFGenerator({ data }: { data: LegalDocumentPDFData
           </Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text>
-            {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 2
-          </Text>
-        </View>
+        <DocumentFooter
+          documentName={documentTitle}
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={2}
+        />
       </Page>
 
       {/* ==================== PAGE 3 ==================== */}
@@ -476,11 +478,11 @@ export function HealthcarePOAPDFGenerator({ data }: { data: LegalDocumentPDFData
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Text>
-            {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 3
-          </Text>
-        </View>
+        <DocumentFooter
+          documentName={documentTitle}
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={3}
+        />
       </Page>
 
       {/* ==================== PAGE 4 ==================== */}
@@ -610,11 +612,11 @@ export function HealthcarePOAPDFGenerator({ data }: { data: LegalDocumentPDFData
           </Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text>
-            {documentTitle} of {r.fullName || "[YOUR NAME]"} | Page 4
-          </Text>
-        </View>
+        <DocumentFooter
+          documentName={documentTitle}
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={4}
+        />
       </Page>
     </Document>
   );

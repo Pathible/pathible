@@ -12,6 +12,12 @@ import {
   requireHouseholdAdmin,
 } from "./auth";
 import { logActivity } from "./shared/activity";
+import {
+  genderValidator,
+  maritalStatusValidator,
+  memberStatusValidator,
+  relationshipTypeValidator,
+} from "./shared/commonValidators";
 import { incrementFamilyUnitCount } from "./shared/counters";
 import { EMAIL_REGEX, validateStateCode, validateZipCode } from "./shared/validators";
 
@@ -28,42 +34,6 @@ import { EMAIL_REGEX, validateStateCode, validateZipCode } from "./shared/valida
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
-
-const relationshipTypeValidator = v.union(
-  v.literal("parent"),
-  v.literal("child"),
-  v.literal("spouse"),
-  v.literal("partner"),
-  v.literal("sibling"),
-  v.literal("grandparent"),
-  v.literal("grandchild"),
-  v.literal("aunt_uncle"),
-  v.literal("niece_nephew"),
-  v.literal("cousin"),
-  v.literal("in_law"),
-  v.literal("other"),
-);
-
-const genderValidator = v.union(
-  v.literal("male"),
-  v.literal("female"),
-  v.literal("prefer_not_to_say"),
-);
-
-const maritalStatusValidator = v.union(
-  v.literal("single"),
-  v.literal("married"),
-  v.literal("divorced"),
-  v.literal("widowed"),
-  v.literal("domestic_partnership"),
-  v.literal("separated"),
-);
-
-const memberStatusValidator = v.union(
-  v.literal("active"),
-  v.literal("pending_invite"),
-  v.literal("inactive"),
-);
 
 // Return type validators
 const familyUnitReturnValidator = v.object({

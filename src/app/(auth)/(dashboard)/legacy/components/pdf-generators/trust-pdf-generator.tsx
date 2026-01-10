@@ -6,7 +6,13 @@ import {
   STATE_NAMES,
   type USState,
 } from "@/lib/state-legal-requirements";
-import { type LegalDocumentPDFData, NotaryAcknowledgment, styles } from "./shared-components";
+import {
+  DocumentFooter,
+  DocumentHeader,
+  type LegalDocumentPDFData,
+  NotaryAcknowledgment,
+  styles,
+} from "./shared-components";
 
 export function TrustPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
   const r = data.responses;
@@ -35,11 +41,11 @@ export function TrustPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Revocable Living Trust Agreement</Text>
-          <Text style={styles.subtitle}>{r.trustName || "The [YOUR NAME] Living Trust"}</Text>
-          <Text style={styles.stateInfo}>State of {stateName}</Text>
-        </View>
+        <DocumentHeader
+          title="Revocable Living Trust Agreement"
+          subtitle={(r.trustName as string) || "The [YOUR NAME] Living Trust"}
+          state={data.state}
+        />
 
         {/* Preamble */}
         <View style={styles.section}>
@@ -133,9 +139,11 @@ export function TrustPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
           </Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text>{r.trustName || "Living Trust"} | Page 1</Text>
-        </View>
+        <DocumentFooter
+          documentName={(r.trustName as string) || "Living Trust"}
+          principalName=""
+          pageNumber={1}
+        />
       </Page>
 
       {/* Page 2 */}
@@ -233,9 +241,11 @@ export function TrustPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
           </Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text>{r.trustName || "Living Trust"} | Page 2</Text>
-        </View>
+        <DocumentFooter
+          documentName={(r.trustName as string) || "Living Trust"}
+          principalName=""
+          pageNumber={2}
+        />
       </Page>
 
       {/* Page 3 - Continued Provisions */}
@@ -336,9 +346,11 @@ export function TrustPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
           </View>
         )}
 
-        <View style={styles.footer}>
-          <Text>{r.trustName || "Living Trust"} | Page 3</Text>
-        </View>
+        <DocumentFooter
+          documentName={(r.trustName as string) || "Living Trust"}
+          principalName=""
+          pageNumber={3}
+        />
       </Page>
 
       {/* Page 4 - Signatures */}
@@ -390,9 +402,11 @@ export function TrustPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
           />
         )}
 
-        <View style={styles.footer}>
-          <Text>{r.trustName || "Living Trust"} | Page 4</Text>
-        </View>
+        <DocumentFooter
+          documentName={(r.trustName as string) || "Living Trust"}
+          principalName=""
+          pageNumber={4}
+        />
       </Page>
 
       {/* Schedule A - Initial Trust Property */}
@@ -500,9 +514,7 @@ export function TrustPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
           <View style={{ height: 100, borderWidth: 1, borderColor: "#ccc", marginTop: 8 }} />
         </View>
 
-        <View style={styles.footer}>
-          <Text>Schedule A | {r.trustName || "Living Trust"}</Text>
-        </View>
+        <DocumentFooter documentName="Schedule A" principalName="" pageNumber={undefined} />
       </Page>
 
       {/* Certification of Trust Page */}
@@ -585,9 +597,11 @@ export function TrustPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
           principalName={(r.fullName as string) || "[TRUSTEE]"}
         />
 
-        <View style={styles.footer}>
-          <Text>Certification of Trust | {r.trustName || "Living Trust"}</Text>
-        </View>
+        <DocumentFooter
+          documentName="Certification of Trust"
+          principalName=""
+          pageNumber={undefined}
+        />
       </Page>
     </Document>
   );

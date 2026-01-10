@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalQuery, query } from "./_generated/server";
+import { maritalStatusValidator, onboardingStatusValidator } from "./shared/commonValidators";
 import { formatBytesAsGB, formatLimit } from "./shared/constants";
 import { getFamilyUnitCount, getMemberCountFromHousehold } from "./shared/counters";
 import {
@@ -46,8 +47,16 @@ export interface AuthenticatedContext {
     dateOfBirth?: number;
     address?: string;
     city?: string;
+    county?: string;
     state?: string;
     zipCode?: string;
+    maritalStatus?:
+      | "single"
+      | "married"
+      | "divorced"
+      | "widowed"
+      | "domestic_partnership"
+      | "separated";
     updatedAt: number;
     onboardingStatus?:
       | "not_started"
@@ -73,17 +82,11 @@ const profileReturnValidator = v.object({
   dateOfBirth: v.optional(v.number()),
   address: v.optional(v.string()),
   city: v.optional(v.string()),
+  county: v.optional(v.string()),
   state: v.optional(v.string()),
   zipCode: v.optional(v.string()),
-  onboardingStatus: v.optional(
-    v.union(
-      v.literal("not_started"),
-      v.literal("profile_complete"),
-      v.literal("household_complete"),
-      v.literal("preferences_complete"),
-      v.literal("complete"),
-    ),
-  ),
+  maritalStatus: v.optional(maritalStatusValidator),
+  onboardingStatus: v.optional(onboardingStatusValidator),
   onboardingStep: v.optional(v.number()),
   onboardingCompletedAt: v.optional(v.number()),
   updatedAt: v.number(),
@@ -248,6 +251,59 @@ export async function requireHouseholdAdmin(
   // Only owners and stewards have admin privileges
   if (membership.role !== "owner" && membership.role !== "steward") {
     throw new Error("Access denied: Admin privileges required");
+  }
+}
+
+// ============================================================================
+// PERMISSION HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Check if a household membership has admin privileges
+ *
+ * Admin roles are "owner" and "steward". These roles have elevated permissions
+ * for managing household resources, members, and settings.
+ *
+ * @example
+ * const membership = await requireHouseholdAccess(ctx, householdId);
+ * if (isHouseholdAdmin(membership)) {
+ *   // Show admin-only UI or perform admin actions
+ * }
+ */
+export function isHouseholdAdmin(membership: Doc<"householdMemberships">): boolean {
+  return membership.role === "owner" || membership.role === "steward";
+}
+
+/**
+ * Require admin privileges OR resource ownership
+ *
+ * Use this when an action should be allowed for:
+ * 1. Household admins (owners or stewards), OR
+ * 2. The original creator/owner of the specific resource
+ *
+ * Throws a descriptive error if neither condition is met.
+ *
+ * @param membership - The user's household membership
+ * @param currentUserId - The current user's profile ID
+ * @param resourceOwnerId - The profile ID of who created/owns the resource
+ * @param action - Description of the action for error message (e.g., "delete this document")
+ *
+ * @example
+ * const membership = await requireHouseholdAccess(ctx, householdId);
+ * const { profile } = await requireAuth(ctx);
+ * requireAdminOrResourceOwner(membership, profile._id, document.uploadedBy, "delete this document");
+ */
+export function requireAdminOrResourceOwner(
+  membership: Doc<"householdMemberships">,
+  currentUserId: Id<"profiles">,
+  resourceOwnerId: Id<"profiles">,
+  action: string,
+): void {
+  const isAdmin = isHouseholdAdmin(membership);
+  const isOwner = currentUserId === resourceOwnerId;
+
+  if (!isAdmin && !isOwner) {
+    throw new Error(`Only admins or the original creator can ${action}`);
   }
 }
 

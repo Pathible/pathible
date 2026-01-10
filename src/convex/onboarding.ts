@@ -10,6 +10,7 @@ import {
 } from "./_generated/server";
 import { checkFamilyMemberLimit, requireActiveSubscription, requireAuth } from "./auth";
 import { logActivity } from "./shared/activity";
+import { onboardingStatusValidator } from "./shared/commonValidators";
 import { incrementFamilyUnitCount } from "./shared/counters";
 import { EMAIL_REGEX } from "./shared/validators";
 
@@ -34,13 +35,7 @@ import { EMAIL_REGEX } from "./shared/validators";
 export const getStatus = query({
   args: {},
   returns: v.object({
-    status: v.union(
-      v.literal("not_started"),
-      v.literal("profile_complete"),
-      v.literal("household_complete"),
-      v.literal("preferences_complete"),
-      v.literal("complete"),
-    ),
+    status: onboardingStatusValidator,
     currentStep: v.number(),
     profile: v.object({
       firstName: v.string(),
@@ -273,9 +268,11 @@ export const createFirstHousehold = mutation({
       avatarUrl: profile.avatarUrl,
       dateOfBirth: profile.dateOfBirth,
       city: profile.city,
+      county: profile.county,
       state: profile.state,
       address: profile.address,
       zipCode: profile.zipCode,
+      maritalStatus: profile.maritalStatus,
       relationshipType: "parent", // Default - user can update later
       roles: ["Family Admin"],
       status: "active",
