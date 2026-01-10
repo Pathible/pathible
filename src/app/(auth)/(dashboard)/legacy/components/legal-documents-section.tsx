@@ -6,13 +6,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardList,
-  Edit,
   Eye,
   FileText,
   Heart,
   Info,
   Landmark,
   Loader2,
+  Pencil,
   Plus,
   ScrollText,
   Shield,
@@ -118,8 +118,8 @@ const ALL_DOCUMENT_TYPES: DocumentType[] = [
 // TODO: Gradually enable more document types as they are tested
 const ENABLED_DOCUMENT_TYPES: DocumentType[] = [
   "will",
-  // "trust",           // Coming soon - needs asset integration testing
-  // "pour_over_will",  // Coming soon - depends on trust
+  "trust", // Coming soon - needs asset integration testing
+  "pour_over_will", // Coming soon - depends on trust
   // "financial_poa",   // Coming soon
   // "healthcare_poa",  // Coming soon
   // "advance_directive", // Coming soon
@@ -339,7 +339,7 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
                       className="flex-1"
                       onClick={() => handleEditDocument(existingDoc._id)}
                     >
-                      <Edit className="h-4 w-4 mr-1" />
+                      <Pencil className="h-4 w-4 mr-1" />
                       {existingDoc.status === "draft" ? "Continue" : "Edit"}
                     </Button>
                     {(existingDoc.status === "complete" || existingDoc.status === "generated") && (

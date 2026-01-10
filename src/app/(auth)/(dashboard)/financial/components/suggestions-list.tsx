@@ -127,8 +127,10 @@ export function SuggestionsList({ suggestions, isLoading }: SuggestionsListProps
                 size="icon"
                 onClick={() => handleDismiss(suggestion._id)}
                 className="shrink-0"
+                title="Dismiss"
               >
                 <X className="h-4 w-4" />
+                <span className="sr-only">Dismiss suggestion</span>
               </Button>
             </div>
           </CardHeader>

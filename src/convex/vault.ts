@@ -374,32 +374,54 @@ export const getStats = query({
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
       .collect();
 
-    // Fetch documents for recent uploads calculation
-    // Also used as fallback if counters haven't been initialized
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const allDocs = await ctx.db
-      .query("vaultDocuments")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
-      .collect();
-
-    const recentUploads = allDocs.filter((doc) => doc._creationTime >= thirtyDaysAgo).length;
-
-    // Use pre-computed counters if available, otherwise calculate from documents
-    // This handles legacy data where counters weren't initialized
+    // Use pre-computed counters if available
     const hasCounters =
       household.vaultDocumentCount !== undefined && household.storageUsedBytes !== undefined;
 
     let totalDocuments: number;
     let totalSize: number;
+    let recentUploads: number;
+
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
     if (hasCounters) {
-      // Use pre-computed counters (O(1))
+      // Use pre-computed counters (O(1)) for totals
       totalDocuments = household.vaultDocumentCount ?? 0;
       totalSize = household.storageUsedBytes ?? 0;
+
+      // For recent uploads, we still need to query but only count
+      // Use pagination to avoid loading all documents into memory
+      let recentCount = 0;
+      let cursor: string | null = null;
+      const BATCH_SIZE = 100;
+
+      do {
+        const batch = await ctx.db
+          .query("vaultDocuments")
+          .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+          .paginate({ numItems: BATCH_SIZE, cursor });
+
+        for (const doc of batch.page) {
+          if (doc._creationTime >= thirtyDaysAgo) {
+            recentCount++;
+          }
+        }
+
+        cursor = batch.isDone ? null : batch.continueCursor;
+      } while (cursor);
+
+      recentUploads = recentCount;
     } else {
-      // Calculate from documents (fallback for legacy data)
+      // Fallback for legacy data: calculate from documents
+      // This only runs once per household until counters are initialized
+      const allDocs = await ctx.db
+        .query("vaultDocuments")
+        .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+        .collect();
+
       totalDocuments = allDocs.length;
       totalSize = allDocs.reduce((sum, doc) => sum + doc.fileSize, 0);
+      recentUploads = allDocs.filter((doc) => doc._creationTime >= thirtyDaysAgo).length;
     }
 
     return {

@@ -3,6 +3,18 @@
  */
 
 /**
+ * String length limits for common field types.
+ */
+export const STRING_LIMITS = {
+  name: 100,
+  description: 500,
+  notes: 1000,
+  address: 200,
+  city: 100,
+  email: 254,
+} as const;
+
+/**
  * Basic email validation regex used for form input checks.
  * NOTE: This intentionally matches the lightweight pattern already used across the app.
  */
@@ -53,6 +65,56 @@ export function validateZipCode(zipCode: string | undefined | null): string | un
   if (trimmed.length === 0) return undefined;
   if (!ZIP_CODE_REGEX.test(trimmed)) {
     throw new Error("ZIP code must be 5 digits or 9 digits (e.g., 12345 or 12345-6789)");
+  }
+  return trimmed;
+}
+
+/**
+ * Validate a required string field.
+ * Trims the value and validates it is not empty and within max length.
+ *
+ * @param value - The string value to validate
+ * @param fieldName - The name of the field (used in error messages)
+ * @param maxLength - Maximum allowed length (default: 100)
+ * @returns The trimmed string value
+ * @throws Error if the value is empty or exceeds max length
+ */
+export function validateRequiredString(
+  value: string,
+  fieldName: string,
+  maxLength: number = 100,
+): string {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    throw new Error(`${fieldName} is required`);
+  }
+  if (trimmed.length > maxLength) {
+    throw new Error(`${fieldName} is too long (max ${maxLength} characters)`);
+  }
+  return trimmed;
+}
+
+/**
+ * Validate an optional string field.
+ * If undefined or empty after trimming, returns undefined.
+ * If present, validates max length and returns trimmed value.
+ *
+ * @param value - The string value to validate (or undefined)
+ * @param fieldName - The name of the field (used in error messages)
+ * @param maxLength - Maximum allowed length (default: 100)
+ * @returns The trimmed string value, or undefined if empty/not provided
+ * @throws Error if the value exceeds max length
+ */
+export function validateOptionalString(
+  value: string | undefined,
+  fieldName: string,
+  maxLength: number = 100,
+): string | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  if (trimmed.length > maxLength) {
+    throw new Error(`${fieldName} is too long (max ${maxLength} characters)`);
   }
   return trimmed;
 }

@@ -32,7 +32,7 @@
  */
 
 import { useMutation } from "convex/react";
-import { Edit, Mail, MapPin, Phone, User, X } from "lucide-react";
+import { Mail, MapPin, Pencil, Phone, User, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import {
   type NewContactData,
@@ -229,7 +229,7 @@ export function PersonPickerField({
               onClick={() => setIsEditing(true)}
               disabled={disabled}
             >
-              <Edit className="h-3.5 w-3.5" />
+              <Pencil className="h-3.5 w-3.5" />
             </Button>
             <Button
               type="button"
@@ -299,7 +299,7 @@ export function PersonPickerField({
               onClick={() => setIsEditing(true)}
               disabled={disabled}
             >
-              <Edit className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </Button>
             <Button
               type="button"

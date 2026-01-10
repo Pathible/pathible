@@ -23,6 +23,10 @@ interface ConvexTestHelpers {
     message: string;
     deletedCount: number;
   }>;
+  setTestSubscriptionTier: (tier: "foundations" | "heritage" | "legacy" | "founders") => Promise<{
+    success: boolean;
+    message: string;
+  }>;
 }
 
 // Expose Convex test helpers for E2E testing (Cypress)
@@ -33,8 +37,9 @@ function exposeTestHelpers() {
   const isCypressTest = !!(window as unknown as { Cypress?: unknown }).Cypress;
   const isTestEnv =
     process.env.NODE_ENV === "test" || process.env.NEXT_PUBLIC_E2E_TESTING === "true";
+  const isDevMode = process.env.NODE_ENV === "development";
 
-  if (isCypressTest || isTestEnv) {
+  if (isCypressTest || isTestEnv || isDevMode) {
     // Expose helper functions that call Convex mutations
     (window as unknown as { __CONVEX_TEST_HELPERS__: ConvexTestHelpers }).__CONVEX_TEST_HELPERS__ =
       {
@@ -42,6 +47,8 @@ function exposeTestHelpers() {
         isCleanState: () => convex.mutation(api.testing.isCleanState, {}),
         grantAdminRole: () => convex.mutation(api.testing.grantAdminRole, {}),
         cleanupTestArticles: () => convex.mutation(api.testing.cleanupTestArticles, {}),
+        setTestSubscriptionTier: (tier: "foundations" | "heritage" | "legacy" | "founders") =>
+          convex.mutation(api.testing.setTestSubscriptionTier, { tier }),
       };
   }
 }

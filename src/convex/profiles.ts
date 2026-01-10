@@ -68,6 +68,7 @@ export const get = query({
 /**
  * Get a profile by ID (public information only)
  * Used for displaying user information to other household members
+ * Requires authentication to prevent profile enumeration
  */
 export const getById = query({
   args: {
@@ -83,6 +84,12 @@ export const getById = query({
     v.null(),
   ),
   handler: async (ctx, args) => {
+    // Require authentication to prevent profile enumeration attacks
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
     const profile = await ctx.db.get(args.profileId);
     // Return null for non-existent or soft-deleted profiles
     if (!profile || profile.deletedAt) return null;

@@ -29,6 +29,7 @@ const _TEST_SEARCH_TERM = "E2E Test";
 /**
  * Helper to ensure user is fully onboarded before accessing vault
  * Handles cases where user is redirected to onboarding or select-plan
+ * Also sets subscription tier to 'heritage' for vault feature access
  */
 function ensureUserOnboarded() {
   cy.url({ timeout: 15000 }).then((url) => {
@@ -76,6 +77,15 @@ function ensureUserOnboarded() {
       cy.visit("/vault", { timeout: 30000 });
     }
     // If already on vault or dashboard, we're good
+  });
+
+  // Set subscription tier to 'heritage' for vault feature access
+  // This must be called after onboarding is complete (household exists)
+  cy.log("Setting subscription tier to heritage for vault access");
+  cy.setSubscriptionTier("heritage").then((result) => {
+    if (!result.success) {
+      cy.log(`Warning: Failed to set subscription tier: ${result.message}`);
+    }
   });
 }
 
@@ -147,14 +157,12 @@ describe("Heritage Vault - Complete E2E Test Suite", () => {
       cy.get('[role="dialog"]').contains(TEST_CATEGORY_NAME).scrollIntoView();
 
       // Find the delete button (trash icon) for our category and click it
-      // Using a more direct approach - find the row container by looking at the category-manager structure
+      // Navigate from the category name to its container div and find the trash button
       cy.get('[role="dialog"]')
-        .contains(TEST_CATEGORY_NAME)
-        .parents('[class*="rounded-lg"][class*="bg-secondary"]')
-        .first()
-        .within(() => {
-          cy.get("button").last().click(); // Delete button is the last button
-        });
+        .contains("span.font-medium", TEST_CATEGORY_NAME)
+        .closest("div.rounded-lg")
+        .find("button:has(svg.text-destructive)")
+        .click();
 
       // Confirm deletion by clicking the "Delete Category" button
       cy.get('[role="alertdialog"]').should("be.visible");
@@ -257,19 +265,26 @@ describe("Heritage Vault - Complete E2E Test Suite", () => {
           const total = Number.parseInt(totalCount as string, 10);
           cy.log(`Total documents: ${total}`);
 
-          // Click on a specific category (Legal Documents as example)
-          cy.get('[data-testid="vault-category-legal-documents"]').click();
+          // Find the first category badge that's not "All Documents" (has data-category attribute)
+          cy.get('[data-testid="vault-category-filters"] [data-category]')
+            .first()
+            .then(($category) => {
+              // If no categories exist, skip the category filter test
+              if ($category.length === 0) {
+                cy.log("No categories found, skipping category filter test");
+                return;
+              }
 
-          // Check the count for this category
-          cy.get('[data-testid="vault-category-legal-documents"]')
-            .invoke("attr", "data-count")
-            .then((categoryCount) => {
-              const expected = Number.parseInt(categoryCount as string, 10);
-              cy.log(`Legal Documents count: ${expected}`);
+              const categoryName = $category.attr("data-category");
+              const categoryCount = Number.parseInt($category.attr("data-count") || "0", 10);
+              cy.log(`Testing category: ${categoryName} with count: ${categoryCount}`);
 
-              if (expected > 0) {
+              // Click the category
+              cy.wrap($category).click();
+
+              if (categoryCount > 0) {
                 // If there are documents, verify the card count matches
-                cy.get('[data-testid="vault-document-card"]').should("have.length", expected);
+                cy.get('[data-testid="vault-document-card"]').should("have.length", categoryCount);
               } else {
                 // If no documents, verify empty state or no cards
                 cy.get('[data-testid="vault-document-card"]').should("not.exist");

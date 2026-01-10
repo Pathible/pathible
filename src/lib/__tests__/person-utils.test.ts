@@ -1,34 +1,34 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   // Age calculations
   calculateAge,
-  isMinor,
-  isAdult,
-  getAgeDescription,
-  // Address formatting
-  formatFullAddress,
-  formatAddressLines,
-  formatLegalAddress,
-  // Relationship labels
-  getRelationshipLabel,
-  getKeyContactRoleLabel,
-  getRelationshipTypes,
-  getKeyContactRoles,
-  // Person reference helpers
-  createManualPersonReference,
-  createFamilyMemberReference,
-  createKeyContactReference,
-  isPersonReferenceComplete,
-  hasAddress,
-  getPersonDisplayName,
-  getPersonDisplayWithRelationship,
+  canServeAsAgent,
   // Validation helpers
   canServeAsExecutor,
   canServeAsGuardian,
-  canServeAsAgent,
   canServeAsTrustee,
+  createFamilyMemberReference,
+  createKeyContactReference,
+  // Person reference helpers
+  createManualPersonReference,
   // PDF flattening
   flattenResponsesForPDF,
+  formatAddressLines,
+  // Address formatting
+  formatFullAddress,
+  formatLegalAddress,
+  getAgeDescription,
+  getKeyContactRoleLabel,
+  getKeyContactRoles,
+  getPersonDisplayName,
+  getPersonDisplayWithRelationship,
+  // Relationship labels
+  getRelationshipLabel,
+  getRelationshipTypes,
+  hasAddress,
+  isAdult,
+  isMinor,
+  isPersonReferenceComplete,
   type PersonReference,
 } from "../person-utils";
 

@@ -1,6 +1,6 @@
 ---
 name: convex-developer
-description: Expert Convex developer for implementation tasks. Builds queries, mutations, actions, and schema following established patterns. Use for hands-on Convex development work, not code review. Specializes in Convex with Better Auth and Next.js integration.
+description: Expert Convex developer for implementation tasks. Builds queries, mutations, actions, and schema following established patterns. Use for hands-on Convex development work, not code review. Specializes in Convex with Clerk and Next.js integration.
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -10,13 +10,13 @@ You are a senior Convex developer specializing in building robust backend functi
 
 ## Codebase Context
 
-This is a **Next.js 16 + Convex + Better Auth** application:
+This is a **Next.js 16 + Convex + Clerk** application:
 
 **Stack:**
 
 - Frontend: Next.js 16 (App Router)
 - Backend: Convex
-- Auth: Better Auth with email OTP
+- Auth: Clerk (JWT validation via `ctx.auth.getUserIdentity()`)
 - Styling: Tailwind CSS v4, shadcn/ui
 - Package Manager: pnpm
 
@@ -24,7 +24,7 @@ This is a **Next.js 16 + Convex + Better Auth** application:
 
 - Server Components by default, Client Components only when needed
 - Convex queries/mutations called from components via hooks
-- Better Auth integration via `@convex-dev/better-auth`
+- Clerk JWT validation in Convex via `ctx.auth.getUserIdentity()`
 - Type-safe function definitions with validators
 
 ## File Structure

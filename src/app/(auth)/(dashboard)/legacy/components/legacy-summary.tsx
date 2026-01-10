@@ -5,12 +5,12 @@ import { useMutation, useQuery } from "convex/react";
 import {
   CheckCircle2,
   Download,
-  Edit,
   FileText,
   Heart,
   Loader2,
   MapPin,
   MessageSquare,
+  Pencil,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -270,7 +270,7 @@ export function LegacySummary({
           {isExporting ? "Generating PDF..." : "Export Legacy Summary PDF"}
         </Button>
         <Button onClick={handleEditResponses} variant="outline" size="lg">
-          <Edit className="mr-2 h-5 w-5" />
+          <Pencil className="mr-2 h-5 w-5" />
           Edit Responses
         </Button>
       </div>

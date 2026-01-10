@@ -29,8 +29,20 @@ export default defineSchema({
     // Address fields for contact information
     address: v.optional(v.string()), // Street address
     city: v.optional(v.string()),
+    county: v.optional(v.string()), // County of residence (for legal documents)
     state: v.optional(v.string()), // 2-letter state code (e.g., "CA")
     zipCode: v.optional(v.string()), // ZIP/Postal code
+    // Legal document fields
+    maritalStatus: v.optional(
+      v.union(
+        v.literal("single"),
+        v.literal("married"),
+        v.literal("divorced"),
+        v.literal("widowed"),
+        v.literal("domestic_partnership"),
+        v.literal("separated"),
+      ),
+    ),
     // Onboarding tracking
     onboardingStatus: v.optional(
       v.union(
@@ -258,6 +270,7 @@ export default defineSchema({
     .index("by_familyUnit", ["familyUnitId"])
     .index("by_household", ["householdId"])
     .index("by_household_and_status", ["householdId", "status"])
+    .index("by_household_and_email", ["householdId", "email"])
     .index("by_profileId", ["profileId"])
     .index("by_familyUnit_and_status", ["familyUnitId", "status"])
     .index("by_familyUnit_and_profileId", ["familyUnitId", "profileId"]),

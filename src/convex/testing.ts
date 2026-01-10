@@ -576,6 +576,94 @@ export const cleanupTestArticles = mutation({
   },
 });
 
+/**
+ * Set subscription tier override for test user's household
+ * This allows E2E tests to test features that require higher tier subscriptions
+ *
+ * SECURITY: Only works for test user emails (containing +clerk_test, etc.)
+ */
+export const setTestSubscriptionTier = mutation({
+  args: {
+    tier: v.union(
+      v.literal("foundations"),
+      v.literal("heritage"),
+      v.literal("legacy"),
+      v.literal("founders"),
+    ),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return {
+        success: false,
+        message: "Not authenticated",
+      };
+    }
+
+    const email = identity.email || "";
+    const userId = identity.subject;
+
+    // Security check - only allow test users
+    const isTestUser = TEST_EMAIL_PATTERNS.some((pattern) =>
+      email.toLowerCase().includes(pattern.toLowerCase()),
+    );
+
+    if (!isTestUser) {
+      console.warn(`[Testing] Blocked tier override for non-test user: ${email}`);
+      return {
+        success: false,
+        message: `Security: Only test users can have tier overrides. Email must contain one of: ${TEST_EMAIL_PATTERNS.join(", ")}`,
+      };
+    }
+
+    // Find user's profile
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (!profile) {
+      return {
+        success: false,
+        message: "User profile not found. Complete onboarding first.",
+      };
+    }
+
+    // Find user's household (as primary contact)
+    const household = await ctx.db
+      .query("households")
+      .withIndex("by_primaryContactId", (q) => q.eq("primaryContactId", profile._id))
+      .first();
+
+    if (!household) {
+      return {
+        success: false,
+        message: "No household found. Complete onboarding first.",
+      };
+    }
+
+    // Set the tier override
+    await ctx.db.patch(household._id, {
+      tierOverride: args.tier,
+      tierOverrideReason: "E2E Testing",
+      tierOverrideExpiresAt: Date.now() + 24 * 60 * 60 * 1000, // Expires in 24 hours
+    });
+
+    console.log(
+      `[Testing] Set tier override to ${args.tier} for household ${household._id} (user: ${email})`,
+    );
+
+    return {
+      success: true,
+      message: `Subscription tier override set to ${args.tier}`,
+    };
+  },
+});
+
 export const isCleanState = mutation({
   args: {},
   returns: v.object({

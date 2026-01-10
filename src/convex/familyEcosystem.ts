@@ -292,6 +292,8 @@ async function createFamilyMemberInternal(
   ctx: { db: MutationCtx["db"] },
   options: CreateFamilyMemberOptions,
 ): Promise<Id<"familyMembers">> {
+  // Get max orderIndex from existing members
+  // Family units typically have <20 members, so collect is acceptable here
   const existingMembers = await ctx.db
     .query("familyMembers")
     .withIndex("by_familyUnit", (q) => q.eq("familyUnitId", options.familyUnitId))

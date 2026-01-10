@@ -123,6 +123,18 @@ declare global {
         message: string;
         deletedCount: number;
       }>;
+
+      /**
+       * Set subscription tier override for test user's household
+       * Allows testing features that require higher tier subscriptions
+       * Must be called AFTER signing in with Clerk and completing onboarding.
+       * SECURITY: Only works for test user emails (+clerk_test, +e2e_test, etc.)
+       * @example cy.setSubscriptionTier('heritage')
+       */
+      setSubscriptionTier(tier: "foundations" | "heritage" | "legacy" | "founders"): Chainable<{
+        success: boolean;
+        message: string;
+      }>;
     }
   }
 }
@@ -320,6 +332,10 @@ interface ConvexTestHelpers {
     success: boolean;
     message: string;
     deletedCount: number;
+  }>;
+  setTestSubscriptionTier: (tier: "foundations" | "heritage" | "legacy" | "founders") => Promise<{
+    success: boolean;
+    message: string;
   }>;
 }
 
@@ -520,6 +536,50 @@ Cypress.Commands.add("cleanupTestArticles", (): Cypress.Chainable<CleanupTestArt
       });
     }) as Cypress.Chainable<CleanupTestArticlesResult>;
 });
+
+// Result type for setSubscriptionTier
+type SetSubscriptionTierResult = {
+  success: boolean;
+  message: string;
+};
+
+/**
+ * Set subscription tier override for test user's household
+ * Allows testing features that require higher tier subscriptions.
+ * Must be signed in first and have completed onboarding.
+ */
+Cypress.Commands.add(
+  "setSubscriptionTier",
+  (
+    tier: "foundations" | "heritage" | "legacy" | "founders",
+  ): Cypress.Chainable<SetSubscriptionTierResult> => {
+    cy.log(`**Setting subscription tier to ${tier}**`);
+
+    return cy
+      .window({ timeout: 30000 })
+      .then((win): SetSubscriptionTierResult | Cypress.Chainable<SetSubscriptionTierResult> => {
+        const testHelpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+          .__CONVEX_TEST_HELPERS__;
+
+        if (!testHelpers) {
+          console.error(
+            "Convex test helpers not found on window. Make sure you're on a page with Convex loaded.",
+          );
+          return {
+            success: false,
+            message: "Convex test helpers not available",
+          };
+        }
+
+        return cy
+          .wrap(testHelpers.setTestSubscriptionTier(tier), { timeout: 30000 })
+          .then((result) => {
+            console.log("Set subscription tier result:", result);
+            return result as SetSubscriptionTierResult;
+          });
+      }) as Cypress.Chainable<SetSubscriptionTierResult>;
+  },
+);
 
 // Export to make TypeScript happy
 export {};

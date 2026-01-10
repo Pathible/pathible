@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { Edit2, Loader2, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -170,11 +170,13 @@ export function BeliefCard({ belief, onDelete }: BeliefCardProps) {
             <CardDescription className="text-muted-foreground">{belief.reflection}</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="icon" onClick={handleStartEdit}>
-              <Edit2 className="w-4 h-4" />
+            <Button variant="ghost" size="icon" onClick={handleStartEdit} title="Edit">
+              <Pencil className="h-4 w-4" />
+              <span className="sr-only">Edit belief</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => onDelete(belief._id)}>
-              <Trash2 className="w-4 h-4 text-destructive" />
+            <Button variant="ghost" size="icon" onClick={() => onDelete(belief._id)} title="Delete">
+              <Trash2 className="h-4 w-4 text-destructive" />
+              <span className="sr-only">Delete belief</span>
             </Button>
           </div>
         </div>

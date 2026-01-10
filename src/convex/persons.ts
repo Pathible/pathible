@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireAuth, requireHouseholdAccess } from "./auth";
 import {
@@ -568,7 +569,7 @@ export const syncPersonToSource = mutation({
       await requireHouseholdAccess(ctx, member.householdId);
 
       // Build update object with only defined fields
-      const updates: Record<string, string | number | undefined> = {};
+      const updates: Partial<Doc<"familyMembers">> = {};
 
       if (args.firstName !== undefined) updates.firstName = args.firstName.trim();
       if (args.lastName !== undefined) updates.lastName = args.lastName.trim();
@@ -596,7 +597,7 @@ export const syncPersonToSource = mutation({
       await requireHouseholdAccess(ctx, contact.householdId);
 
       // Build update object with only defined fields
-      const updates: Record<string, string | number | undefined> = {};
+      const updates: Partial<Doc<"keyContacts">> = {};
 
       // Key contacts have a single "name" field, not firstName/lastName
       if (args.fullName !== undefined) {

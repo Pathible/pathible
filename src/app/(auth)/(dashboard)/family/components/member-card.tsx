@@ -36,9 +36,19 @@ interface FamilyMember {
   email?: string;
   phone?: string;
   dateOfBirth?: number;
+  address?: string;
   city?: string;
+  county?: string;
   state?: string;
+  zipCode?: string;
   gender?: "male" | "female" | "prefer_not_to_say" | undefined;
+  maritalStatus?:
+    | "single"
+    | "married"
+    | "divorced"
+    | "widowed"
+    | "domestic_partnership"
+    | "separated";
   relationshipType:
     | "parent"
     | "child"
