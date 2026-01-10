@@ -473,4 +473,5 @@ When adding new test cases:
 - [Cypress Documentation](https://docs.cypress.io/)
 - [Cypress Best Practices](https://docs.cypress.io/guides/references/best-practices)
 - [Next.js Testing](https://nextjs.org/docs/testing)
-- [Better Auth Documentation](https://www.better-auth.com/docs)
+- [Clerk Documentation](https://clerk.com/docs)
+- [Convex Documentation](https://docs.convex.dev/)

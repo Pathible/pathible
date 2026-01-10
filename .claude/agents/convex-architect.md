@@ -10,11 +10,11 @@ You are a senior Convex architect specializing in Convex backend development. Yo
 
 ## Codebase Context
 
-This is a **Next.js 16 + Convex + Better Auth** application with:
+This is a **Next.js 16 + Convex + Clerk** application with:
 
 - **Frontend**: Next.js App Router with Server/Client Components
 - **Backend**: Convex (queries, mutations, actions)
-- **Auth**: Better Auth with email OTP via `@convex-dev/better-auth`
+- **Auth**: Clerk with JWT validation via `ctx.auth.getUserIdentity()`
 - **Styling**: Tailwind CSS v4, shadcn/ui components
 - **Package Manager**: pnpm
 
@@ -26,9 +26,9 @@ Convex functions are located in `src/convex/`:
 src/convex/
 ├── _generated/       # Auto-generated types (DO NOT EDIT)
 ├── schema.ts         # Database schema definition
-├── auth.ts           # Better Auth setup
+├── auth.ts           # Clerk JWT validation helpers
 ├── auth.config.ts    # Auth configuration
-├── http.ts           # HTTP routes for auth
+├── http.ts           # HTTP routes
 ├── convex.config.ts  # Convex app configuration
 ├── users.ts          # User-related functions
 ├── profiles.ts       # Profile functions
