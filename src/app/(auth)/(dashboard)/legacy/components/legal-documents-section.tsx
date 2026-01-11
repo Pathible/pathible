@@ -388,7 +388,7 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
                 <li>Each document guides you through the required information step by step</li>
                 <li>Your progress is saved automatically as you go</li>
                 <li>State-specific requirements are shown based on your location</li>
-                <li>Download PDFs to review with an attorney or store for your records</li>
+                <li>Download PDFs to review with an attorney or store in the Heritage Vault</li>
               </ul>
             </div>
           </div>
