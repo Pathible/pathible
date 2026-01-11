@@ -386,7 +386,10 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
       </div>
 
       {/* Quick Info Card */}
-      <Card className="bg-amber-50 border-amber-200 text-amber-900" data-tour="legal-docs-getting-started">
+      <Card
+        className="bg-amber-50 border-amber-200 text-amber-900"
+        data-tour="legal-docs-getting-started"
+      >
         <CardContent>
           <div className="flex items-start gap-3">
             <Info className="h-5 w-5 text-muted-foreground mt-0.5" />

@@ -349,6 +349,7 @@ export function LegalDocumentWizard({
                 size="sm"
                 onClick={() => setShowLivePreview(!showLivePreview)}
                 className="hidden lg:flex"
+                data-tour="legal-doc-preview-toggle"
               >
                 {showLivePreview ? (
                   <>
@@ -676,7 +677,12 @@ export function LegalDocumentWizard({
                   </Button>
                   <div className="flex gap-2">
                     {document.status === "complete" && (
-                      <Button variant="outline" onClick={handleExportPDF} disabled={isExporting}>
+                      <Button
+                        variant="outline"
+                        onClick={handleExportPDF}
+                        disabled={isExporting}
+                        data-tour="legal-doc-download-pdf"
+                      >
                         {isExporting ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
@@ -708,7 +714,7 @@ export function LegalDocumentWizard({
           )}
 
           {/* Quick Navigation */}
-          <Card>
+          <Card data-tour="legal-doc-quick-nav">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium">Quick Navigation</span>

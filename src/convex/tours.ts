@@ -1469,11 +1469,146 @@ export const seedLegalDocumentsTour = internalMutation({
         body: "Click this tab to access your legal document templates. Create essential estate planning documents like wills, trusts, and powers of attorney.",
       },
       {
+        stepKey: "legal-docs-disclaimer",
+        route: "/legacy?tab=legal-documents",
+        anchorKey: "legal-docs-disclaimer",
+        title: "Important Notice",
+        body: "These templates are for educational purposes to help you organize your estate planning information. Always consult with a qualified attorney before signing any legal documents.",
+      },
+      {
         stepKey: "legal-documents-grid",
         route: "/legacy?tab=legal-documents",
         anchorKey: "legal-documents-grid",
-        title: "Document Templates",
-        body: "Browse available document types here. Each card shows a different legal document you can create. Click any card to start building that document with our step-by-step wizard.",
+        title: "Choose a Document",
+        body: "Select from available document types like Last Will and Testament, Revocable Living Trust, or Pour-Over Will. Each wizard guides you step-by-step through the information needed.",
+      },
+      {
+        stepKey: "legal-docs-getting-started",
+        route: "/legacy?tab=legal-documents",
+        anchorKey: "legal-docs-getting-started",
+        title: "Getting Started Tips",
+        body: "Your progress saves automatically as you work. State-specific legal requirements are shown based on your location. Once complete, download PDFs to review with an attorney.",
+      },
+    ];
+
+    // Create or update each step
+    let stepsUpdated = 0;
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+
+      // Check if step exists
+      const existingStep = await ctx.db
+        .query("tourSteps")
+        .withIndex("by_tour_and_stepKey", (q) => q.eq("tourId", tourId).eq("stepKey", step.stepKey))
+        .unique();
+
+      if (existingStep) {
+        // Update existing step
+        await ctx.db.patch(existingStep._id, {
+          order: i,
+          route: step.route,
+          anchorKey: step.anchorKey,
+          title: step.title,
+          body: step.body,
+          enabled: true,
+          updatedAt: now,
+        });
+      } else {
+        // Create new step
+        await ctx.db.insert("tourSteps", {
+          tourId,
+          stepKey: step.stepKey,
+          order: i,
+          route: step.route,
+          anchorKey: step.anchorKey,
+          title: step.title,
+          body: step.body,
+          enabled: true,
+          versionIntroduced: 1,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      stepsUpdated++;
+    }
+
+    return { tourId, created, stepsUpdated };
+  },
+});
+
+/**
+ * Seed: Legal Document Wizard Tour
+ * Guides users through the document wizard interface when editing a legal document.
+ * Usage: npx convex run tours:seedLegalDocumentWizardTour
+ */
+export const seedLegalDocumentWizardTour = internalMutation({
+  args: {},
+  returns: v.object({
+    tourId: v.id("tours"),
+    created: v.boolean(),
+    stepsUpdated: v.number(),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    let created = false;
+
+    // Check if tour already exists
+    const existing = await ctx.db
+      .query("tours")
+      .withIndex("by_key", (q) => q.eq("key", "legal-document-wizard-tour"))
+      .unique();
+
+    let tourId: Id<"tours">;
+
+    if (existing) {
+      tourId = existing._id;
+      // Update tour metadata
+      await ctx.db.patch(existing._id, {
+        name: "Document Wizard Tour",
+        description: "Learn how to use the legal document wizard to create your documents.",
+        status: "published",
+        priority: 55,
+        updatedAt: now,
+      });
+    } else {
+      // Create the tour
+      tourId = await ctx.db.insert("tours", {
+        key: "legal-document-wizard-tour",
+        name: "Document Wizard Tour",
+        description: "Learn how to use the legal document wizard to create your documents.",
+        status: "published",
+        version: 1,
+        priority: 55,
+        createdBy: "system",
+        createdAt: now,
+        updatedAt: now,
+      });
+      created = true;
+    }
+
+    // Define the tour steps - these show when user is editing a document
+    // Note: route uses pattern matching for dynamic document IDs
+    const steps = [
+      {
+        stepKey: "legal-doc-preview-toggle",
+        route: "/legacy/documents",
+        anchorKey: "legal-doc-preview-toggle",
+        title: "Live Preview",
+        body: "Toggle the live preview panel to see your document update in real-time as you fill in details. This helps you visualize the final result.",
+      },
+      {
+        stepKey: "legal-doc-quick-nav",
+        route: "/legacy/documents",
+        anchorKey: "legal-doc-quick-nav",
+        title: "Quick Navigation",
+        body: "Jump to any section of the document using these buttons. Completed sections show a checkmark. Your progress is saved automatically.",
+      },
+      {
+        stepKey: "legal-doc-download-pdf",
+        route: "/legacy/documents",
+        anchorKey: "legal-doc-download-pdf",
+        title: "Download Your Document",
+        body: "Once all sections are complete, download your document as a PDF. Remember to have an attorney review it before signing - this is an educational template only.",
       },
     ];
 
