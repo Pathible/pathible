@@ -270,7 +270,10 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
         </CardHeader>
         <CardContent>
           {/* Important Notice */}
-          <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <div
+            className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+            data-tour="legal-docs-disclaimer"
+          >
             <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
             <div className="text-sm">
               <p className="font-medium text-amber-800 dark:text-amber-300">
@@ -304,6 +307,11 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
+                  {/* Status badges:
+                      - draft: User is still filling out the wizard
+                      - complete: Wizard finished, PDF not yet downloaded
+                      - generated: User has downloaded the PDF at least once
+                  */}
                   {existingDoc && (
                     <Badge
                       variant={
@@ -318,10 +326,10 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                       )}
                       {existingDoc.status === "generated"
-                        ? "Generated"
+                        ? "PDF Downloaded"
                         : existingDoc.status === "complete"
-                          ? "Ready"
-                          : "Draft"}
+                          ? "Ready to Download"
+                          : "In Progress"}
                     </Badge>
                   )}
                 </div>
@@ -378,7 +386,7 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
       </div>
 
       {/* Quick Info Card */}
-      <Card className="bg-amber-50 border-amber-200 text-amber-900 ">
+      <Card className="bg-amber-50 border-amber-200 text-amber-900" data-tour="legal-docs-getting-started">
         <CardContent>
           <div className="flex items-start gap-3">
             <Info className="h-5 w-5 text-muted-foreground mt-0.5" />
