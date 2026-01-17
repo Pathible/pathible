@@ -1139,7 +1139,14 @@ export function TermsOfServiceContent() {
                 </a>
               </p>
               <p>
-                <Strong>Address:</Strong> [Address to be provided]
+                <Strong>Address:</Strong> <br />
+                390 NE 191st St
+                <br />
+                STE 18899
+                <br />
+                Miami, FL 33179
+                <br />
+                United States
               </p>
             </div>
           </div>

@@ -1263,7 +1263,13 @@ export function PrivacyPolicyContent() {
           <br />
           Attn: Privacy Officer
           <br />
-          [Address to be provided]
+          390 NE 191st St
+          <br />
+          STE 18899
+          <br />
+          Miami, FL 33179
+          <br />
+          United States
         </Paragraph>
       </Section>
 
