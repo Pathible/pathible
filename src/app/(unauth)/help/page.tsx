@@ -62,7 +62,7 @@ const HELP_CATEGORIES = [
     ],
   },
   {
-    title: "Financial Overview",
+    title: "Financial Clarity",
     description: "Track accounts, properties, and insurance.",
     icon: Wallet,
     links: null,

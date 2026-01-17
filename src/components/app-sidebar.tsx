@@ -74,7 +74,7 @@ const navItems: NavItem[] = [
     },
   },
   {
-    title: "Financial Intelligence",
+    title: "Financial Clarity",
     href: "/financial",
     icon: TrendingUp,
     tourKey: "nav-financial",
