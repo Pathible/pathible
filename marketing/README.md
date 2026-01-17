@@ -12,6 +12,8 @@ This folder contains the complete social media launch strategy and ready-to-post
 
 | File                                                                 | Description                                                           |
 | -------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [PEACE-soundbites.md](./PEACE-soundbites.md)                         | Core messaging soundbites (PEACE framework) - start here              |
+| [soundbite-content.md](./soundbite-content.md)                       | Derivative content built from soundbites (ads, emails, social)        |
 | [social-media-launch-strategy.md](./social-media-launch-strategy.md) | Master strategy document with calendar, hashtags, timing, and metrics |
 | [brand-voice-guidelines.md](./brand-voice-guidelines.md)             | Voice and tone guidelines for all content                             |
 | [content-templates.md](./content-templates.md)                       | Reusable templates for ongoing content creation                       |
@@ -28,6 +30,14 @@ This folder contains the complete social media launch strategy and ready-to-post
 ---
 
 ## Quick Reference
+
+### Core Soundbites (PEACE Framework)
+
+**Problem:** "Have you ever had to sort through a loved one's mess while grieving?"
+**Empathy:** "We have."
+**Answer:** "Use Pathible."
+**Change:** "Get everything in one place for your family."
+**End Result:** "So they never have to."
 
 ### Tagline
 
