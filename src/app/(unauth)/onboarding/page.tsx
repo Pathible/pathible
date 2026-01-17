@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { api } from "@/convex/_generated/api";
-import { checkHasActivePlan, getCurrentPlanTier } from "@/lib/subscription-plans";
+import { checkHasActivePlan, getCurrentPlanTier } from "@/lib/feature-access";
 
 /**
  * Multi-Step Onboarding Wizard

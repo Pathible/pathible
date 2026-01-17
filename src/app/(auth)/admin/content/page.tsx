@@ -1,7 +1,18 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { Archive, Eye, FileText, Loader2, MoreHorizontal, Plus, Send, Trash2 } from "lucide-react";
+import {
+  Archive,
+  Eye,
+  FileText,
+  Globe,
+  Loader2,
+  Lock,
+  MoreHorizontal,
+  Plus,
+  Send,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -62,6 +73,11 @@ const STATUS_STYLES: Record<string, string> = {
   archived: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
+const VISIBILITY_STYLES: Record<string, string> = {
+  public: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  subscribers: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+};
+
 function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString("en-US", {
     month: "short",
@@ -74,6 +90,7 @@ export default function ContentManagerPage() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<{
     id: Id<"educationalArticles">;
@@ -96,6 +113,8 @@ export default function ContentManagerPage() {
             | "faith_stewardship"
             | "other")
         : undefined,
+    visibility:
+      visibilityFilter !== "all" ? (visibilityFilter as "public" | "subscribers") : undefined,
   });
 
   const updateArticle = useMutation(api.articles.update);
@@ -116,6 +135,24 @@ export default function ContentManagerPage() {
       toast.success("Article archived");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to archive");
+    }
+  };
+
+  const handleMakePublic = async (id: Id<"educationalArticles">) => {
+    try {
+      await updateArticle({ id, visibility: "public" });
+      toast.success("Article is now public");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update visibility");
+    }
+  };
+
+  const handleMakeSubscribers = async (id: Id<"educationalArticles">) => {
+    try {
+      await updateArticle({ id, visibility: "subscribers" });
+      toast.success("Article is now subscribers-only");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update visibility");
     }
   };
 
@@ -189,6 +226,18 @@ export default function ContentManagerPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="w-48">
+              <Select value={visibilityFilter} onValueChange={setVisibilityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by visibility" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Visibility</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                  <SelectItem value="subscribers">Subscribers Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -231,6 +280,7 @@ export default function ContentManagerPage() {
                     <TableHead className="min-w-[300px] max-w-[400px]">Title</TableHead>
                     <TableHead className="w-[140px]">Category</TableHead>
                     <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="w-[110px]">Visibility</TableHead>
                     <TableHead className="w-[80px]">Views</TableHead>
                     <TableHead className="w-[100px]">Updated</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
@@ -256,6 +306,21 @@ export default function ContentManagerPage() {
                       </TableCell>
                       <TableCell>
                         <Badge className={STATUS_STYLES[article.status]}>{article.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={VISIBILITY_STYLES[article.visibility]}>
+                          {article.visibility === "public" ? (
+                            <span className="flex items-center gap-1">
+                              <Globe className="h-3 w-3" />
+                              Public
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <Lock className="h-3 w-3" />
+                              Subscribers
+                            </span>
+                          )}
+                        </Badge>
                       </TableCell>
                       <TableCell>{article.viewCount}</TableCell>
                       <TableCell>{formatDate(article.updatedAt)}</TableCell>
@@ -290,6 +355,18 @@ export default function ContentManagerPage() {
                               <DropdownMenuItem onClick={() => handleArchive(article._id)}>
                                 <Archive className="h-4 w-4 mr-2" />
                                 Archive
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            {article.visibility === "subscribers" ? (
+                              <DropdownMenuItem onClick={() => handleMakePublic(article._id)}>
+                                <Globe className="h-4 w-4 mr-2" />
+                                Make Public
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => handleMakeSubscribers(article._id)}>
+                                <Lock className="h-4 w-4 mr-2" />
+                                Subscribers Only
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />

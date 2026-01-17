@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { FullPageLoader } from "@/components/full-page-loader";
 import { PublicPageLayout } from "@/components/PublicPageLayout";
-import { checkHasActivePlan } from "@/lib/subscription-plans";
+import { checkHasActivePlan } from "@/lib/feature-access";
 
 /**
  * Public Pricing Page

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCurrentPlanTier, PLAN_LABELS } from "@/lib/subscription-plans";
+import { getCurrentPlanTier, PLAN_LABELS } from "@/lib/feature-access";
 
 const statusVariants: Record<string, { label: string; className: string }> = {
   active: {

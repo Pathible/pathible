@@ -25,9 +25,9 @@ import { tierHasAccess } from "@/convex/shared/subscriptionTiers";
 import {
   FEATURE_SLUGS,
   type FeatureSlug,
+  type SubscriptionTier,
   useEffectiveMultipleFeatureAccess,
 } from "@/lib/feature-access";
-import type { SubscriptionTier } from "@/lib/subscription-plans";
 
 type TierAccess = {
   strategy: "tier";

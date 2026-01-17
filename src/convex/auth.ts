@@ -937,22 +937,33 @@ export const getOnboardingStatus = query({
 // ============================================================================
 
 /**
- * Internal Mutation: Sync subscription tier from Clerk Billing
+ * Internal Mutation: Sync subscription tier and status from Clerk Billing
  *
  * Called by the Clerk webhook handler when subscription events occur.
- * Updates the household's subscriptionTier based on the Clerk user's plan.
+ * Updates the household's subscriptionTier and/or subscriptionStatus based on the Clerk user's plan.
  *
  * @param clerkUserId - The Clerk user ID (identity.subject)
- * @param tier - The subscription tier from Clerk Billing
+ * @param tier - The subscription tier from Clerk Billing (optional)
+ * @param status - The subscription status from Clerk Billing (optional)
  */
 export const syncSubscriptionTier = internalMutation({
   args: {
     clerkUserId: v.string(),
-    tier: v.union(
-      v.literal("foundations"),
-      v.literal("heritage"),
-      v.literal("legacy"),
-      v.literal("founders"),
+    tier: v.optional(
+      v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+        v.literal("founders"),
+      ),
+    ),
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("inactive"),
+        v.literal("cancelled"),
+        v.literal("past_due"),
+      ),
     ),
   },
   returns: v.object({
@@ -961,7 +972,19 @@ export const syncSubscriptionTier = internalMutation({
     householdId: v.optional(v.id("households")),
   }),
   handler: async (ctx, args) => {
-    console.log(`[Subscription Sync] Syncing tier ${args.tier} for Clerk user ${args.clerkUserId}`);
+    // Require at least one of tier or status
+    if (!args.tier && !args.status) {
+      console.log(`[Subscription Sync] No tier or status provided for user ${args.clerkUserId}`);
+      return {
+        success: false,
+        message: "No tier or status provided",
+        householdId: undefined,
+      };
+    }
+
+    console.log(
+      `[Subscription Sync] Syncing ${args.tier ? `tier=${args.tier}` : ""}${args.tier && args.status ? ", " : ""}${args.status ? `status=${args.status}` : ""} for Clerk user ${args.clerkUserId}`,
+    );
 
     // Find the user's profile by Clerk user ID
     const profile = await ctx.db
@@ -993,17 +1016,32 @@ export const syncSubscriptionTier = internalMutation({
       };
     }
 
-    // Update the subscription tier
-    await ctx.db.patch(household._id, {
-      subscriptionTier: args.tier,
-      updatedAt: Date.now(),
-    });
+    // Build the patch object with only the fields that are provided
+    const patch: {
+      subscriptionTier?: "foundations" | "heritage" | "legacy" | "founders";
+      subscriptionStatus?: "active" | "inactive" | "cancelled" | "past_due";
+      updatedAt: number;
+    } = { updatedAt: Date.now() };
 
-    console.log(`[Subscription Sync] Updated household ${household._id} to tier ${args.tier}`);
+    if (args.tier) {
+      patch.subscriptionTier = args.tier;
+    }
+    if (args.status) {
+      patch.subscriptionStatus = args.status;
+    }
+
+    // Update the subscription tier and/or status
+    await ctx.db.patch(household._id, patch);
+
+    const updates: string[] = [];
+    if (args.tier) updates.push(`tier to ${args.tier}`);
+    if (args.status) updates.push(`status to ${args.status}`);
+
+    console.log(`[Subscription Sync] Updated household ${household._id}: ${updates.join(", ")}`);
 
     return {
       success: true,
-      message: `Updated subscription tier to ${args.tier}`,
+      message: `Updated subscription ${updates.join(", ")}`,
       householdId: household._id,
     };
   },

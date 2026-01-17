@@ -1,0 +1,158 @@
+"use client";
+
+import { useQuery } from "convex/react";
+import { ArrowLeft, BookOpen, Clock, Loader2 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { ArticleUpgradeCTA } from "@/components/learning/public";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { api } from "@/convex/_generated/api";
+
+const CATEGORY_LABELS: Record<string, string> = {
+  estate_planning: "Estate Planning",
+  financial_planning: "Financial Planning",
+  family_legacy: "Family Legacy",
+  legal: "Legal",
+  insurance: "Insurance",
+  digital_legacy: "Digital Legacy",
+  end_of_life: "End of Life",
+  faith_stewardship: "Faith & Stewardship",
+  other: "General",
+};
+
+interface ArticleContentProps {
+  slug: string;
+}
+
+export function ArticleContent({ slug }: ArticleContentProps) {
+  const article = useQuery(api.articles.getPublicBySlug, { slug });
+
+  if (article === undefined) {
+    return (
+      <div className="py-24 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (article === null) {
+    return (
+      <div className="py-24">
+        <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 text-center">
+          <BookOpen className="h-16 w-16 mx-auto text-muted-foreground/50 mb-6" />
+          <h1 className="font-crimson text-3xl mb-4">Article Not Found</h1>
+          <p className="text-muted-foreground mb-8">
+            The article you're looking for doesn't exist or has been moved.
+          </p>
+          <Button asChild>
+            <Link href="/learn">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Learn
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <article className="py-12 sm:py-16">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        {/* Back link */}
+        <Link
+          href="/learn"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-pathible-forest transition-colors mb-8"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Learn
+        </Link>
+
+        {/* Article Header */}
+        <header className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Badge variant="outline" className="text-xs font-normal">
+              {CATEGORY_LABELS[article.category] || article.category}
+            </Badge>
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>{article.readTimeMinutes} min read</span>
+            </div>
+          </div>
+
+          <h1 className="font-crimson text-3xl sm:text-4xl lg:text-5xl leading-tight mb-4">
+            {article.title}
+          </h1>
+
+          <p className="text-xl text-muted-foreground leading-relaxed">{article.excerpt}</p>
+        </header>
+
+        {/* Featured Image */}
+        {article.featuredImageUrl && (
+          <div className="mb-8 rounded-2xl overflow-hidden relative aspect-video">
+            <Image
+              src={article.featuredImageUrl}
+              alt={article.title}
+              fill
+              className="object-cover"
+              unoptimized
+            />
+          </div>
+        )}
+
+        {/* Article Content - content is admin-authored and trusted */}
+        <div
+          className="prose prose-lg max-w-none prose-headings:font-crimson prose-headings:text-foreground prose-p:text-foreground/90 prose-a:text-pathible-forest prose-a:no-underline hover:prose-a:underline"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: Admin-authored CMS content is trusted
+          dangerouslySetInnerHTML={{ __html: formatContent(article.content) }}
+        />
+
+        {/* Upgrade CTA for truncated subscriber content */}
+        {article.isTruncated && <ArticleUpgradeCTA />}
+
+        {/* Footer CTA for public articles */}
+        {!article.isTruncated && (
+          <div className="mt-16 pt-8 border-t border-pathible-sage/20 text-center">
+            <p className="text-muted-foreground mb-4">Want more resources like this?</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button asChild variant="outline" className="rounded-xl">
+                <Link href="/learn">Explore More Articles</Link>
+              </Button>
+              <Button
+                asChild
+                className="bg-pathible-forest hover:bg-pathible-green-hover text-white rounded-xl"
+              >
+                <Link href="/signup">Start Your Journey</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+/**
+ * Simple content formatting - converts markdown-like content to basic HTML
+ * In production, you might want to use a proper markdown parser
+ */
+function formatContent(content: string): string {
+  // Basic markdown-like formatting
+  return (
+    content
+      // Convert headers
+      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+      .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+      .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+      // Convert bold
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      // Convert italic
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      // Convert line breaks to paragraphs
+      .split("\n\n")
+      .map((para) => (para.trim() ? `<p>${para.trim()}</p>` : ""))
+      .join("\n")
+      // Convert single line breaks within paragraphs
+      .replace(/\n/g, "<br />")
+  );
+}

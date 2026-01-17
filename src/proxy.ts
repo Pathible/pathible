@@ -13,7 +13,7 @@
  * are done in the layout for protected routes.
  */
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { checkHasActivePlan } from "@/lib/subscription-plans";
+import { checkHasActivePlan } from "@/lib/feature-access";
 
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
