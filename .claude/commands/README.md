@@ -302,6 +302,47 @@ Run security checks against current branch before merge.
 | `/test-setup` | Verify test environment |
 | `/schema-check` | Validate schema implementation |
 | `/security-audit` | Security vulnerability check |
+| `/soundbites` | Generate PEACE framework marketing soundbites |
+
+---
+
+### `/soundbites`
+
+Generate zero-cognitive-load marketing soundbites using the StoryBrand PEACE framework.
+
+**Usage:**
+
+```bash
+/soundbites              # Interactive soundbite generation
+/soundbites --refine     # Refine existing soundbites
+/soundbites --derivative # Generate derivative content
+```
+
+**What it does:**
+
+1. Reviews codebase to understand product/service
+2. Asks interactive questions about target audience and core problem
+3. Generates 5 PEACE soundbites (Problem, Empathy, Answer, Change, End Result)
+4. Evaluates cognitive load (target: 0)
+5. Saves to `marketing/PEACE-soundbites.md`
+6. Offers refinement and derivative content generation
+
+**PEACE Framework:**
+
+| Element    | Purpose                             |
+| ---------- | ----------------------------------- |
+| Problem    | Attract attention                   |
+| Empathy    | Create empathetic bond              |
+| Answer     | Elevate product value               |
+| Change     | Add personal value                  |
+| End Result | Cast vision that motivates action   |
+
+**Cognitive Load Rules:**
+- Zero cognitive load = immediately understood, no interpretation needed
+- No clever language, jargon, or vague messaging
+- Plain, simple words a child could understand
+
+**Reference:** See `.claude/skills/soundbites/SKILL.md` for full framework documentation.
 
 ---
 
