@@ -505,3 +505,187 @@ export function getCategoryLabel(category: string | undefined): string {
   const found = TEMPLATE_CATEGORIES.find((c) => c.value === category);
   return found?.label ?? "Other";
 }
+
+// ============================================================================
+// EMAIL QUEUE UTILITIES
+// ============================================================================
+
+export const RATE_LIMIT_DELAY_MS = 500; // 500ms between emails = 2 emails/second
+export const DEFAULT_MAX_ATTEMPTS = 3;
+export const RETRY_DELAYS_MS = [60_000, 300_000, 900_000]; // 1min, 5min, 15min
+
+/**
+ * Calculate scheduled send times for a batch of emails
+ * Each email is scheduled 500ms after the previous one to respect rate limits
+ */
+export function calculateBatchScheduleTimes(
+  emailCount: number,
+  startTime: number = Date.now(),
+): number[] {
+  const scheduleTimes: number[] = [];
+  for (let i = 0; i < emailCount; i++) {
+    scheduleTimes.push(startTime + i * RATE_LIMIT_DELAY_MS);
+  }
+  return scheduleTimes;
+}
+
+/**
+ * Calculate the next retry delay based on attempt number
+ * Uses exponential backoff: 1min, 5min, 15min
+ */
+export function calculateRetryDelay(attemptNumber: number): number {
+  const index = Math.min(attemptNumber - 1, RETRY_DELAYS_MS.length - 1);
+  return RETRY_DELAYS_MS[Math.max(0, index)];
+}
+
+/**
+ * Determine if an email should be retried based on attempts
+ */
+export function shouldRetryEmail(attempts: number, maxAttempts: number): boolean {
+  return attempts < maxAttempts;
+}
+
+// ============================================================================
+// VAULT EMPTY EMAIL TEMPLATE
+// ============================================================================
+
+/**
+ * Generate HTML content for the vault empty engagement email
+ */
+export function generateVaultEmptyEmailHtml(firstName: string, householdName?: string): string {
+  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+  const householdMention = householdName
+    ? `You've set up the ${householdName} household`
+    : "You've set up your household";
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Heritage Vault Awaits</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; background-color: #f5f5f5;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center;">
+              <img src="https://pathible.com/pathible-logo.png" alt="Pathible" width="140" style="max-width: 140px;">
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 20px 40px;">
+              <h1 style="color: #1a1a1a; font-size: 24px; font-weight: 600; margin: 0 0 20px;">Your Heritage Vault is ready</h1>
+
+              <p style="color: #4a4a4a; font-size: 16px; margin: 0 0 16px;">
+                ${greeting}
+              </p>
+
+              <p style="color: #4a4a4a; font-size: 16px; margin: 0 0 16px;">
+                ${householdMention} and we're excited to help you build your family's legacy. Your Heritage Vault is ready and waiting for its first document.
+              </p>
+
+              <p style="color: #4a4a4a; font-size: 16px; margin: 0 0 24px;">
+                Start with something simple—a family photo, an important document, or a cherished recipe. Every journey begins with a single step.
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 24px;">
+                <tr>
+                  <td style="background-color: #2563eb; border-radius: 6px;">
+                    <a href="https://pathible.com/dashboard/vault" style="display: inline-block; padding: 14px 32px; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none;">
+                      Upload Your First Document
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Benefits Section -->
+              <div style="background-color: #f8fafc; border-radius: 6px; padding: 20px; margin-bottom: 24px;">
+                <p style="color: #1a1a1a; font-size: 14px; font-weight: 600; margin: 0 0 12px;">
+                  Why start today?
+                </p>
+                <ul style="color: #4a4a4a; font-size: 14px; margin: 0; padding-left: 20px;">
+                  <li style="margin-bottom: 8px;"><strong>Peace of mind</strong> — Know your important documents are safe and accessible</li>
+                  <li style="margin-bottom: 8px;"><strong>Easy access</strong> — Find what you need, when you need it</li>
+                  <li style="margin-bottom: 8px;"><strong>Lasting legacy</strong> — Preserve memories for future generations</li>
+                </ul>
+              </div>
+
+              <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                Questions? We're here to help. Just reply to this email or visit our <a href="https://pathible.com/help" style="color: #2563eb; text-decoration: none;">Help Center</a>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px; text-align: center;">
+                You're receiving this email because you signed up for Pathible and enabled email notifications.
+              </p>
+              <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">
+                <a href="https://pathible.com/dashboard/settings" style="color: #9ca3af; text-decoration: underline;">Manage email preferences</a> ·
+                <a href="https://pathible.com" style="color: #9ca3af; text-decoration: underline;">pathible.com</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+}
+
+// ============================================================================
+// RECIPIENT ELIGIBILITY
+// ============================================================================
+
+export interface VaultEmptyRecipientCriteria {
+  onboardingStatus: string;
+  onboardingCompletedAt: number | undefined;
+  email: string | undefined;
+  deletedAt: number | undefined;
+  emailNotificationsEnabled: boolean;
+  vaultDocumentCount: number;
+}
+
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * Check if a user is eligible for the vault empty engagement email
+ */
+export function isEligibleForVaultEmptyEmail(
+  criteria: VaultEmptyRecipientCriteria,
+  currentTime: number = Date.now(),
+): boolean {
+  // Must have completed onboarding
+  if (criteria.onboardingStatus !== "complete") return false;
+
+  // Must have completed onboarding at least 3 days ago
+  if (!criteria.onboardingCompletedAt) return false;
+  const threeDaysAgo = currentTime - THREE_DAYS_MS;
+  if (criteria.onboardingCompletedAt > threeDaysAgo) return false;
+
+  // Must have an email
+  if (!criteria.email) return false;
+
+  // Must not be deleted
+  if (criteria.deletedAt) return false;
+
+  // Must have email notifications enabled
+  if (!criteria.emailNotificationsEnabled) return false;
+
+  // Must have empty vault
+  if (criteria.vaultDocumentCount > 0) return false;
+
+  return true;
+}

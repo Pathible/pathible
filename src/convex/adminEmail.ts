@@ -539,9 +539,15 @@ export const recordSentEmail = internalMutation({
     ),
     recipientCount: v.number(),
     sentBy: v.id("profiles"),
-    status: v.union(v.literal("sent"), v.literal("partial"), v.literal("failed")),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("partial"),
+      v.literal("failed"),
+      v.literal("queued"),
+    ),
     errorMessage: v.optional(v.string()),
     resendBatchId: v.optional(v.string()),
+    campaignId: v.optional(v.string()),
   },
   returns: v.id("sentEmails"),
   handler: async (ctx, args) => {
@@ -557,6 +563,7 @@ export const recordSentEmail = internalMutation({
       status: args.status,
       errorMessage: args.errorMessage,
       resendBatchId: args.resendBatchId,
+      campaignId: args.campaignId,
     });
   },
 });
@@ -720,7 +727,38 @@ export const getRecipientsForEmail = query({
 });
 
 /**
- * Send email action - handles Resend API call
+ * Helper function to personalize email content with recipient variables
+ */
+function personalizeContent(
+  template: string,
+  recipient: { firstName: string; lastName: string; email: string },
+): string {
+  const fullName = `${recipient.firstName} ${recipient.lastName}`.trim();
+  const platformVars = {
+    appName: "Pathible",
+    supportEmail: "support@pathible.com",
+    currentYear: new Date().getFullYear().toString(),
+    loginUrl: "https://pathible.com/login",
+    dashboardUrl: "https://pathible.com/dashboard",
+  };
+
+  return template
+    .replace(/\{\{firstName\}\}/g, recipient.firstName || "")
+    .replace(/\{\{lastName\}\}/g, recipient.lastName || "")
+    .replace(/\{\{fullName\}\}/g, fullName || "")
+    .replace(/\{\{email\}\}/g, recipient.email || "")
+    .replace(/\{\{appName\}\}/g, platformVars.appName)
+    .replace(/\{\{supportEmail\}\}/g, platformVars.supportEmail)
+    .replace(/\{\{currentYear\}\}/g, platformVars.currentYear)
+    .replace(/\{\{loginUrl\}\}/g, platformVars.loginUrl)
+    .replace(/\{\{dashboardUrl\}\}/g, platformVars.dashboardUrl);
+}
+
+/**
+ * Send email action - queues emails for rate-limited sending
+ *
+ * Instead of sending directly via Resend, emails are added to the queue
+ * and processed by the cron job (respecting 2 emails/second rate limit).
  */
 export const sendEmail = action({
   args: {
@@ -748,123 +786,118 @@ export const sendEmail = action({
     success: v.boolean(),
     sentCount: v.number(),
     errorMessage: v.optional(v.string()),
+    campaignId: v.optional(v.string()),
   }),
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    success: boolean;
+    sentCount: number;
+    errorMessage?: string;
+    campaignId?: string;
+  }> => {
     // Get current admin profile
     const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal, {});
-
-    const { Resend } = await import("resend");
-    const resend = new Resend(process.env.RESEND_API_KEY);
-
-    let sentCount = 0;
-    let errorMessage: string | undefined;
-    let resendBatchId: string | undefined;
-    let status: "sent" | "partial" | "failed" = "sent";
 
     try {
       if (args.recipientEmails.length === 0) {
         throw new Error("No recipients specified");
       }
 
-      // Send emails in batches (Resend recommends max 100 per batch)
-      const batchSize = 100;
-      const batches: Array<typeof args.recipientEmails> = [];
+      // Create campaign ID for tracking
+      const dateStr = new Date().toISOString().replace(/[:.]/g, "-");
+      const campaignId = `admin_broadcast_${dateStr}`;
 
-      for (let i = 0; i < args.recipientEmails.length; i += batchSize) {
-        batches.push(args.recipientEmails.slice(i, i + batchSize));
-      }
+      // Create campaign record
+      await ctx.runMutation(internal.emailQueue.createCampaign, {
+        campaignId,
+        type: "admin_broadcast",
+        totalRecipients: args.recipientEmails.length,
+      });
 
-      // Platform variables (same for all recipients)
-      const platformVars = {
-        appName: "Pathible",
-        supportEmail: "support@pathible.com",
-        currentYear: new Date().getFullYear().toString(),
-        loginUrl: "https://pathible.com/login",
-        dashboardUrl: "https://pathible.com/dashboard",
+      // Update campaign status to sending
+      await ctx.runMutation(internal.emailQueue.updateCampaignStatus, {
+        campaignId,
+        status: "sending",
+      });
+
+      // Prepare personalized emails for batch enqueue
+      const emails = args.recipientEmails.map((recipient) => {
+        const personalizedSubject = personalizeContent(args.subject, recipient);
+        const personalizedHtml = personalizeContent(args.htmlContent, recipient);
+
+        return {
+          to: recipient.email,
+          subject: personalizedSubject,
+          htmlContent: personalizedHtml,
+          recipientContext: {
+            firstName: recipient.firstName,
+            lastName: recipient.lastName,
+          },
+        };
+      });
+
+      // Enqueue all emails with rate limiting (500ms stagger between each)
+      const result: { queuedCount: number; emailIds: Id<"emailQueue">[] } = await ctx.runMutation(
+        internal.emailQueue.enqueueEmailBatch,
+        {
+          emails,
+          templateId: args.templateId,
+          campaignId,
+        },
+      );
+
+      // Record the sent email with "queued" status
+      await ctx.runMutation(internal.adminEmail.recordSentEmail, {
+        subject: args.subject,
+        content: args.content,
+        htmlContent: args.htmlContent,
+        templateId: args.templateId,
+        recipientType: args.recipientType,
+        recipientFilter: {
+          tiers: args.tiers,
+          userIds: args.userIds,
+        },
+        recipientCount: result.queuedCount,
+        sentBy: profile._id,
+        status: "queued",
+        campaignId,
+      });
+
+      console.log(`[Admin Email] Queued ${result.queuedCount} emails for campaign ${campaignId}`);
+
+      return {
+        success: true,
+        sentCount: result.queuedCount,
+        campaignId,
       };
-
-      for (const batch of batches) {
-        for (const recipient of batch) {
-          try {
-            // Substitute variables for this recipient
-            const fullName = `${recipient.firstName} ${recipient.lastName}`.trim();
-            const personalizedSubject = args.subject
-              .replace(/\{\{firstName\}\}/g, recipient.firstName || "")
-              .replace(/\{\{lastName\}\}/g, recipient.lastName || "")
-              .replace(/\{\{fullName\}\}/g, fullName || "")
-              .replace(/\{\{email\}\}/g, recipient.email || "")
-              .replace(/\{\{appName\}\}/g, platformVars.appName)
-              .replace(/\{\{supportEmail\}\}/g, platformVars.supportEmail)
-              .replace(/\{\{currentYear\}\}/g, platformVars.currentYear)
-              .replace(/\{\{loginUrl\}\}/g, platformVars.loginUrl)
-              .replace(/\{\{dashboardUrl\}\}/g, platformVars.dashboardUrl);
-
-            const personalizedHtml = args.htmlContent
-              .replace(/\{\{firstName\}\}/g, recipient.firstName || "")
-              .replace(/\{\{lastName\}\}/g, recipient.lastName || "")
-              .replace(/\{\{fullName\}\}/g, fullName || "")
-              .replace(/\{\{email\}\}/g, recipient.email || "")
-              .replace(/\{\{appName\}\}/g, platformVars.appName)
-              .replace(/\{\{supportEmail\}\}/g, platformVars.supportEmail)
-              .replace(/\{\{currentYear\}\}/g, platformVars.currentYear)
-              .replace(/\{\{loginUrl\}\}/g, platformVars.loginUrl)
-              .replace(/\{\{dashboardUrl\}\}/g, platformVars.dashboardUrl);
-
-            const response = await resend.emails.send({
-              from: "Pathible <noreply@app.pathible.com>",
-              replyTo: "support@pathible.com",
-              to: recipient.email,
-              subject: personalizedSubject,
-              html: personalizedHtml,
-            });
-
-            if (response.data?.id) {
-              sentCount++;
-              if (!resendBatchId) {
-                resendBatchId = response.data.id;
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to send to ${recipient.email}:`, err);
-          }
-        }
-      }
-
-      if (sentCount === 0) {
-        status = "failed";
-        errorMessage = "Failed to send to any recipients";
-      } else if (sentCount < args.recipientEmails.length) {
-        status = "partial";
-        errorMessage = `Sent ${sentCount} of ${args.recipientEmails.length} emails`;
-      }
     } catch (err) {
-      status = "failed";
-      errorMessage = err instanceof Error ? err.message : "Unknown error";
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+
+      // Record the failed attempt
+      await ctx.runMutation(internal.adminEmail.recordSentEmail, {
+        subject: args.subject,
+        content: args.content,
+        htmlContent: args.htmlContent,
+        templateId: args.templateId,
+        recipientType: args.recipientType,
+        recipientFilter: {
+          tiers: args.tiers,
+          userIds: args.userIds,
+        },
+        recipientCount: 0,
+        sentBy: profile._id,
+        status: "failed",
+        errorMessage,
+      });
+
+      return {
+        success: false,
+        sentCount: 0,
+        errorMessage,
+      };
     }
-
-    // Record the sent email
-    await ctx.runMutation(internal.adminEmail.recordSentEmail, {
-      subject: args.subject,
-      content: args.content,
-      htmlContent: args.htmlContent,
-      templateId: args.templateId,
-      recipientType: args.recipientType,
-      recipientFilter: {
-        tiers: args.tiers,
-        userIds: args.userIds,
-      },
-      recipientCount: sentCount,
-      sentBy: profile._id,
-      status,
-      errorMessage,
-      resendBatchId,
-    });
-
-    return {
-      success: status !== "failed",
-      sentCount,
-      errorMessage,
-    };
   },
 });
 
