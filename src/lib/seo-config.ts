@@ -78,6 +78,7 @@ export const softwareApplicationSchema = {
   },
   featureList: [
     "Heritage Vault - Secure document storage",
+    "Financial Clarity - Track accounts, property, and insurance",
     "Wisdom & Stories - Family story preservation",
     "Legacy Planning - Final wishes documentation",
     "Bank-level encryption",
@@ -94,42 +95,47 @@ export const FAQ_ITEMS = [
   {
     question: "What is Pathible?",
     answer:
-      "Pathible is a faith-based family legacy platform that combines secure document storage with story preservation and legacy planning tools. It's designed for Christian families who want to organize important documents, preserve their life stories, and document their final wishes in one secure place. Rooted in Proverbs 13:22—'A good man leaves an inheritance to his children's children'—Pathible helps you leave a blessing, not a burden.",
+      "Pathible helps you get everything in one place for your family. Store your important documents, track your finances, save your stories and letters, and write down your wishes. So when the time comes, your family finds what they need instead of searching through a mess. Rooted in Proverbs 13:22: 'A good man leaves an inheritance to his children's children.'",
   },
   {
     question: "How is Pathible different from Dropbox or Google Drive?",
     answer:
-      "While cloud storage services like Dropbox store files, Pathible is purpose-built for family legacy. It provides guided prompts for documenting wishes, tools for writing letters to future generations, a Core Beliefs feature for recording family values, and organized categories specifically for estate and legacy documents. Unlike generic storage, Pathible helps you add meaning to what you store.",
+      "Dropbox stores files. Pathible helps you organize everything your family will need and add your story to it. You can write letters to your grandchildren, write down what you believe, and show them exactly where to find things. It's not just storage. It's everything in one place, with meaning.",
   },
   {
     question: "Is my data secure?",
     answer:
-      "Yes. Pathible uses bank-level encryption (AES-256) to protect all documents and data. You own your data completely, and we never sell or share your information with third parties. Your family's legacy stays private and secure.",
+      "Yes. Pathible uses bank-level encryption to protect all your documents and data. You own your data completely. We never sell or share your information. Your family's files stay private and secure.",
   },
   {
     question: "Who is Pathible for?",
     answer:
-      "Pathible serves three primary groups: (1) Faith-driven families in their 40s-70s building multigenerational legacies, (2) Adult children helping organize their aging parents' affairs and capture their stories, and (3) Young families who want to start documenting their legacy early. If you believe legacy is for your children's children, Pathible is for you.",
+      "Pathible is for three groups: (1) People who have been through sorting a loved one's mess and never want to put their family through the same. (2) People watching their parents age and want to help them get organized. (3) Young families who want to start now. If you want your family to find what they need without the chaos, Pathible is for you.",
   },
   {
     question: "How much does Pathible cost?",
     answer:
-      "Pathible offers three subscription plans: Foundations for families just starting their legacy journey, Growth for expanding legacies with more storage and features, and Heritage for comprehensive family archives with priority support. Visit our pricing page for current rates.",
+      "Pathible offers three plans: Foundations for getting started, Heritage for more storage and features, and Legacy for families who want everything. Visit our pricing page for current rates.",
   },
   {
     question: "What is the Heritage Vault?",
     answer:
-      "The Heritage Vault is Pathible's secure document storage system. It organizes legal documents (wills, trusts, powers of attorney), financial documents (insurance policies, account information), property documents (deeds, vehicle titles), and personal documents (medical records, family history) in one searchable, shareable location. Your family will know exactly where to find everything.",
+      "The Heritage Vault is where you store your important files. Wills, insurance, passwords, deeds, medical records. Everything organized so your family can find it. You can share it with them and they'll know exactly where everything is.",
+  },
+  {
+    question: "What is Financial Clarity?",
+    answer:
+      "Financial Clarity helps you document your family's financial picture in one place. Track bank accounts, investments, property, and insurance policies. Add notes about beneficiaries and key contacts. When your family needs to find things, they'll know exactly where to look.",
   },
   {
     question: "What are Wisdom & Stories?",
     answer:
-      "Wisdom & Stories is Pathible's family storytelling feature. It helps you record life stories, write letters to loved ones (including those not yet born), document your Core Beliefs, and preserve the 'why' behind your life decisions for future generations. This is where legacy truly lives—not just in documents, but in the meaning behind them.",
+      "Wisdom & Stories is where you save what matters most. Write your stories. Write letters to your kids and grandkids (even ones not born yet). Write down what you believe. Your family will read these again and again.",
   },
   {
     question: "What is Legacy Planning in Pathible?",
     answer:
-      "Legacy Planning helps you document final wishes, key contacts (attorneys, financial advisors, doctors), create a Document Access Map showing where important items are located, and provide clear guidance to your family. The goal is simple: give your family clarity instead of confusion when they need it most.",
+      "Legacy Planning helps you write down your wishes and who to call. Doctors, lawyers, advisors. You show your family where everything is. The goal is simple: your family gets clarity instead of confusion when they need it most.",
   },
 ] as const;
 
