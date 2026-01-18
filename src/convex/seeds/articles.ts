@@ -998,4 +998,507 @@ That peace is worth the effort.
     readTimeMinutes: 7,
     viewCount: 0,
   },
+
+  // ============================================================================
+  // PUBLIC ARTICLES - Pathible Benefits & Ease of Use (visible without login)
+  // ============================================================================
+  {
+    title: "Why We Built Pathible: A Story of Love After Loss",
+    slug: "why-we-built-pathible",
+    excerpt:
+      "Have you ever had to sort through a loved one's affairs while grieving? We have. That's why we built Pathible - so your family never has to.",
+    content: `# Why We Built Pathible: A Story of Love After Loss
+
+Have you ever had to sort through a loved one's mess while grieving?
+
+We have.
+
+The endless searching through drawers. The guessing at passwords. The discovering important documents weeks too late. The arguments with siblings about what Mom wanted. The guilt of not knowing.
+
+It's a special kind of pain - grief compounded by chaos.
+
+## The Moment That Changed Everything
+
+When my father passed, I thought I was prepared. I'm organized. I'm tech-savvy. I had even asked him about the important stuff.
+
+But I wasn't prepared.
+
+His life insurance policy? In a filing cabinet, but not the one we checked first. His bank accounts? Scattered across three institutions we didn't know about. His wishes for the memorial? Never written down - so we guessed, and my brother and I still argue about whether we got it right.
+
+The hardest part wasn't finding the paperwork. It was realizing that this chaos was preventable. If he'd just had everything in one place. If he'd just told us where to look. If he'd just written down what mattered to him.
+
+## From Pain to Purpose
+
+Pathible was born from that experience. Not as a business plan, but as a promise: no family should have to become detectives while they're grieving.
+
+We built the tool we wished we'd had. One secure place where:
+
+- **Documents live together** - wills, insurance policies, account information, all findable in minutes, not weeks
+- **Wishes are clear** - healthcare preferences, memorial plans, the things that matter written down before they're needed
+- **Stories are preserved** - not just paperwork, but wisdom, memories, and the things you want your grandchildren to know about you
+- **Access is simple** - the right people can find what they need, when they need it
+
+## What Makes Pathible Different
+
+There are plenty of places to store files. Cloud drives are cheap. But Pathible isn't about storage - it's about **stewardship**.
+
+We designed it for families of faith who understand that legacy is more than money. It's wisdom, stories, values, and love made tangible for the next generation.
+
+> "A good man leaves an inheritance to his children's children." - Proverbs 13:22
+
+That inheritance isn't just financial. It's everything that made you *you*.
+
+## The Gift You Give
+
+When you organize your legacy with Pathible, you're not doing something morbid. You're doing something profoundly loving.
+
+You're saying to your family:
+
+- "I love you enough to spare you confusion."
+- "I respect you enough to make my wishes clear."
+- "I trust you with my story, and I want you to have it."
+
+That's not preparing for death. That's preparing a gift for life.
+
+## Start Simple
+
+You don't have to do everything at once. Most people start with:
+
+1. **Upload one important document** - maybe your will or insurance policy
+2. **Write down where things are** - create a simple access map
+3. **Add one story** - a memory, a lesson, something you want remembered
+
+Fifteen minutes can save your family fifteen hours of stress. That's a trade worth making.
+
+## We Have. Now You Don't Have To.
+
+Have you ever had to sort through a loved one's mess while grieving?
+
+We have.
+
+Use Pathible. Get everything in one place for your family. So they never have to.
+
+---
+
+*Ready to start? It takes less than 15 minutes to upload your first documents and give your family the gift of clarity.*`,
+    category: "family_legacy",
+    status: "published",
+    visibility: "public",
+    authorName: "Pathible Team",
+    readTimeMinutes: 5,
+    viewCount: 0,
+  },
+  {
+    title: "Getting Started with Pathible: Your First 15 Minutes",
+    slug: "getting-started-with-pathible",
+    excerpt:
+      "Organizing your legacy doesn't have to be overwhelming. Here's how to make real progress in just 15 minutes - and why starting small is the secret to actually finishing.",
+    content: `# Getting Started with Pathible: Your First 15 Minutes
+
+Let's be honest: "organizing your legacy" sounds like a big project. The kind of thing you'll get to someday. Next month. After the holidays. When things settle down.
+
+But here's what we've learned: the families who actually get organized aren't the ones with the most time. They're the ones who started small.
+
+Fifteen minutes. That's all you need to make meaningful progress.
+
+## Why Starting Small Works
+
+Most people stall because they think they need to do everything at once:
+- Find every document
+- Scan every page
+- Write their whole life story
+- Get it perfect
+
+That's overwhelming. And overwhelming leads to "I'll do it later." And later never comes.
+
+Instead, try this: **one small action today**. Then another tomorrow. Small steps, steady progress.
+
+## Your First 15 Minutes: Three Options
+
+Pick whichever feels easiest. Done is better than perfect.
+
+### Option A: Upload One Critical Document
+
+Start with the single most important document your family would need:
+- Your will (if you have one)
+- A life insurance policy
+- Your healthcare directive
+
+Just one. Upload it. Done.
+
+**Why this matters:** If something happened tomorrow, your family could find this. That's already better than yesterday.
+
+### Option B: Create Your "Where to Find Things" List
+
+Open a new note in Pathible and answer these questions:
+- Where do you keep important papers? (filing cabinet, desk, safe)
+- What bank(s) do you use?
+- Who is your insurance through?
+- Where are your digital passwords stored?
+
+You don't need account numbers yet. Just the basics. A starting point.
+
+**Why this matters:** Your family won't need to become detectives. They'll know where to look.
+
+### Option C: Write One Thing You Want Remembered
+
+Not your whole life story. Just one thing:
+- A favorite family memory
+- A lesson you learned the hard way
+- Something you believe deeply and want passed down
+
+Three paragraphs. Five minutes. Save it.
+
+**Why this matters:** Someday, this will mean everything to someone. And it only took you five minutes.
+
+## What Happens Next
+
+After your first 15 minutes, you'll notice something: the momentum builds.
+
+Most users come back within a week to add more. Not because we nag them, but because starting feels good. The weight lifts a little. The "someday" project becomes a "today" project.
+
+Here's a simple cadence that works:
+
+**Week 1:** Upload one document or create your access list
+**Week 2:** Add another document category (insurance, accounts, property)
+**Week 3:** Write a short letter to someone you love
+**Week 4:** Share access with one trusted person
+
+Four weeks. Less than an hour total. Your family is protected.
+
+## The Tools That Make It Easy
+
+Pathible is designed for people who don't have time for complicated systems:
+
+**Heritage Vault** - Drag and drop your documents. We organize them by category automatically. Find anything in seconds.
+
+**Quick-Add Stories** - Write as much or as little as you want. No pressure to be profound. Just real.
+
+**Controlled Access** - Decide who can see what, and when. Your spouse might have full access now; your children might only see certain things later.
+
+**Reminders** - We'll gently nudge you to keep going. Not annoying. Just helpful.
+
+## The 15-Minute Challenge
+
+Here's our challenge to you: set a timer for 15 minutes. Pick one of the three options above. Do it now - or at least today.
+
+Not tomorrow. Not next week. Today.
+
+Because the best time to organize your legacy was years ago. The second best time is the next 15 minutes.
+
+---
+
+*Ready? Sign in and let's get started. Your first document is waiting to be uploaded.*`,
+    category: "family_legacy",
+    status: "published",
+    visibility: "public",
+    authorName: "Pathible Team",
+    readTimeMinutes: 5,
+    viewCount: 0,
+  },
+  {
+    title: "What Makes Pathible Different: Legacy Planning for Families of Faith",
+    slug: "what-makes-pathible-different",
+    excerpt:
+      "There are lots of places to store files. Pathible isn't about storage - it's about stewardship. Here's what makes us different from every other digital vault.",
+    content: `# What Makes Pathible Different: Legacy Planning for Families of Faith
+
+You could store your important documents anywhere. Google Drive is free. Dropbox works fine. Your filing cabinet isn't going anywhere.
+
+So why Pathible?
+
+Because legacy isn't just about files. It's about **everything your family needs - and everything you want them to remember**.
+
+## The Problem with "Just Use a Folder"
+
+Generic storage solutions work for storing things. But they fail at three critical tasks:
+
+**1. They don't organize for emergencies**
+
+When your family needs to find your life insurance policy at 2 AM, they're not going to appreciate your nested folder structure. They need to find the right document *now*, not browse through "Documents > Important > Really Important > Dad's Stuff."
+
+**2. They don't capture what matters most**
+
+Your cloud drive can hold your will. It can't hold your wisdom. Where do you put the letter to your daughter for her wedding day? The story about your grandfather? Your hopes for your grandchildren's faith?
+
+**3. They don't control access appropriately**
+
+Sharing a folder means sharing everything. But maybe your spouse should see your finances now, while your adult children should only access certain things later. Generic tools weren't designed for this.
+
+## How Pathible Is Different
+
+We built Pathible specifically for families planning their legacy. Here's what that means:
+
+### 1. Organized for the Moment of Need
+
+Your Heritage Vault automatically organizes documents by category:
+- **Legal** - wills, trusts, powers of attorney
+- **Financial** - accounts, investments, debts
+- **Insurance** - life, health, property policies
+- **Property** - deeds, titles, valuations
+- **Medical** - healthcare directives, medical history
+- **Personal** - vital records, military service, personal items
+
+When your family needs something, they'll find it in seconds. Not hours. Not days.
+
+### 2. Wisdom Alongside Paperwork
+
+This is what really sets Pathible apart. Your legacy isn't just documents - it's your story, your values, your faith.
+
+**Wisdom & Stories** lets you capture:
+- Letters to loved ones (to be read now or later)
+- Life lessons learned the hard way
+- Core beliefs and values you want passed down
+- Family stories worth preserving
+- Your faith journey
+
+Your grandchildren deserve to know more than your account numbers. They deserve to know *you*.
+
+### 3. Controlled Access That Makes Sense
+
+With Pathible, you decide:
+- Who can see what
+- When they can see it
+- What they can do with it
+
+Your spouse might have full access today. Your children might gain access to certain things when they turn 25, or after you're gone. Your financial advisor might see investment documents but nothing else.
+
+This isn't paranoia. It's wisdom.
+
+### 4. Built for Families of Faith
+
+We're not just a tech company that happens to serve families. We're families of faith building tools for other families of faith.
+
+That means:
+- **Stewardship, not just storage** - We believe in the Proverbs 13:22 principle: "A good man leaves an inheritance to his children's children."
+- **Purpose, not just features** - Every feature asks: "Does this help families pass down what matters?"
+- **Values, not just value** - We're building for generations, not just quarters.
+
+## What Our Users Say
+
+*"I finally have peace of mind knowing my family can find everything they need. But more than that - they'll know what I believe and why."*
+
+*"I spent months trying to organize my dad's affairs after he passed. I started using Pathible the same week and had my own documents organized in an afternoon."*
+
+*"The stories feature changed everything for me. I realized I had so much I wanted to tell my grandchildren that I'd never written down."*
+
+## The Right Tool for the Right Job
+
+You wouldn't use a hammer to write a letter. You wouldn't use a spreadsheet to tell your story.
+
+Generic cloud storage is great for generic files. But your legacy isn't generic. It's specific, personal, and deeply important.
+
+Pathible is the right tool for this particular job: helping your family find what they need, when they need it, while preserving what matters most.
+
+## Start With What You Have
+
+You don't need everything perfect to start. You don't need to scan every document or write your memoir.
+
+Start with one document. One story. One letter.
+
+The tool is ready when you are.
+
+---
+
+*Ready to see the difference? Start your free trial and experience what legacy planning should feel like.*`,
+    category: "family_legacy",
+    status: "published",
+    visibility: "public",
+    authorName: "Pathible Team",
+    readTimeMinutes: 6,
+    viewCount: 0,
+  },
+  {
+    title: "Don't Leave Your Family a Mess: A Simple Checklist",
+    slug: "dont-leave-your-family-a-mess-checklist",
+    excerpt:
+      "The simplest legacy planning checklist you'll find. Ten items that will save your family hours of stress and confusion. Print it, check it off, and rest easy.",
+    content: `# Don't Leave Your Family a Mess: A Simple Checklist
+
+You love your family. You don't want them struggling to find your insurance policy while they're grieving. You don't want siblings arguing about what you wanted because you never wrote it down.
+
+But where do you even start?
+
+Here's the simplest checklist we know. Ten items. Each one takes less than an hour. Complete them all, and your family will thank you someday.
+
+## The "Don't Leave a Mess" Checklist
+
+### ☐ 1. Create or Update Your Will
+
+Without a will, the state decides who gets what - and it might not match your wishes.
+
+**What to do:**
+- If you don't have a will, get one (online services make this affordable)
+- If you have one, review it - is it still accurate?
+- Make sure someone knows where it is
+
+**Time needed:** 30-60 minutes for a simple will
+
+---
+
+### ☐ 2. List Your Accounts
+
+Make a simple list of every financial account you have:
+- Bank accounts (checking, savings)
+- Investment accounts
+- Retirement accounts (401k, IRA, pension)
+- Credit cards and loans
+- Any other accounts
+
+**What to include:** Institution name, account type, approximate value
+**What NOT to include:** Passwords (keep those separate and secure)
+
+**Time needed:** 30 minutes
+
+---
+
+### ☐ 3. Gather Your Insurance Information
+
+Your family needs to know what coverage you have and how to claim it.
+
+**List these policies:**
+- Life insurance (this is the most important one)
+- Health insurance
+- Homeowners/renters insurance
+- Auto insurance
+- Any other policies
+
+**For each:** Company name, policy number, coverage amount, beneficiary (for life insurance)
+
+**Time needed:** 30 minutes
+
+---
+
+### ☐ 4. Document Your Digital Life
+
+Your online accounts need a plan too.
+
+**Create a list of:**
+- Email accounts
+- Social media accounts
+- Online banking logins
+- Subscription services
+- Password manager access
+
+**Important:** Don't write passwords directly on this list. Instead, use a password manager and tell someone how to access it.
+
+**Time needed:** 30 minutes
+
+---
+
+### ☐ 5. Complete Healthcare Directives
+
+If you can't speak for yourself, who decides your care? What would you want?
+
+**Two documents you need:**
+- **Living will / Advance directive:** Your wishes for medical treatment
+- **Healthcare power of attorney:** Who makes decisions on your behalf
+
+Many states have free forms available online.
+
+**Time needed:** 30-60 minutes
+
+---
+
+### ☐ 6. Name a Financial Power of Attorney
+
+If you're incapacitated, who can pay your bills and manage your accounts?
+
+This is different from your will (which only takes effect after death). A financial POA lets someone act on your behalf while you're alive but unable to manage things yourself.
+
+**Time needed:** 30 minutes
+
+---
+
+### ☐ 7. Write Down Your Wishes
+
+Some things aren't covered by legal documents but still matter:
+
+- Funeral or memorial preferences
+- What should happen to specific personal items
+- Charitable giving intentions
+- Messages you want shared with family
+
+**Time needed:** 30-60 minutes
+
+---
+
+### ☐ 8. Tell Someone Where Everything Is
+
+All of this organization is useless if no one can find it.
+
+**Choose one trusted person and tell them:**
+- Where your will is located
+- Where your insurance policies are
+- How to access your important documents
+- Who to contact for help (attorney, financial advisor, etc.)
+
+Consider using Pathible's Heritage Vault to keep everything in one secure, shareable location.
+
+**Time needed:** 30 minutes
+
+---
+
+### ☐ 9. Review Your Beneficiaries
+
+Your beneficiary designations (on retirement accounts, life insurance, etc.) override your will. If they're outdated, your assets might go to the wrong person.
+
+**Check the beneficiaries on:**
+- Life insurance policies
+- Retirement accounts (401k, IRA)
+- Bank accounts (if they have POD/TOD designations)
+- Investment accounts
+
+**Time needed:** 30 minutes
+
+---
+
+### ☐ 10. Write One Letter
+
+Here's the item most people skip - and most families wish they had.
+
+Write a letter to someone you love. It doesn't need to be long. Just tell them:
+- What you appreciate about them
+- What you hope for their future
+- Something you want them to remember
+
+Seal it. Save it. Someday, it will mean more than you can imagine.
+
+**Time needed:** 15-30 minutes
+
+---
+
+## You Don't Have to Do This Alone
+
+This checklist is simple, but that doesn't mean it's easy. If you're feeling overwhelmed, here are your options:
+
+**Do it yourself:** Work through one item at a time. No rush.
+
+**Use Pathible:** Our Heritage Vault makes it easy to organize documents, share access with family, and capture the stories that matter.
+
+**Get professional help:** An estate attorney or financial planner can guide you through the legal and financial pieces.
+
+The important thing is to start. Pick one item from this list and do it today.
+
+## The Gift of Clarity
+
+When you complete this checklist, you're not just organizing paperwork. You're giving your family a gift:
+
+- The gift of knowing where things are
+- The gift of understanding your wishes
+- The gift of avoiding conflict
+- The gift of hearing from you one more time
+
+Don't leave them a mess. Leave them a blessing.
+
+---
+
+*Print this checklist and start checking items off. Or use Pathible to organize everything digitally - it's what we built it for.*`,
+    category: "family_legacy",
+    status: "published",
+    visibility: "public",
+    authorName: "Pathible Team",
+    readTimeMinutes: 7,
+    viewCount: 0,
+  },
 ];
