@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { ArrowLeft, BookOpen, Clock, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import { ArticleUpgradeCTA } from "@/components/learning/public";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,12 +101,17 @@ export function ArticleContent({ slug }: ArticleContentProps) {
           </div>
         )}
 
-        {/* Article Content - content is admin-authored and trusted */}
-        <div
-          className="prose prose-lg max-w-none prose-headings:font-crimson prose-headings:text-foreground prose-p:text-foreground/90 prose-a:text-pathible-forest prose-a:no-underline hover:prose-a:underline"
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: Admin-authored CMS content is trusted
-          dangerouslySetInnerHTML={{ __html: formatContent(article.content) }}
-        />
+        {/* Article Content */}
+        <div className="prose prose-lg max-w-none prose-headings:font-crimson prose-headings:text-foreground prose-p:text-foreground/90 prose-a:text-pathible-forest prose-a:no-underline hover:prose-a:underline prose-li:text-foreground/90 prose-strong:text-foreground prose-hr:border-pathible-sage/30">
+          <ReactMarkdown
+            components={{
+              // Skip H1 rendering since title is already displayed in the header
+              h1: () => null,
+            }}
+          >
+            {article.content}
+          </ReactMarkdown>
+        </div>
 
         {/* Upgrade CTA for truncated subscriber content */}
         {article.isTruncated && <ArticleUpgradeCTA />}
@@ -129,30 +135,5 @@ export function ArticleContent({ slug }: ArticleContentProps) {
         )}
       </div>
     </article>
-  );
-}
-
-/**
- * Simple content formatting - converts markdown-like content to basic HTML
- * In production, you might want to use a proper markdown parser
- */
-function formatContent(content: string): string {
-  // Basic markdown-like formatting
-  return (
-    content
-      // Convert headers
-      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-      .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-      .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-      // Convert bold
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      // Convert italic
-      .replace(/\*(.+?)\*/g, "<em>$1</em>")
-      // Convert line breaks to paragraphs
-      .split("\n\n")
-      .map((para) => (para.trim() ? `<p>${para.trim()}</p>` : ""))
-      .join("\n")
-      // Convert single line breaks within paragraphs
-      .replace(/\n/g, "<br />")
   );
 }
