@@ -47,9 +47,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    {
+      url: `${baseUrl}/learn`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
   ];
 
-  // Future: Add dynamic pages (blog posts, help articles) here
+  // Future: Add dynamic pages (blog posts, public articles) here
+  // For public /learn articles, consider fetching from Convex API
   // const blogPosts = await getBlogPosts();
   // const blogUrls = blogPosts.map((post) => ({
   //   url: `${baseUrl}/blog/${post.slug}`,
