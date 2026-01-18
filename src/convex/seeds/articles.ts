@@ -26,6 +26,7 @@ export interface ArticleSeedData {
   content: string;
   category: ArticleCategory;
   status: "draft" | "published" | "archived";
+  visibility: "public" | "subscribers";
   authorName: string;
   readTimeMinutes: number;
   viewCount: number;
@@ -97,6 +98,7 @@ And someday, when your children's children look back at what you left them, may 
 *Ready to put stewardship into practice? Start by getting your important documents in one place where your family can find them.*`,
     category: "faith_stewardship",
     status: "published",
+    visibility: "subscribers",
     authorName: "Pathible Team",
     readTimeMinutes: 5,
     viewCount: 0,
@@ -187,6 +189,7 @@ Lord, help us teach our children well. Give us wisdom to model faithful stewards
 *Looking for ways to organize your family's financial information so your children know where to find things someday? That's part of the legacy too.*`,
     category: "faith_stewardship",
     status: "published",
+    visibility: "subscribers",
     authorName: "Pathible Team",
     readTimeMinutes: 6,
     viewCount: 0,
@@ -282,6 +285,7 @@ That's a gift that lasts.
 *Need a place to document all of this? Pathible helps you organize your documents and capture your wishes, so your family has everything in one secure place.*`,
     category: "family_legacy",
     status: "published",
+    visibility: "subscribers",
     authorName: "Pathible Team",
     readTimeMinutes: 6,
     viewCount: 0,
@@ -391,6 +395,7 @@ The best time to create a legacy plan was years ago. The second best time is now
 *Ready to start? Pathible gives you one secure place for your documents, your stories, and your wishes. Everything your family needs - together.*`,
     category: "estate_planning",
     status: "published",
+    visibility: "subscribers",
     authorName: "Pathible Team",
     readTimeMinutes: 5,
     viewCount: 0,
@@ -506,6 +511,7 @@ And your family will have the gift of clarity - which is more valuable than you 
 *Looking for a secure place to store all of this? Pathible's Heritage Vault keeps your important documents organized and accessible to the people who need them.*`,
     category: "financial_planning",
     status: "published",
+    visibility: "subscribers",
     authorName: "Pathible Team",
     readTimeMinutes: 6,
     viewCount: 0,
@@ -643,6 +649,7 @@ Employer benefits often have time limits and specific procedures. Knowing these 
 *Ready to organize your insurance information? Store your policies and create a summary in Pathible's Heritage Vault, where your family can access them when needed.*`,
     category: "insurance",
     status: "published",
+    visibility: "subscribers",
     authorName: "Pathible Team",
     readTimeMinutes: 7,
     viewCount: 0,
@@ -804,6 +811,7 @@ Small steps, steady progress. That's how it gets done.
 *Need a secure place to store and organize all of this? Pathible's Heritage Vault is designed exactly for this purpose - keeping your family's essential documents safe and accessible.*`,
     category: "legal",
     status: "published",
+    visibility: "subscribers",
     authorName: "Pathible Team",
     readTimeMinutes: 7,
     viewCount: 0,
@@ -985,6 +993,7 @@ That peace is worth the effort.
 *Pathible makes creating and maintaining your Document Access Map simple. Keep everything organized in one secure place, with controlled access for the people who need it.*`,
     category: "digital_legacy",
     status: "published",
+    visibility: "subscribers",
     authorName: "Pathible Team",
     readTimeMinutes: 7,
     viewCount: 0,
