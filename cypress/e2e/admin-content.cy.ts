@@ -78,6 +78,23 @@ describe("Admin Content Manager E2E Test", () => {
     });
   });
 
+  after(() => {
+    // Final cleanup after all tests in this suite complete
+    // This ensures leftover articles are cleaned up even if afterEach fails
+    cy.log("**Final cleanup of test articles after all tests**");
+
+    // Sign in to clean up articles
+    setupClerkTestingToken();
+    cy.visit("/dashboard", { failOnStatusCode: false });
+    cy.wait(2000);
+
+    cy.cleanupTestArticles().then((result) => {
+      if (result.deletedCount > 0) {
+        cy.log(`Final cleanup: removed ${result.deletedCount} test article(s)`);
+      }
+    });
+  });
+
   afterEach(() => {
     // Clean up any test articles created during the test
     // This ensures no orphaned data even if test fails

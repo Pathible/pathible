@@ -1,18 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import {
-  Archive,
-  Eye,
-  FileText,
-  Globe,
-  Loader2,
-  Lock,
-  MoreHorizontal,
-  Plus,
-  Send,
-  Trash2,
-} from "lucide-react";
+import { Archive, Eye, FileText, Globe, Loader2, Lock, Plus, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -30,13 +19,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -279,7 +261,7 @@ export default function ContentManagerPage() {
                     <TableHead className="w-[110px]">Visibility</TableHead>
                     <TableHead className="w-[80px]">Views</TableHead>
                     <TableHead className="w-[100px]">Updated</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="w-[160px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -321,60 +303,78 @@ export default function ContentManagerPage() {
                       <TableCell>{article.viewCount}</TableCell>
                       <TableCell>{formatDate(article.updatedAt)}</TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                        <div
+                          className="flex items-center gap-1"
+                          role="group"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          {article.status === "published" && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={(e) => e.stopPropagation()}
+                              className="h-8 w-8"
+                              asChild
+                              title="View article"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
+                              <Link href={`/learn/${article.slug}`} target="_blank">
+                                <Eye className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                              </Link>
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {article.status === "published" && (
-                              <DropdownMenuItem asChild>
-                                <Link href={`/financial/articles/${article.slug}`} target="_blank">
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View
-                                </Link>
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            {article.status === "draft" && (
-                              <DropdownMenuItem onClick={() => handlePublish(article._id)}>
-                                <Send className="h-4 w-4 mr-2" />
-                                Publish
-                              </DropdownMenuItem>
-                            )}
-                            {article.status === "published" && (
-                              <DropdownMenuItem onClick={() => handleArchive(article._id)}>
-                                <Archive className="h-4 w-4 mr-2" />
-                                Archive
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            {article.visibility === "subscribers" ? (
-                              <DropdownMenuItem onClick={() => handleMakePublic(article._id)}>
-                                <Globe className="h-4 w-4 mr-2" />
-                                Make Public
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onClick={() => handleMakeSubscribers(article._id)}>
-                                <Lock className="h-4 w-4 mr-2" />
-                                Subscribers Only
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteClick(article._id, article.title)}
-                              className="text-destructive"
+                          )}
+                          {article.status === "draft" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handlePublish(article._id)}
+                              title="Publish article"
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <Send className="h-4 w-4 text-muted-foreground hover:text-green-600" />
+                            </Button>
+                          )}
+                          {article.status === "published" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleArchive(article._id)}
+                              title="Archive article"
+                            >
+                              <Archive className="h-4 w-4 text-muted-foreground hover:text-amber-600" />
+                            </Button>
+                          )}
+                          {article.visibility === "subscribers" ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleMakePublic(article._id)}
+                              title="Make public"
+                            >
+                              <Globe className="h-4 w-4 text-muted-foreground hover:text-blue-600" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleMakeSubscribers(article._id)}
+                              title="Make subscribers only"
+                            >
+                              <Lock className="h-4 w-4 text-muted-foreground hover:text-amber-600" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDeleteClick(article._id, article.title)}
+                            title="Delete article"
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
