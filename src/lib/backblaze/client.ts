@@ -36,10 +36,6 @@ export class BackblazeClient {
     );
 
     const url = `${B2_CONSTANTS.B2_API_BASE_URL}${B2_CONSTANTS.B2_API_PATH_PREFIX}/${B2_CONSTANTS.B2_API_VERSION}/b2_authorize_account`;
-    console.log("[B2 Client] Attempting authorization...", {
-      url,
-      keyId: `${this.config.keyId.substring(0, 8)}...`,
-    });
 
     const response = await fetch(url, {
       method: "GET",
@@ -79,10 +75,6 @@ export class BackblazeClient {
     }
 
     const data: B2AuthorizeAccountResponse = await response.json();
-    console.log("[B2 Client] Authorization successful", {
-      apiUrl: data.apiUrl,
-      downloadUrl: data.downloadUrl,
-    });
 
     this.authToken = data.authorizationToken;
     this.apiUrl = data.apiUrl;
@@ -110,11 +102,6 @@ export class BackblazeClient {
     const { authToken, apiUrl } = await this.ensureAuth();
 
     const url = `${apiUrl}${B2_CONSTANTS.B2_API_PATH_PREFIX}/${B2_CONSTANTS.B2_API_VERSION}/b2_get_upload_url`;
-
-    console.log("[B2 Client] Requesting upload URL...", {
-      url,
-      bucketId: this.config.bucketId,
-    });
 
     const response = await fetch(url, {
       method: "POST",
@@ -150,9 +137,7 @@ export class BackblazeClient {
       throw new Error(`Failed to get upload URL: ${errorMessage}`);
     }
 
-    const result = await response.json();
-    console.log("[B2 Client] Upload URL obtained successfully");
-    return result;
+    return response.json();
   }
 
   /**

@@ -189,8 +189,6 @@ export const updateSystemTemplate = mutation({
 
     await ctx.db.patch(args.templateId, updates);
 
-    console.log(`[Admin Email] Updated system template: ${template.name}`);
-
     return { success: true };
   },
 });
@@ -388,8 +386,6 @@ export const createTemplate = mutation({
       updatedAt: Date.now(),
     });
 
-    console.log(`[Admin Email] Created template: ${args.name}`);
-
     return templateId;
   },
 });
@@ -489,8 +485,6 @@ export const updateTemplate = mutation({
 
     await ctx.db.patch(args.templateId, updates);
 
-    console.log(`[Admin Email] Updated template: ${template.name}`);
-
     return { success: true };
   },
 });
@@ -510,8 +504,6 @@ export const deleteTemplate = mutation({
     }
 
     await ctx.db.delete(args.templateId);
-
-    console.log(`[Admin Email] Deleted template: ${template.name}`);
 
     return { success: true };
   },
@@ -1256,8 +1248,6 @@ export const sendEmail = action({
         status: "queued",
         campaignId,
       });
-
-      console.log(`[Admin Email] Queued ${result.queuedCount} emails for campaign ${campaignId}`);
 
       return {
         success: true,

@@ -438,10 +438,6 @@ export const updateHouseholdTier = mutation({
       updatedAt: Date.now(),
     });
 
-    console.log(
-      `[Admin] Updated household ${args.householdId} tier from ${household.subscriptionTier} to ${args.tier}`,
-    );
-
     return null;
   },
 });

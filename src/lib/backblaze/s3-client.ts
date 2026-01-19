@@ -65,15 +65,6 @@ export class BackblazeS3Client {
 
   constructor() {
     const config = getS3Config();
-
-    console.log("[B2 S3 Client] Initializing with config:", {
-      endpoint: config.endpoint,
-      region: config.region,
-      bucketName: config.bucketName,
-      hasAccessKeyId: !!config.accessKeyId,
-      hasSecretAccessKey: !!config.secretAccessKey,
-    });
-
     this.bucketName = config.bucketName;
 
     // Initialize S3 client with Backblaze B2 endpoint
@@ -255,17 +246,10 @@ export class BackblazeS3Client {
    */
   async testConnection(): Promise<boolean> {
     try {
-      console.log("[B2 S3 Client] Testing connection...");
-
       // Try to generate a presigned URL for a test key
       await this.getPresignedUploadUrl("connection-test/test.txt", "text/plain", { expiresIn: 60 });
-
-      console.log("[B2 S3 Client] Connection test successful");
       return true;
-    } catch (error) {
-      console.error("[B2 S3 Client] Connection test failed:", {
-        error: error instanceof Error ? error.message : String(error),
-      });
+    } catch {
       return false;
     }
   }

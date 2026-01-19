@@ -132,7 +132,6 @@ export const create = mutation({
     }
 
     const userId = identity.subject; // Clerk user ID
-    console.log(`[Profile] Creating profile for user ${userId}`);
 
     // Check if profile already exists
     const existing = await ctx.db
@@ -141,7 +140,6 @@ export const create = mutation({
       .unique();
 
     if (existing) {
-      console.log(`[Profile] Profile already exists: ${existing._id}`);
       throw new Error("Profile already exists");
     }
 
@@ -179,8 +177,6 @@ export const create = mutation({
       dateOfBirth: args.dateOfBirth,
       updatedAt: Date.now(),
     });
-
-    console.log(`[Profile] Created profile ${profileId} for user ${userId}`);
 
     return profileId;
   },
@@ -423,8 +419,6 @@ export const linkToClerkUser = mutation({
 
     const clerkUserId = identity.subject;
 
-    console.log(`[Migration] Linking profile for email ${args.email} to Clerk user ${clerkUserId}`);
-
     // First, check if a profile already exists for this Clerk user ID
     const existingClerkProfile = await ctx.db
       .query("profiles")
@@ -432,17 +426,13 @@ export const linkToClerkUser = mutation({
       .unique();
 
     if (existingClerkProfile) {
-      console.log(`[Migration] Profile already exists for Clerk user: ${existingClerkProfile._id}`);
       return existingClerkProfile._id;
     }
 
-    // Find profile by email pattern in the userId (Better Auth format)
-    // Better Auth often stores the email as part of the user identifier
-    // We'll look for any profile and check manually
+    // Find profile by email - Better Auth profiles have email stored on the profile
     const allProfiles = await ctx.db.query("profiles").collect();
 
-    // Find a profile that might match - look for non-Clerk formatted userId
-    // or try to match based on other criteria
+    // Find a profile that matches the provided email and hasn't been migrated yet
     let profileToMigrate = null;
 
     for (const profile of allProfiles) {
@@ -451,32 +441,22 @@ export const linkToClerkUser = mutation({
         continue;
       }
 
-      // If email matches what we're looking for, this is likely the profile
-      // Better Auth profiles might have email-based IDs or we match by name/other fields
-      if (!profile.deletedAt) {
+      // Match by email address
+      if (profile.email === args.email && !profile.deletedAt) {
         profileToMigrate = profile;
         break;
       }
     }
 
     if (!profileToMigrate) {
-      console.log(`[Migration] No unmigrated profile found for email ${args.email}`);
       return null;
     }
-
-    console.log(
-      `[Migration] Found profile to migrate: ${profileToMigrate._id} (old userId: ${profileToMigrate.userId})`,
-    );
 
     // Update the profile's userId to the Clerk user ID
     await ctx.db.patch(profileToMigrate._id, {
       userId: clerkUserId,
       updatedAt: Date.now(),
     });
-
-    console.log(
-      `[Migration] Successfully linked profile ${profileToMigrate._id} to Clerk user ${clerkUserId}`,
-    );
 
     return profileToMigrate._id;
   },
