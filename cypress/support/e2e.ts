@@ -72,7 +72,16 @@ Cypress.on("uncaught:exception", (err) => {
 
   // Example: Ignore Convex connection errors during tests
   if (err.message.includes("Convex") || err.message.includes("WebSocket")) {
-    cy.log("Ignoring Convex connection error in test environment");
+    console.log("Ignoring Convex connection error in test environment");
+    return false;
+  }
+
+  // Ignore Next.js Performance measurement errors (occurs on 404 pages)
+  if (
+    err.message.includes("Failed to execute 'measure' on 'Performance'") ||
+    err.message.includes("negative time stamp")
+  ) {
+    console.log("Ignoring Next.js Performance measurement error");
     return false;
   }
 

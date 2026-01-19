@@ -78,6 +78,50 @@ describe("Public Learn Page - Unauthenticated Access", () => {
   });
 });
 
+describe("Public Category Page - Category Grouping", () => {
+  beforeEach(() => {
+    cy.clearCookies();
+    cy.clearLocalStorage();
+    cy.window().then((win) => {
+      win.sessionStorage.clear();
+    });
+  });
+
+  it("should show 404 for non-existent category", () => {
+    cy.visit("/learn/category/non-existent-category", { failOnStatusCode: false });
+
+    cy.get("body", { timeout: 15000 }).should("be.visible");
+
+    // Should show 404 page
+    cy.contains("404", { timeout: 10000 }).should("be.visible");
+  });
+
+  it("should display category page for valid category slug", () => {
+    // Visit a valid category page
+    cy.visit("/learn/category/beliefs-values", { failOnStatusCode: false });
+
+    cy.get("body", { timeout: 15000 }).should("be.visible");
+
+    // Should show category title
+    cy.contains("Beliefs & Values", { timeout: 10000 }).should("be.visible");
+
+    // Should have back link to learn
+    cy.contains("Back to Learn", { timeout: 10000 }).should("be.visible");
+  });
+
+  it("should navigate back to learn from category page", () => {
+    cy.visit("/learn/category/beliefs-values", { failOnStatusCode: false });
+
+    cy.get("body", { timeout: 15000 }).should("be.visible");
+
+    // Click back link
+    cy.contains("Back to Learn", { timeout: 10000 }).click();
+
+    // Should be back on /learn
+    cy.url({ timeout: 10000 }).should("eq", `${Cypress.config().baseUrl}/learn`);
+  });
+});
+
 describe("Public Article Detail Page - Visibility Tests", () => {
   beforeEach(() => {
     cy.clearCookies();

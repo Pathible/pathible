@@ -131,3 +131,44 @@ export const ARTICLE_CATEGORY_OPTIONS = ARTICLE_CATEGORY_VALUES.map((value) => (
   value,
   label: ARTICLE_CATEGORY_LABELS[value],
 }));
+
+/**
+ * URL-friendly slugs for categories
+ * Maps category values to their slug equivalents (replaces underscores with hyphens)
+ */
+export const ARTICLE_CATEGORY_SLUGS: Record<ArticleCategory, string> = {
+  beliefs_values: "beliefs-values",
+  family_planning: "family-planning",
+  financial_clarity: "financial-clarity",
+  family_legacy: "family-legacy",
+  legal_basics: "legal-basics",
+  insurance_essentials: "insurance-essentials",
+  digital_access: "digital-access",
+  after_loss: "after-loss",
+  more: "more",
+};
+
+/**
+ * Reverse mapping: slug to category value
+ */
+export const SLUG_TO_CATEGORY: Record<string, ArticleCategory> = Object.fromEntries(
+  Object.entries(ARTICLE_CATEGORY_SLUGS).map(([category, slug]) => [
+    slug,
+    category as ArticleCategory,
+  ]),
+) as Record<string, ArticleCategory>;
+
+/**
+ * Convert a category value to a URL slug
+ */
+export function categoryToSlug(category: ArticleCategory): string {
+  return ARTICLE_CATEGORY_SLUGS[category] ?? category.replace(/_/g, "-");
+}
+
+/**
+ * Convert a URL slug to a category value
+ * Returns undefined if the slug doesn't match any category
+ */
+export function slugToCategory(slug: string): ArticleCategory | undefined {
+  return SLUG_TO_CATEGORY[slug];
+}

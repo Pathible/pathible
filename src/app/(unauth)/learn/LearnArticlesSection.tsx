@@ -1,15 +1,120 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { ArrowRight, BookOpen, Loader2 } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { PublicArticleCard, SubscriberTeaser } from "@/components/learning/public";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
+import {
+  ARTICLE_CATEGORY_LABELS,
+  ARTICLE_CATEGORY_VALUES,
+  type ArticleCategory,
+  categoryToSlug,
+  LEGACY_CATEGORY_MAPPING,
+} from "@/convex/shared/categories";
+
+const ARTICLES_PER_CATEGORY = 4;
+
+type PublicArticle = {
+  _id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  category: string;
+  readTimeMinutes: number;
+  featuredImageUrl?: string;
+  publishedAt?: number;
+};
+
+/**
+ * Get display label for a category, handling both legacy and new category values
+ */
+function getCategoryDisplayLabel(category: string): string {
+  if (category in LEGACY_CATEGORY_MAPPING) {
+    const newCategory = LEGACY_CATEGORY_MAPPING[category];
+    return ARTICLE_CATEGORY_LABELS[newCategory];
+  }
+  if (category in ARTICLE_CATEGORY_LABELS) {
+    return ARTICLE_CATEGORY_LABELS[category as ArticleCategory];
+  }
+  return category;
+}
+
+/**
+ * Normalize a category value (handle legacy values)
+ */
+function normalizeCategory(category: string): ArticleCategory {
+  if (category in LEGACY_CATEGORY_MAPPING) {
+    return LEGACY_CATEGORY_MAPPING[category];
+  }
+  return category as ArticleCategory;
+}
+
+/**
+ * Group articles by category
+ */
+function groupArticlesByCategory(articles: PublicArticle[]): Map<ArticleCategory, PublicArticle[]> {
+  const grouped = new Map<ArticleCategory, PublicArticle[]>();
+
+  for (const article of articles) {
+    const category = normalizeCategory(article.category);
+    const existing = grouped.get(category) ?? [];
+    existing.push(article);
+    grouped.set(category, existing);
+  }
+
+  return grouped;
+}
+
+interface CategorySectionProps {
+  category: ArticleCategory;
+  articles: PublicArticle[];
+}
+
+function CategorySection({ category, articles }: CategorySectionProps) {
+  const displayedArticles = articles.slice(0, ARTICLES_PER_CATEGORY);
+  const hasMore = articles.length > ARTICLES_PER_CATEGORY;
+  const categorySlug = categoryToSlug(category);
+
+  return (
+    <div className="mb-16 last:mb-0">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="font-crimson text-2xl sm:text-3xl">{getCategoryDisplayLabel(category)}</h3>
+        {hasMore && (
+          <Link
+            href={`/learn/category/${categorySlug}`}
+            className="group flex items-center gap-1 text-sm font-medium text-pathible-forest hover:underline"
+          >
+            View all {articles.length}
+            <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        )}
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {displayedArticles.map((article) => (
+          <PublicArticleCard key={article._id} article={article} />
+        ))}
+      </div>
+
+      {hasMore && (
+        <div className="mt-6 text-center sm:hidden">
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link href={`/learn/category/${categorySlug}`}>
+              View all {articles.length} articles
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function LearnArticlesSection() {
   const publicArticles = useQuery(api.articles.listPublicArticles, {
-    limit: 20,
+    limit: 100, // Fetch more to ensure we have enough for all categories
   });
   const subscriberPreviews = useQuery(api.articles.listSubscriberArticlePreviews, { limit: 6 });
 
@@ -28,9 +133,17 @@ export function LearnArticlesSection() {
   const hasPublicArticles = publicArticles && publicArticles.length > 0;
   const hasSubscriberArticles = subscriberPreviews && subscriberPreviews.length > 0;
 
+  // Group articles by category
+  const groupedArticles = hasPublicArticles ? groupArticlesByCategory(publicArticles) : new Map();
+
+  // Get categories in the preferred order (based on ARTICLE_CATEGORY_VALUES)
+  const orderedCategories = ARTICLE_CATEGORY_VALUES.filter(
+    (category) => groupedArticles.has(category) && (groupedArticles.get(category)?.length ?? 0) > 0,
+  );
+
   return (
     <>
-      {/* Public Articles Section */}
+      {/* Public Articles Section - Grouped by Category */}
       <section>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12">
@@ -40,12 +153,14 @@ export function LearnArticlesSection() {
             </p>
           </div>
 
-          {hasPublicArticles ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {publicArticles.map((article) => (
-                <PublicArticleCard key={article._id} article={article} />
-              ))}
-            </div>
+          {orderedCategories.length > 0 ? (
+            orderedCategories.map((category) => (
+              <CategorySection
+                key={category}
+                category={category}
+                articles={groupedArticles.get(category) ?? []}
+              />
+            ))
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-2xl">
               <BookOpen className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
