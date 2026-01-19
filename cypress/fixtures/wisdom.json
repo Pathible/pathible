@@ -1,0 +1,53 @@
+{
+  "testEntries": [
+    {
+      "title": "E2E Test Life Lesson",
+      "content": "This is a test life lesson entry created during E2E testing. The most important lesson I learned was to always verify your tests clean up after themselves.",
+      "category": "lessons",
+      "isPublished": false
+    },
+    {
+      "title": "E2E Test Family Story",
+      "content": "This is a test family story entry. Every year, our family would gather for E2E testing to ensure the application worked perfectly.",
+      "category": "stories",
+      "isPublished": true
+    },
+    {
+      "title": "E2E Test Advice",
+      "content": "Here is some test advice for future developers: Always write comprehensive E2E tests before shipping features.",
+      "category": "advice",
+      "isPublished": false
+    },
+    {
+      "title": "E2E Test Tradition",
+      "content": "Our family has a tradition of running automated tests every morning. It keeps us grounded and ensures quality.",
+      "category": "traditions",
+      "isPublished": true
+    },
+    {
+      "title": "E2E Test Values",
+      "content": "Quality and reliability are values we hold dear. These tests represent our commitment to excellence.",
+      "category": "values",
+      "isPublished": false
+    }
+  ],
+  "testCoreBeliefs": [
+    {
+      "title": "E2E Test Belief 1",
+      "description": "Testing is not optional, it is essential for quality software.",
+      "order": 1
+    },
+    {
+      "title": "E2E Test Belief 2",
+      "description": "Automated tests save time and reduce bugs in the long run.",
+      "order": 2
+    }
+  ],
+  "categories": [
+    { "value": "values", "label": "Values" },
+    { "value": "lessons", "label": "Life Lessons" },
+    { "value": "stories", "label": "Stories" },
+    { "value": "advice", "label": "Advice" },
+    { "value": "traditions", "label": "Traditions" }
+  ]
+}

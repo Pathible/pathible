@@ -135,6 +135,39 @@ declare global {
         success: boolean;
         message: string;
       }>;
+
+      /**
+       * Clean up test financial data (accounts, properties, insurance policies)
+       * Deletes all financial data created during E2E tests for the test user
+       * Must be called AFTER signing in with Clerk.
+       * SECURITY: Only works for test user emails (+clerk_test, +e2e_test, etc.)
+       * @example cy.cleanupTestFinancialData()
+       */
+      cleanupTestFinancialData(): Chainable<{
+        success: boolean;
+        message: string;
+        deletedCounts: {
+          accounts: number;
+          properties: number;
+          policies: number;
+        };
+      }>;
+
+      /**
+       * Clean up test wisdom data (entries, core beliefs)
+       * Deletes all wisdom data created during E2E tests for the test user
+       * Must be called AFTER signing in with Clerk.
+       * SECURITY: Only works for test user emails (+clerk_test, +e2e_test, etc.)
+       * @example cy.cleanupTestWisdomData()
+       */
+      cleanupTestWisdomData(): Chainable<{
+        success: boolean;
+        message: string;
+        deletedCounts: {
+          entries: number;
+          coreBeliefs: number;
+        };
+      }>;
     }
   }
 }
@@ -578,6 +611,123 @@ Cypress.Commands.add(
             return result as SetSubscriptionTierResult;
           });
       }) as Cypress.Chainable<SetSubscriptionTierResult>;
+  },
+);
+
+// Result type for cleanupTestFinancialData
+type CleanupTestFinancialDataResult = {
+  success: boolean;
+  message: string;
+  deletedCounts: {
+    accounts: number;
+    properties: number;
+    policies: number;
+  };
+};
+
+/**
+ * Clean up test financial data
+ * Note: This uses resetTestUser which already deletes financial data as part of its cleanup.
+ * For granular cleanup, we log the counts from the reset result.
+ */
+Cypress.Commands.add(
+  "cleanupTestFinancialData",
+  (): Cypress.Chainable<CleanupTestFinancialDataResult> => {
+    cy.log("**Cleaning up test financial data**");
+
+    return cy
+      .window({ timeout: 30000 })
+      .then(
+        (
+          win,
+        ): CleanupTestFinancialDataResult | Cypress.Chainable<CleanupTestFinancialDataResult> => {
+          const testHelpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+            .__CONVEX_TEST_HELPERS__;
+
+          if (!testHelpers) {
+            console.error("Convex test helpers not found on window.");
+            return {
+              success: false,
+              message: "Convex test helpers not available",
+              deletedCounts: {
+                accounts: 0,
+                properties: 0,
+                policies: 0,
+              },
+            };
+          }
+
+          // Use resetTestUser which cleans up all data including financial
+          return cy.wrap(testHelpers.resetTestUser(), { timeout: 30000 }).then((rawResult) => {
+            const result = rawResult as ResetTestUserResult;
+            console.log("Cleanup financial data result:", result);
+            return {
+              success: result.success,
+              message: result.message,
+              deletedCounts: {
+                accounts: result.deleted.financialAccounts,
+                properties: result.deleted.properties,
+                policies: result.deleted.insurancePolicies,
+              },
+            } as CleanupTestFinancialDataResult;
+          });
+        },
+      ) as Cypress.Chainable<CleanupTestFinancialDataResult>;
+  },
+);
+
+// Result type for cleanupTestWisdomData
+type CleanupTestWisdomDataResult = {
+  success: boolean;
+  message: string;
+  deletedCounts: {
+    entries: number;
+    coreBeliefs: number;
+  };
+};
+
+/**
+ * Clean up test wisdom data
+ * Note: This uses resetTestUser which already deletes wisdom data as part of its cleanup.
+ * For granular cleanup, we log the counts from the reset result.
+ */
+Cypress.Commands.add(
+  "cleanupTestWisdomData",
+  (): Cypress.Chainable<CleanupTestWisdomDataResult> => {
+    cy.log("**Cleaning up test wisdom data**");
+
+    return cy
+      .window({ timeout: 30000 })
+      .then((win): CleanupTestWisdomDataResult | Cypress.Chainable<CleanupTestWisdomDataResult> => {
+        const testHelpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+          .__CONVEX_TEST_HELPERS__;
+
+        if (!testHelpers) {
+          console.error("Convex test helpers not found on window.");
+          return {
+            success: false,
+            message: "Convex test helpers not available",
+            deletedCounts: {
+              entries: 0,
+              coreBeliefs: 0,
+            },
+          };
+        }
+
+        // Use resetTestUser which cleans up all data including wisdom
+        return cy.wrap(testHelpers.resetTestUser(), { timeout: 30000 }).then((rawResult) => {
+          const result = rawResult as ResetTestUserResult;
+          console.log("Cleanup wisdom data result:", result);
+          return {
+            success: result.success,
+            message: result.message,
+            deletedCounts: {
+              entries: result.deleted.wisdomEntries,
+              coreBeliefs: result.deleted.coreBeliefs,
+            },
+          } as CleanupTestWisdomDataResult;
+        });
+      }) as Cypress.Chainable<CleanupTestWisdomDataResult>;
   },
 );
 
