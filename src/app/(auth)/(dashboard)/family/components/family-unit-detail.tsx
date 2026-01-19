@@ -31,6 +31,16 @@ interface FamilyUnitDetailProps {
   unitId: string;
 }
 
+// Format timestamp to YYYY-MM-DD in local timezone (not UTC)
+// Using toISOString() would shift dates backward for US timezones
+function formatDateForInput(timestamp: number): string {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 // Helper to build mutation args from form state
 // Converts empty strings to undefined for optional fields
 function buildMutationArgs(formState: MemberFormState) {
@@ -111,9 +121,7 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
       phone: member.phone || "",
       relationshipType: member.relationshipType,
       gender: member.gender || "",
-      dateOfBirth: member.dateOfBirth
-        ? new Date(member.dateOfBirth).toISOString().split("T")[0]
-        : "",
+      dateOfBirth: member.dateOfBirth ? formatDateForInput(member.dateOfBirth) : "",
       address: member.address || "",
       city: member.city || "",
       county: member.county || "",

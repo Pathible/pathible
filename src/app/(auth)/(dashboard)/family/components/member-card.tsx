@@ -120,22 +120,36 @@ export function MemberCard({ member, onEdit, onRemove }: MemberCardProps) {
     return relationshipLabels[relationship] || "Family Member";
   };
 
+  // Format birth date using UTC to avoid timezone shifts
+  // Dates are stored as UTC midnight, so we must display using UTC
   const formatBirthDate = (timestamp?: number) => {
     if (!timestamp) return null;
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const date = new Date(timestamp);
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    return `${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
   };
 
+  // Calculate age using UTC dates to match stored birth dates
   const calculateAge = (birthTimestamp?: number) => {
     if (!birthTimestamp) return null;
     const birthDate = new Date(birthTimestamp);
     const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
+    const monthDiff = today.getUTCMonth() - birthDate.getUTCMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getUTCDate() < birthDate.getUTCDate())) {
       age--;
     }
     return age;
