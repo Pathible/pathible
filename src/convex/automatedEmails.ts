@@ -163,6 +163,8 @@ export const getActiveSystemTemplates = internalQuery({
 
 /**
  * Get recipients based on dynamic trigger conditions from a system template
+ *
+ * Performance optimized: batch-fetches all related data upfront to avoid N+1 queries
  */
 export const getAutomatedEmailRecipients = internalQuery({
   args: {
@@ -173,8 +175,23 @@ export const getAutomatedEmailRecipients = internalQuery({
     const { triggerConditions } = args;
     const now = Date.now();
 
-    // Get all profiles
+    // Batch fetch all data upfront to avoid N+1 queries
     const profiles = await ctx.db.query("profiles").collect();
+    const allPreferences = await ctx.db.query("userPreferences").collect();
+    const allMemberships = await ctx.db.query("householdMemberships").collect();
+
+    // Get unique household IDs from memberships
+    const householdIds = [...new Set(allMemberships.map((m) => m.householdId))];
+    const allHouseholds = await Promise.all(householdIds.map((id) => ctx.db.get(id)));
+
+    // Create lookup maps for O(1) access
+    const preferencesMap = new Map(allPreferences.map((p) => [p.profileId.toString(), p]));
+    const membershipMap = new Map(allMemberships.map((m) => [m.userId.toString(), m]));
+    const householdMap = new Map(
+      allHouseholds
+        .filter((h): h is NonNullable<typeof h> => h !== null)
+        .map((h) => [h._id.toString(), h]),
+    );
 
     const recipients: Array<{
       profileId: Id<"profiles">;
@@ -204,25 +221,17 @@ export const getAutomatedEmailRecipients = internalQuery({
         if (profile.onboardingCompletedAt > cutoffTime) continue;
       }
 
-      // Check email notifications preference if required
+      // Check email notifications preference if required (using lookup map)
       if (triggerConditions.requireEmailNotifications) {
-        const preferences = await ctx.db
-          .query("userPreferences")
-          .withIndex("by_profile", (q) => q.eq("profileId", profile._id))
-          .unique();
-
+        const preferences = preferencesMap.get(profile._id.toString());
         if (!preferences?.emailNotifications) continue;
       }
 
-      // Get household membership for vault check and household name
-      const membership = await ctx.db
-        .query("householdMemberships")
-        .withIndex("by_user", (q) => q.eq("userId", profile._id))
-        .first();
-
+      // Get household membership for vault check and household name (using lookup map)
+      const membership = membershipMap.get(profile._id.toString());
       if (!membership) continue;
 
-      const household = await ctx.db.get(membership.householdId);
+      const household = householdMap.get(membership.householdId.toString());
       if (!household) continue;
 
       // Check vault empty condition
@@ -247,7 +256,9 @@ export const getAutomatedEmailRecipients = internalQuery({
 
 /**
  * Legacy query for backward compatibility
- * Returns recipients for the vault_empty email (same logic as getAutomatedEmailRecipients)
+ * Returns recipients for the vault_empty email
+ *
+ * Performance optimized: delegates to getAutomatedEmailRecipients with proper trigger conditions
  */
 export const getVaultEmptyRecipients = internalQuery({
   args: {},
@@ -263,11 +274,34 @@ export const getVaultEmptyRecipients = internalQuery({
       householdName?: string;
     }>
   > => {
-    const now = Date.now();
-    const minDaysSinceOnboarding = 3;
+    // Reuse the optimized getAutomatedEmailRecipients with vault_empty conditions
+    // This avoids code duplication and ensures consistent N+1 fix
+    const triggerConditions = {
+      onboardingStatus: "complete",
+      minDaysSinceOnboarding: 3,
+      vaultEmpty: true,
+      requireEmailNotifications: true,
+    };
 
-    // Get all profiles
+    const now = Date.now();
+
+    // Batch fetch all data upfront to avoid N+1 queries
     const profiles = await ctx.db.query("profiles").collect();
+    const allPreferences = await ctx.db.query("userPreferences").collect();
+    const allMemberships = await ctx.db.query("householdMemberships").collect();
+
+    // Get unique household IDs from memberships
+    const householdIds = [...new Set(allMemberships.map((m) => m.householdId))];
+    const allHouseholds = await Promise.all(householdIds.map((id) => ctx.db.get(id)));
+
+    // Create lookup maps for O(1) access
+    const preferencesMap = new Map(allPreferences.map((p) => [p.profileId.toString(), p]));
+    const membershipMap = new Map(allMemberships.map((m) => [m.userId.toString(), m]));
+    const householdMap = new Map(
+      allHouseholds
+        .filter((h): h is NonNullable<typeof h> => h !== null)
+        .map((h) => [h._id.toString(), h]),
+    );
 
     const recipients: Array<{
       profileId: Id<"profiles">;
@@ -285,31 +319,23 @@ export const getVaultEmptyRecipients = internalQuery({
       if (!profile.email) continue;
 
       // Check onboarding status
-      if (profile.onboardingStatus !== "complete") continue;
+      if (profile.onboardingStatus !== triggerConditions.onboardingStatus) continue;
 
       // Check minimum days since onboarding
       if (!profile.onboardingCompletedAt) continue;
-      const minMs = minDaysSinceOnboarding * 24 * 60 * 60 * 1000;
+      const minMs = triggerConditions.minDaysSinceOnboarding * 24 * 60 * 60 * 1000;
       const cutoffTime = now - minMs;
       if (profile.onboardingCompletedAt > cutoffTime) continue;
 
-      // Check email notifications preference
-      const preferences = await ctx.db
-        .query("userPreferences")
-        .withIndex("by_profile", (q) => q.eq("profileId", profile._id))
-        .unique();
-
+      // Check email notifications preference (using lookup map)
+      const preferences = preferencesMap.get(profile._id.toString());
       if (!preferences?.emailNotifications) continue;
 
-      // Get household membership for vault check and household name
-      const membership = await ctx.db
-        .query("householdMemberships")
-        .withIndex("by_user", (q) => q.eq("userId", profile._id))
-        .first();
-
+      // Get household membership (using lookup map)
+      const membership = membershipMap.get(profile._id.toString());
       if (!membership) continue;
 
-      const household = await ctx.db.get(membership.householdId);
+      const household = householdMap.get(membership.householdId.toString());
       if (!household) continue;
 
       // Check vault empty condition

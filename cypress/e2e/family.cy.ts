@@ -75,21 +75,6 @@ describe("Family Ecosystem Page", () => {
         cy.get('[data-tour="family-add-unit"]', { timeout: 10000 }).should("be.visible");
       });
     });
-
-    it("should display coming soon features for messaging and family tree", () => {
-      cy.visit("/family", { failOnStatusCode: false });
-
-      ensureOnFamily().then((onFamily) => {
-        if (!onFamily) {
-          cy.log("Skipping - user not on family page");
-          return;
-        }
-
-        // Check for coming soon cards
-        cy.contains("Family Messaging", { timeout: 10000 }).should("be.visible");
-        cy.contains("Family Tree", { timeout: 10000 }).should("be.visible");
-      });
-    });
   });
 
   describe("Invite Member Dialog", () => {

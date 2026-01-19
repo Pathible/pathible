@@ -31,46 +31,27 @@ interface FamilyUnitDetailProps {
   unitId: string;
 }
 
-// Type for relationship and other union types
-type RelationshipType =
-  | "parent"
-  | "child"
-  | "spouse"
-  | "partner"
-  | "sibling"
-  | "grandparent"
-  | "grandchild"
-  | "aunt_uncle"
-  | "niece_nephew"
-  | "cousin"
-  | "in_law"
-  | "other";
-
-type Gender = "male" | "female" | "prefer_not_to_say";
-type MaritalStatus =
-  | "single"
-  | "married"
-  | "divorced"
-  | "widowed"
-  | "domestic_partnership"
-  | "separated";
-
 // Helper to build mutation args from form state
+// Converts empty strings to undefined for optional fields
 function buildMutationArgs(formState: MemberFormState) {
+  // Helper to convert empty strings to undefined (for union types that include "")
+  const toUndefinedIfEmpty = <T extends string>(val: T | ""): Exclude<T, ""> | undefined =>
+    val === "" ? undefined : (val as Exclude<T, "">);
+
   return {
     firstName: formState.firstName,
     lastName: formState.lastName,
     email: formState.email || undefined,
     phone: formState.phone || undefined,
-    gender: (formState.gender as Gender) || undefined,
+    gender: toUndefinedIfEmpty(formState.gender),
     dateOfBirth: formState.dateOfBirth ? new Date(formState.dateOfBirth).getTime() : undefined,
     address: formState.address || undefined,
     city: formState.city || undefined,
     county: formState.county || undefined,
     state: formState.state || undefined,
     zipCode: formState.zipCode || undefined,
-    maritalStatus: (formState.maritalStatus as MaritalStatus) || undefined,
-    relationshipType: formState.relationshipType as RelationshipType,
+    maritalStatus: toUndefinedIfEmpty(formState.maritalStatus),
+    relationshipType: formState.relationshipType,
   };
 }
 

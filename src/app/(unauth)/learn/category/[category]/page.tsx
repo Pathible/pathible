@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicPageLayout } from "@/components/PublicPageLayout";
 import {
@@ -52,12 +53,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12">
             <nav className="mb-4">
-              <a
+              <Link
                 href="/learn"
                 className="text-sm text-muted-foreground hover:text-pathible-forest transition-colors"
               >
                 ← Back to Learn
-              </a>
+              </Link>
             </nav>
             <h1 className="font-crimson text-3xl sm:text-4xl mb-4">{categoryLabel}</h1>
             <p className="text-muted-foreground text-lg max-w-2xl">

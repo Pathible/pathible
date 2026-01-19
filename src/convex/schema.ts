@@ -688,7 +688,9 @@ export default defineSchema({
     .index("by_category", ["category"])
     .index("by_status_and_publishedAt", ["status", "publishedAt"])
     .index("by_visibility", ["visibility"])
-    .index("by_status_and_visibility", ["status", "visibility"]),
+    .index("by_status_and_visibility", ["status", "visibility"])
+    .index("by_status_category", ["status", "category"])
+    .index("by_status_visibility_category", ["status", "visibility", "category"]),
 
   /**
    * User article reads - tracks which articles each user has read

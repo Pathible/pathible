@@ -1,6 +1,13 @@
 import { useCallback, useState } from "react";
 
 /**
+ * Utility type to extract keys that have string values
+ */
+type StringKeys<T> = {
+  [K in keyof T]: T[K] extends string ? K : never;
+}[keyof T];
+
+/**
  * Hook for managing form field state with reset capability
  *
  * @example
@@ -37,10 +44,9 @@ export function useFormState<T extends Record<string, unknown>>(initialValues: T
   }, [initialValues]);
 
   const getInputProps = useCallback(
-    (field: keyof T) => ({
+    <K extends StringKeys<T>>(field: K) => ({
       value: values[field] as string,
-      onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-        setField(field, e.target.value as T[typeof field]),
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setField(field, e.target.value as T[K]),
     }),
     [values, setField],
   );

@@ -114,7 +114,7 @@ function CategorySection({ category, articles }: CategorySectionProps) {
 
 export function LearnArticlesSection() {
   const publicArticles = useQuery(api.articles.listPublicArticles, {
-    limit: 100, // Fetch more to ensure we have enough for all categories
+    limit: 50, // Max limit enforced by backend
   });
   const subscriberPreviews = useQuery(api.articles.listSubscriberArticlePreviews, { limit: 6 });
 

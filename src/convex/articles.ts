@@ -100,18 +100,25 @@ export const listPublished = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 20;
+    // Enforce maximum limit to prevent abuse
+    const MAX_LIMIT = 50;
+    const limit = Math.min(args.limit ?? 20, MAX_LIMIT);
 
-    let articles = await ctx.db
-      .query("educationalArticles")
-      .withIndex("by_status", (q) => q.eq("status", "published"))
-      .order("desc")
-      .take(limit);
-
-    // Filter by category if provided
-    if (args.category) {
-      articles = articles.filter((a) => a.category === args.category);
-    }
+    // Use composite index when category is provided, otherwise use simple status index
+    const category = args.category;
+    const articles = category
+      ? await ctx.db
+          .query("educationalArticles")
+          .withIndex("by_status_category", (q) =>
+            q.eq("status", "published").eq("category", category),
+          )
+          .order("desc")
+          .take(limit)
+      : await ctx.db
+          .query("educationalArticles")
+          .withIndex("by_status", (q) => q.eq("status", "published"))
+          .order("desc")
+          .take(limit);
 
     return articles.map((article) => ({
       _id: article._id,
@@ -149,21 +156,27 @@ export const listPublicArticles = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 20;
+    // Enforce maximum limit to prevent abuse (cap at 50 regardless of client input)
+    const MAX_LIMIT = 50;
+    const limit = Math.min(args.limit ?? 20, MAX_LIMIT);
 
-    // Use composite index for efficient querying
-    let articles = await ctx.db
-      .query("educationalArticles")
-      .withIndex("by_status_and_visibility", (q) =>
-        q.eq("status", "published").eq("visibility", "public"),
-      )
-      .order("desc")
-      .take(limit);
-
-    // Filter by category if provided
-    if (args.category) {
-      articles = articles.filter((a) => a.category === args.category);
-    }
+    // Use composite index when category is provided, otherwise use status+visibility index
+    const category = args.category;
+    const articles = category
+      ? await ctx.db
+          .query("educationalArticles")
+          .withIndex("by_status_visibility_category", (q) =>
+            q.eq("status", "published").eq("visibility", "public").eq("category", category),
+          )
+          .order("desc")
+          .take(limit)
+      : await ctx.db
+          .query("educationalArticles")
+          .withIndex("by_status_and_visibility", (q) =>
+            q.eq("status", "published").eq("visibility", "public"),
+          )
+          .order("desc")
+          .take(limit);
 
     return articles.map((article) => ({
       _id: article._id,
@@ -198,7 +211,9 @@ export const listSubscriberArticlePreviews = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 10;
+    // Enforce maximum limit to prevent abuse
+    const MAX_LIMIT = 50;
+    const limit = Math.min(args.limit ?? 10, MAX_LIMIT);
 
     // Get subscriber-only published articles
     const articles = await ctx.db

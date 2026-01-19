@@ -18,21 +18,47 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Union types for form fields
+export type RelationshipType =
+  | "parent"
+  | "child"
+  | "spouse"
+  | "partner"
+  | "sibling"
+  | "grandparent"
+  | "grandchild"
+  | "aunt_uncle"
+  | "niece_nephew"
+  | "cousin"
+  | "in_law"
+  | "other";
+
+export type Gender = "male" | "female" | "prefer_not_to_say" | "";
+
+export type MaritalStatus =
+  | "single"
+  | "married"
+  | "divorced"
+  | "widowed"
+  | "domestic_partnership"
+  | "separated"
+  | "";
+
 // Form state type - consolidates all form fields into single object
 export interface MemberFormState {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
-  relationshipType: string;
-  gender: string;
+  relationshipType: RelationshipType;
+  gender: Gender;
   dateOfBirth: string;
   address: string;
   city: string;
   county: string;
   state: string;
   zipCode: string;
-  maritalStatus: string;
+  maritalStatus: MaritalStatus;
 }
 
 export const INITIAL_FORM_STATE: MemberFormState = {
@@ -159,7 +185,7 @@ export function MemberFormDialog({
                 <Label htmlFor="gender">Gender</Label>
                 <Select
                   value={formState.gender}
-                  onValueChange={(value) => onFormChange({ gender: value })}
+                  onValueChange={(value: string) => onFormChange({ gender: value as Gender | "" })}
                 >
                   <SelectTrigger id="gender">
                     <SelectValue placeholder="Select gender" />
@@ -179,7 +205,9 @@ export function MemberFormDialog({
                 <Label htmlFor="relationshipType">Relationship *</Label>
                 <Select
                   value={formState.relationshipType}
-                  onValueChange={(value) => onFormChange({ relationshipType: value })}
+                  onValueChange={(value: string) =>
+                    onFormChange({ relationshipType: value as RelationshipType })
+                  }
                   required
                 >
                   <SelectTrigger id="relationshipType">
@@ -198,7 +226,9 @@ export function MemberFormDialog({
                 <Label htmlFor="maritalStatus">Marital Status</Label>
                 <Select
                   value={formState.maritalStatus}
-                  onValueChange={(value) => onFormChange({ maritalStatus: value })}
+                  onValueChange={(value: string) =>
+                    onFormChange({ maritalStatus: value as MaritalStatus | "" })
+                  }
                 >
                   <SelectTrigger id="maritalStatus">
                     <SelectValue placeholder="Select marital status" />

@@ -613,35 +613,26 @@ export const getQueueStats = query({
   handler: async (ctx) => {
     await requireAdmin(ctx);
 
-    const queued = await ctx.db
-      .query("emailQueue")
-      .withIndex("by_status", (q) => q.eq("status", "queued"))
-      .collect();
+    // Single query to get all emails, count by status in memory
+    const allEmails = await ctx.db.query("emailQueue").order("desc").collect();
 
-    const processing = await ctx.db
-      .query("emailQueue")
-      .withIndex("by_status", (q) => q.eq("status", "processing"))
-      .collect();
+    // Count by status
+    const stats = { queued: 0, processing: 0, sent: 0, failed: 0 };
+    for (const email of allEmails) {
+      if (email.status in stats) {
+        stats[email.status]++;
+      }
+    }
 
-    const sent = await ctx.db
-      .query("emailQueue")
-      .withIndex("by_status", (q) => q.eq("status", "sent"))
-      .collect();
-
-    const failed = await ctx.db
-      .query("emailQueue")
-      .withIndex("by_status", (q) => q.eq("status", "failed"))
-      .collect();
-
-    // Get 10 most recent emails for activity feed
-    const allEmails = await ctx.db.query("emailQueue").order("desc").take(10);
+    // Get 10 most recent for activity feed (already sorted desc)
+    const recentEmails = allEmails.slice(0, 10);
 
     return {
-      queued: queued.length,
-      processing: processing.length,
-      sent: sent.length,
-      failed: failed.length,
-      recentEmails: allEmails.map((e) => ({
+      queued: stats.queued,
+      processing: stats.processing,
+      sent: stats.sent,
+      failed: stats.failed,
+      recentEmails: recentEmails.map((e) => ({
         _id: e._id,
         to: e.to,
         subject: e.subject,
@@ -1198,8 +1189,8 @@ export const sendEmail = action({
     errorMessage?: string;
     campaignId?: string;
   }> => {
-    // Get current admin profile
-    const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal, {});
+    // Verify admin access and get profile
+    const { profile } = await ctx.runQuery(internal.auth.requireAdminInternal, {});
 
     try {
       if (args.recipientEmails.length === 0) {
@@ -1316,7 +1307,13 @@ export const sendTestEmail = action({
   returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
   handler: async (ctx, args) => {
     // Verify admin access
-    const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal, {});
+    const { profile } = await ctx.runQuery(internal.auth.requireAdminInternal, {});
+
+    // Validate email format
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!EMAIL_REGEX.test(args.toEmail)) {
+      return { success: false, error: "Invalid email format" };
+    }
 
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);

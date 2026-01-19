@@ -723,6 +723,36 @@ export const requireAuthInternal = internalQuery({
 });
 
 /**
+ * Internal Query: Require admin role (for use in actions)
+ * Throws if not authenticated or not an admin
+ */
+export const requireAdminInternal = internalQuery({
+  args: {},
+  returns: v.object({
+    user: v.object({
+      _id: v.string(),
+      email: v.string(),
+    }),
+    profile: profileReturnValidator,
+  }),
+  handler: async (ctx) => {
+    const auth = await requireAuth(ctx);
+
+    // Check if user has admin role
+    const userRole = await ctx.db
+      .query("userRoles")
+      .withIndex("by_userId", (q) => q.eq("userId", auth.user._id))
+      .unique();
+
+    if (!userRole || userRole.role !== "admin") {
+      throw new Error("Admin access required");
+    }
+
+    return auth;
+  },
+});
+
+/**
  * Internal Query: Require household access (for use in actions)
  * Returns membership or throws if not authorized
  */

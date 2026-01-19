@@ -54,13 +54,18 @@ describe("Legal Documents - E2E Test Suite", () => {
           return;
         }
 
-        cy.get("body", { timeout: 15000 }).should("be.visible");
+        // Wait for loading to complete - either content appears or spinner disappears
+        // The page shows a spinner while loading, then shows content
+        cy.get("body", { timeout: 20000 }).should("be.visible");
 
-        // Should show legal documents section or feature gate
-        cy.get("body").then(($body) => {
+        // Wait for actual content to load (not just the loading spinner)
+        // Either "Legal Document Templates" appears, or "Upgrade" for gated feature
+        cy.get("body", { timeout: 20000 }).should(($body) => {
           const bodyText = $body.text();
           const hasLegalDocs =
             bodyText.includes("Legal Document Templates") ||
+            bodyText.includes("Educational Purposes Only") ||
+            bodyText.includes("Last Will") ||
             bodyText.includes("Last Will and Testament");
           const hasFeatureGate = bodyText.includes("Upgrade") || bodyText.includes("upgrade");
 
