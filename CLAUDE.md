@@ -25,8 +25,16 @@ pnpm test:e2e
 
 - **Never consider a feature complete** until both `pnpm test` AND `pnpm test:e2e` pass
 - **New user-facing features require E2E tests** - add tests in `cypress/e2e/`
-- **Tests must clean up after themselves** - use `cy.cleanupTestArticles()` and similar helpers
+- **New utility functions require unit tests** - add tests in `src/lib/__tests__/`
+- **Tests must clean up after themselves** - use cleanup helpers like:
+  - `cy.resetTestUser()` - Reset user to clean state
+  - `cy.cleanupTestArticles()` - Clean up test articles
+  - `cy.cleanupTestFinancialData()` - Clean up financial test data
+  - `cy.cleanupTestWisdomData()` - Clean up wisdom test data
+- **Use `data-testid` attributes** for reliable element selection in E2E tests
 - **Zero regressions allowed** - if a test fails, fix it before moving on
+
+**See [`docs/TEST_COVERAGE.md`](docs/TEST_COVERAGE.md) for the test coverage matrix and detailed guidelines.**
 
 ---
 

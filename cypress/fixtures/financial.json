@@ -1,0 +1,72 @@
+{
+  "testAccounts": [
+    {
+      "name": "E2E Test Checking",
+      "type": "checking",
+      "institution": "Test Bank",
+      "accountNumberLast4": "1234",
+      "balance": 5000.0
+    },
+    {
+      "name": "E2E Test Savings",
+      "type": "savings",
+      "institution": "Test Bank",
+      "accountNumberLast4": "5678",
+      "balance": 10000.0
+    },
+    {
+      "name": "E2E Test Investment",
+      "type": "investment",
+      "institution": "Test Brokerage",
+      "accountNumberLast4": "9012",
+      "balance": 25000.0
+    },
+    {
+      "name": "E2E Test Retirement",
+      "type": "retirement",
+      "institution": "Test 401k Provider",
+      "accountNumberLast4": "3456",
+      "balance": 100000.0
+    }
+  ],
+  "testProperties": [
+    {
+      "name": "E2E Test Home",
+      "type": "primary_residence",
+      "address": "123 Test Street, Test City, TS 12345",
+      "estimatedValue": 500000
+    },
+    {
+      "name": "E2E Test Rental",
+      "type": "rental",
+      "address": "456 Rental Ave, Test City, TS 12345",
+      "estimatedValue": 350000
+    }
+  ],
+  "testInsurance": [
+    {
+      "type": "life",
+      "provider": "E2E Test Life Insurance",
+      "policyNumberLast4": "1111",
+      "coverageAmount": 500000,
+      "premiumAmount": 100,
+      "premiumFrequency": "monthly"
+    },
+    {
+      "type": "home",
+      "provider": "E2E Test Home Insurance",
+      "policyNumberLast4": "2222",
+      "coverageAmount": 500000,
+      "premiumAmount": 150,
+      "premiumFrequency": "monthly"
+    },
+    {
+      "type": "auto",
+      "provider": "E2E Test Auto Insurance",
+      "policyNumberLast4": "3333",
+      "coverageAmount": 100000,
+      "premiumAmount": 80,
+      "premiumFrequency": "monthly"
+    }
+  ]
+}
