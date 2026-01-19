@@ -54,18 +54,26 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import {
+  ARTICLE_CATEGORY_LABELS,
+  ARTICLE_CATEGORY_OPTIONS,
+  type ArticleCategory,
+  LEGACY_CATEGORY_MAPPING,
+} from "@/convex/shared/categories";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  estate_planning: "Estate Planning",
-  financial_planning: "Financial Planning",
-  family_legacy: "Family Legacy",
-  legal: "Legal",
-  insurance: "Insurance",
-  digital_legacy: "Digital Legacy",
-  end_of_life: "End of Life",
-  faith_stewardship: "Faith & Stewardship",
-  other: "Other",
-};
+/**
+ * Get display label for a category, handling both legacy and new category values
+ */
+function getCategoryDisplayLabel(category: string): string {
+  if (category in LEGACY_CATEGORY_MAPPING) {
+    const newCategory = LEGACY_CATEGORY_MAPPING[category];
+    return ARTICLE_CATEGORY_LABELS[newCategory];
+  }
+  if (category in ARTICLE_CATEGORY_LABELS) {
+    return ARTICLE_CATEGORY_LABELS[category as ArticleCategory];
+  }
+  return category;
+}
 
 const STATUS_STYLES: Record<string, string> = {
   draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
@@ -100,19 +108,7 @@ export default function ContentManagerPage() {
   const articles = useQuery(api.articles.listAll, {
     status:
       statusFilter !== "all" ? (statusFilter as "draft" | "published" | "archived") : undefined,
-    category:
-      categoryFilter !== "all"
-        ? (categoryFilter as
-            | "estate_planning"
-            | "financial_planning"
-            | "family_legacy"
-            | "legal"
-            | "insurance"
-            | "digital_legacy"
-            | "end_of_life"
-            | "faith_stewardship"
-            | "other")
-        : undefined,
+    category: categoryFilter !== "all" ? (categoryFilter as ArticleCategory) : undefined,
     visibility:
       visibilityFilter !== "all" ? (visibilityFilter as "public" | "subscribers") : undefined,
   });
@@ -218,9 +214,9 @@ export default function ContentManagerPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
+                  {ARTICLE_CATEGORY_OPTIONS.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -302,7 +298,7 @@ export default function ContentManagerPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{CATEGORY_LABELS[article.category]}</Badge>
+                        <Badge variant="outline">{getCategoryDisplayLabel(article.category)}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge className={STATUS_STYLES[article.status]}>{article.status}</Badge>

@@ -1,25 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin, requireAuth } from "./auth";
-
-/**
- * Educational Articles Module
- *
- * Admin-managed content for Faith & Finances and other educational resources.
- */
-
-// Validators for reuse
-const articleCategoryValidator = v.union(
-  v.literal("estate_planning"),
-  v.literal("financial_planning"),
-  v.literal("family_legacy"),
-  v.literal("legal"),
-  v.literal("insurance"),
-  v.literal("digital_legacy"),
-  v.literal("end_of_life"),
-  v.literal("faith_stewardship"),
-  v.literal("other"),
-);
+import { articleCategoryValidator } from "./shared/categories";
 
 const articleStatusValidator = v.union(
   v.literal("draft"),

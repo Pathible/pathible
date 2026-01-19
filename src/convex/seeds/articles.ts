@@ -8,16 +8,7 @@
  * - Hopeful, not morbid
  */
 
-export type ArticleCategory =
-  | "estate_planning"
-  | "financial_planning"
-  | "family_legacy"
-  | "legal"
-  | "insurance"
-  | "digital_legacy"
-  | "end_of_life"
-  | "faith_stewardship"
-  | "other";
+import type { ArticleCategory } from "../shared/categories";
 
 export interface ArticleSeedData {
   title: string;
@@ -34,7 +25,7 @@ export interface ArticleSeedData {
 
 export const articleSeedData: ArticleSeedData[] = [
   // ============================================================================
-  // FAITH & STEWARDSHIP (2 articles)
+  // BELIEFS & VALUES (2 articles) - formerly Faith & Stewardship
   // ============================================================================
   {
     title: "What Does Biblical Stewardship Really Mean?",
@@ -96,7 +87,7 @@ And someday, when your children's children look back at what you left them, may 
 ---
 
 *Ready to put stewardship into practice? Start by getting your important documents in one place where your family can find them.*`,
-    category: "faith_stewardship",
+    category: "beliefs_values",
     status: "published",
     visibility: "subscribers",
     authorName: "Pathible Team",
@@ -187,7 +178,7 @@ Lord, help us teach our children well. Give us wisdom to model faithful stewards
 ---
 
 *Looking for ways to organize your family's financial information so your children know where to find things someday? That's part of the legacy too.*`,
-    category: "faith_stewardship",
+    category: "beliefs_values",
     status: "published",
     visibility: "subscribers",
     authorName: "Pathible Team",
@@ -196,7 +187,7 @@ Lord, help us teach our children well. Give us wisdom to model faithful stewards
   },
 
   // ============================================================================
-  // LEGACY PLANNING (2 articles)
+  // FAMILY LEGACY (2 articles)
   // ============================================================================
   {
     title: "5 Conversations Every Family Should Have (Before It's Too Late)",
@@ -393,7 +384,7 @@ The best time to create a legacy plan was years ago. The second best time is now
 ---
 
 *Ready to start? Pathible gives you one secure place for your documents, your stories, and your wishes. Everything your family needs - together.*`,
-    category: "estate_planning",
+    category: "family_planning",
     status: "published",
     visibility: "subscribers",
     authorName: "Pathible Team",
@@ -402,7 +393,7 @@ The best time to create a legacy plan was years ago. The second best time is now
   },
 
   // ============================================================================
-  // FINANCIAL LITERACY (2 articles)
+  // FINANCIAL CLARITY (2 articles) - formerly Financial Planning
   // ============================================================================
   {
     title: "Getting Your Financial House in Order: A Simple Guide",
@@ -509,7 +500,7 @@ And your family will have the gift of clarity - which is more valuable than you 
 ---
 
 *Looking for a secure place to store all of this? Pathible's Heritage Vault keeps your important documents organized and accessible to the people who need them.*`,
-    category: "financial_planning",
+    category: "financial_clarity",
     status: "published",
     visibility: "subscribers",
     authorName: "Pathible Team",
@@ -647,7 +638,7 @@ Employer benefits often have time limits and specific procedures. Knowing these 
 ---
 
 *Ready to organize your insurance information? Store your policies and create a summary in Pathible's Heritage Vault, where your family can access them when needed.*`,
-    category: "insurance",
+    category: "insurance_essentials",
     status: "published",
     visibility: "subscribers",
     authorName: "Pathible Team",
@@ -656,7 +647,7 @@ Employer benefits often have time limits and specific procedures. Knowing these 
   },
 
   // ============================================================================
-  // DOCUMENT ORGANIZATION (2 articles)
+  // LEGAL BASICS & DIGITAL ACCESS (2 articles)
   // ============================================================================
   {
     title: "The Essential Documents Every Family Should Have",
@@ -809,7 +800,7 @@ Small steps, steady progress. That's how it gets done.
 ---
 
 *Need a secure place to store and organize all of this? Pathible's Heritage Vault is designed exactly for this purpose - keeping your family's essential documents safe and accessible.*`,
-    category: "legal",
+    category: "legal_basics",
     status: "published",
     visibility: "subscribers",
     authorName: "Pathible Team",
@@ -991,7 +982,7 @@ That peace is worth the effort.
 ---
 
 *Pathible makes creating and maintaining your Document Access Map simple. Keep everything organized in one secure place, with controlled access for the people who need it.*`,
-    category: "digital_legacy",
+    category: "digital_access",
     status: "published",
     visibility: "subscribers",
     authorName: "Pathible Team",

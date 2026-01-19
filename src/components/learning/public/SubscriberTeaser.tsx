@@ -3,18 +3,25 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ARTICLE_CATEGORY_LABELS,
+  type ArticleCategory,
+  LEGACY_CATEGORY_MAPPING,
+} from "@/convex/shared/categories";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  estate_planning: "Estate Planning",
-  financial_planning: "Financial Planning",
-  family_legacy: "Family Legacy",
-  legal: "Legal",
-  insurance: "Insurance",
-  digital_legacy: "Digital Legacy",
-  end_of_life: "End of Life",
-  faith_stewardship: "Faith & Stewardship",
-  other: "General",
-};
+/**
+ * Get display label for a category, handling both legacy and new category values
+ */
+function getCategoryDisplayLabel(category: string): string {
+  if (category in LEGACY_CATEGORY_MAPPING) {
+    const newCategory = LEGACY_CATEGORY_MAPPING[category];
+    return ARTICLE_CATEGORY_LABELS[newCategory];
+  }
+  if (category in ARTICLE_CATEGORY_LABELS) {
+    return ARTICLE_CATEGORY_LABELS[category as ArticleCategory];
+  }
+  return category;
+}
 
 interface SubscriberTeaserProps {
   article: {
@@ -39,7 +46,7 @@ export function SubscriberTeaser({ article }: SubscriberTeaserProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2 mb-2">
           <Badge variant="outline" className="text-xs font-normal border-muted-foreground/30">
-            {CATEGORY_LABELS[article.category] || article.category}
+            {getCategoryDisplayLabel(article.category)}
           </Badge>
           <Badge className="text-xs bg-pathible-gold/10 text-pathible-gold border-0">
             Subscribers Only

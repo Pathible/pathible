@@ -31,20 +31,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-
-const CATEGORIES = [
-  { value: "faith_stewardship", label: "Faith & Stewardship" },
-  { value: "estate_planning", label: "Estate Planning" },
-  { value: "financial_planning", label: "Financial Planning" },
-  { value: "family_legacy", label: "Family Legacy" },
-  { value: "legal", label: "Legal" },
-  { value: "insurance", label: "Insurance" },
-  { value: "digital_legacy", label: "Digital Legacy" },
-  { value: "end_of_life", label: "End of Life" },
-  { value: "other", label: "Other" },
-] as const;
-
-type CategoryValue = (typeof CATEGORIES)[number]["value"];
+import {
+  ARTICLE_CATEGORY_OPTIONS,
+  type ArticleCategory,
+  migrateLegacyCategory,
+} from "@/convex/shared/categories";
 
 interface FormData {
   title: string;
@@ -62,7 +53,7 @@ export default function EditArticlePage() {
 
   const article = useQuery(api.articles.get, { id: articleId });
 
-  const [category, setCategory] = useState<CategoryValue | undefined>(undefined);
+  const [category, setCategory] = useState<ArticleCategory | undefined>(undefined);
   const [status, setStatus] = useState<"draft" | "published" | "archived" | undefined>(undefined);
   const [initialized, setInitialized] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -87,7 +78,8 @@ export default function EditArticlePage() {
         readTimeMinutes: article.readTimeMinutes,
         featuredImageUrl: article.featuredImageUrl ?? "",
       });
-      setCategory(article.category as CategoryValue);
+      // Handle both legacy and new category values
+      setCategory(migrateLegacyCategory(article.category));
       setStatus(article.status as "draft" | "published" | "archived");
       setInitialized(true);
     }
@@ -258,13 +250,13 @@ export default function EditArticlePage() {
                   <Select
                     key={`category-${article._id}-${initialized}`}
                     value={category}
-                    onValueChange={(v) => setCategory(v as CategoryValue)}
+                    onValueChange={(v) => setCategory(v as ArticleCategory)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((cat) => (
+                      {ARTICLE_CATEGORY_OPTIONS.map((cat) => (
                         <SelectItem key={cat.value} value={cat.value}>
                           {cat.label}
                         </SelectItem>

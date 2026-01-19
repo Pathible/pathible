@@ -9,18 +9,25 @@ import { ArticleUpgradeCTA } from "@/components/learning/public";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
+import {
+  ARTICLE_CATEGORY_LABELS,
+  type ArticleCategory,
+  LEGACY_CATEGORY_MAPPING,
+} from "@/convex/shared/categories";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  estate_planning: "Estate Planning",
-  financial_planning: "Financial Planning",
-  family_legacy: "Family Legacy",
-  legal: "Legal",
-  insurance: "Insurance",
-  digital_legacy: "Digital Legacy",
-  end_of_life: "End of Life",
-  faith_stewardship: "Faith & Stewardship",
-  other: "General",
-};
+/**
+ * Get display label for a category, handling both legacy and new category values
+ */
+function getCategoryDisplayLabel(category: string): string {
+  if (category in LEGACY_CATEGORY_MAPPING) {
+    const newCategory = LEGACY_CATEGORY_MAPPING[category];
+    return ARTICLE_CATEGORY_LABELS[newCategory];
+  }
+  if (category in ARTICLE_CATEGORY_LABELS) {
+    return ARTICLE_CATEGORY_LABELS[category as ArticleCategory];
+  }
+  return category;
+}
 
 interface ArticleContentProps {
   slug: string;
@@ -73,7 +80,7 @@ export function ArticleContent({ slug }: ArticleContentProps) {
         <header className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Badge variant="outline" className="text-xs font-normal">
-              {CATEGORY_LABELS[article.category] || article.category}
+              {getCategoryDisplayLabel(article.category)}
             </Badge>
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Clock className="h-4 w-4" />

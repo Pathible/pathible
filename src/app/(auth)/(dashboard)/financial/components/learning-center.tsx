@@ -13,17 +13,29 @@ import { api } from "@/convex/_generated/api";
 
 /**
  * Category to stage mapping
- * Stage 1 (Understanding): faith_stewardship, other
- * Stage 2 (Building): estate_planning, financial_planning, legal
- * Stage 3 (Strengthening): family_legacy, digital_legacy, insurance, end_of_life
+ * Supports both legacy and new category values for backward compatibility
+ *
+ * Stage 1 (Understanding): beliefs_values (faith_stewardship), more (other)
+ * Stage 2 (Building): family_planning (estate_planning), financial_clarity (financial_planning), legal_basics (legal)
+ * Stage 3 (Strengthening): family_legacy, digital_access (digital_legacy), insurance_essentials (insurance), after_loss (end_of_life)
  */
 const CATEGORY_TO_STAGE: Record<string, number> = {
+  // New category values
+  beliefs_values: 1,
+  more: 1,
+  family_planning: 2,
+  financial_clarity: 2,
+  legal_basics: 2,
+  family_legacy: 3,
+  digital_access: 3,
+  insurance_essentials: 3,
+  after_loss: 3,
+  // Legacy category values (for backward compatibility during migration)
   faith_stewardship: 1,
   other: 1,
   estate_planning: 2,
   financial_planning: 2,
   legal: 2,
-  family_legacy: 3,
   digital_legacy: 3,
   insurance: 3,
   end_of_life: 3,

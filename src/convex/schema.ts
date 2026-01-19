@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { articleCategoryValidator } from "./shared/categories";
 
 /**
  * Pathible Database Schema
@@ -671,17 +672,7 @@ export default defineSchema({
     slug: v.string(), // URL-friendly identifier
     content: v.string(), // Rich text/markdown
     excerpt: v.string(), // Short description
-    category: v.union(
-      v.literal("estate_planning"),
-      v.literal("financial_planning"),
-      v.literal("family_legacy"),
-      v.literal("legal"),
-      v.literal("insurance"),
-      v.literal("digital_legacy"),
-      v.literal("end_of_life"),
-      v.literal("faith_stewardship"),
-      v.literal("other"),
-    ),
+    category: articleCategoryValidator,
     readTimeMinutes: v.number(),
     featuredImageUrl: v.optional(v.string()),
     status: v.union(v.literal("draft"), v.literal("published"), v.literal("archived")),
