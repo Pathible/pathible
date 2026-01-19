@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. Write the test or verification step first.
 3. Then implement the code or changes.
 4. Run verification and iterate until it passes.
+5. **All E2E tests must pass** (`pnpm test:e2e`) before considering a feature complete.
+6. **New features require E2E tests** - Add appropriate E2E tests for user-facing features.
 
 ---
 
@@ -245,6 +247,9 @@ pnpm test:e2e:open      # Interactive Cypress UI
 - Tests full user workflows (vault, onboarding, admin features)
 - Requires the dev server to be running (`pnpm dev`)
 - Uses Clerk testing tokens for authentication
+- **All tests must pass before merging** - run `pnpm test:e2e` to verify
+- **Tests must clean up after themselves** - use `afterEach` or `after` hooks with `cy.cleanupTestArticles()` and similar helpers
+- **New user-facing features require E2E tests** - create tests in `cypress/e2e/` for new functionality
 
 ### E2E Test Helpers
 
