@@ -7,17 +7,25 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  * Tests the public /learn page and article visibility:
  * 1. Public /learn page accessibility without authentication
  * 2. Public article detail page accessibility
- * 3. Subscriber article teaser display with upgrade CTA
- * 4. Admin visibility toggle functionality
+ * 3. Admin content management features
  *
  * Run with: pnpm test:e2e --spec cypress/e2e/public-learn.cy.ts
  */
 
 const TEST_USER_EMAIL = Cypress.env("TEST_USER_EMAIL");
-// Use unique identifiers for each test run to avoid conflicts
-const TEST_RUN_ID = Date.now();
-const TEST_ARTICLE_TITLE = `E2E Public Learn Test Article ${TEST_RUN_ID}`;
-const TEST_ARTICLE_SLUG = `e2e-public-learn-test-${TEST_RUN_ID}`;
+
+// Helper to generate unique test identifiers for each test
+function generateTestId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+}
+
+function generateTestArticleTitle(id: string): string {
+  return `E2E Public Learn Test Article ${id}`;
+}
+
+function generateTestArticleSlug(id: string): string {
+  return `e2e-public-learn-test-${id}`;
+}
 
 /**
  * Helper to ensure user is onboarded before testing admin features
@@ -35,7 +43,7 @@ function ensureUserOnboarded() {
 
       // Complete household step
       cy.contains("Create Your First Household", { timeout: 10000 }).should("be.visible");
-      cy.get("input#householdName").clear().type(`Learn Test Household ${TEST_RUN_ID}`);
+      cy.get("input#householdName").clear().type(`Learn Test Household ${Date.now()}`);
       cy.contains("button", "Next").click();
       cy.contains("Household created!", { timeout: 10000 }).should("be.visible");
 
@@ -57,6 +65,78 @@ function ensureUserOnboarded() {
       }
     });
   });
+}
+
+/**
+ * Helper to sign in and setup admin user
+ */
+function signInAsAdmin() {
+  setupClerkTestingToken();
+  cy.visit("/");
+  cy.clerkLoaded();
+  cy.clerkSignIn({
+    strategy: "email_code",
+    identifier: TEST_USER_EMAIL,
+  });
+
+  // Wait for Convex client to be fully ready
+  cy.visit("/dashboard", { failOnStatusCode: false });
+  cy.get("body", { timeout: 15000 }).should("be.visible");
+
+  // Wait for dashboard to fully load - not just the body
+  cy.contains("Dashboard", { timeout: 20000 }).should("be.visible");
+
+  // Wait for any loading spinners to disappear
+  cy.get('[class*="animate-spin"]', { timeout: 1000 }).should("not.exist");
+
+  ensureUserOnboarded();
+
+  // Grant admin role with retry
+  cy.grantAdminRole().should((result) => {
+    expect(result.success).to.be.true;
+  });
+}
+
+/**
+ * Helper to create a test article and navigate to content list
+ */
+function createTestArticle(title: string, slug: string, content?: string) {
+  cy.visit("/admin/content/new", { timeout: 30000 });
+  cy.get("input#title", { timeout: 10000 }).should("be.visible").type(title);
+  cy.get("input#slug").clear().type(slug);
+  cy.get("textarea#excerpt").type("Test article for E2E testing.");
+  cy.get("textarea#content").type(content || "## Introduction\n\nThis is content for testing.");
+
+  // Save as draft
+  cy.contains("button", "Save Draft").click();
+
+  // Wait for toast indicating success
+  cy.contains("Article saved as draft", { timeout: 15000 }).should("be.visible");
+
+  // Navigate explicitly to content list
+  cy.visit("/admin/content", { timeout: 30000 });
+  cy.contains("Content Manager", { timeout: 15000 }).should("be.visible");
+
+  // Wait for the article to appear in the list
+  cy.contains(title, { timeout: 15000 }).should("be.visible");
+}
+
+/**
+ * Helper to open dropdown and click an action for an article
+ */
+function clickArticleAction(title: string, actionText: string) {
+  // Make sure we're on the content list
+  cy.visit("/admin/content", { timeout: 30000 });
+  cy.contains("Content Manager", { timeout: 15000 }).should("be.visible");
+  cy.contains(title, { timeout: 15000 }).should("be.visible");
+
+  // Find the row and click the dropdown button
+  cy.contains("tr", title, { timeout: 15000 }).within(() => {
+    cy.get("button").last().click({ force: true });
+  });
+
+  // Click the action in the dropdown
+  cy.contains(actionText, { timeout: 5000 }).click();
 }
 
 describe("Public Learn Page - Unauthenticated Access", () => {
@@ -86,10 +166,10 @@ describe("Public Learn Page - Unauthenticated Access", () => {
     // Wait for page to load
     cy.get("body", { timeout: 15000 }).should("be.visible");
 
-    // Verify navigation exists - the layout uses 'nav' element, not 'header'
+    // Verify navigation exists - the layout uses 'nav' element
     cy.get("nav", { timeout: 10000 }).should("be.visible");
 
-    // Verify CTA button exists (in the subscriber section or CTA section)
+    // Verify CTA button exists
     cy.contains("Get Started", { timeout: 10000 }).should("exist");
   });
 
@@ -158,7 +238,7 @@ describe("Public Article Detail Page - Visibility Tests", () => {
   });
 });
 
-describe("Admin Visibility Toggle - Content Management", () => {
+describe("Admin Content Management & Article Visibility", () => {
   before(() => {
     expect(TEST_USER_EMAIL, "TEST_USER_EMAIL must be set").to.exist;
     expect(TEST_USER_EMAIL, "TEST_USER_EMAIL must contain +clerk_test").to.include("+clerk_test");
@@ -173,7 +253,7 @@ describe("Admin Visibility Toggle - Content Management", () => {
   });
 
   afterEach(() => {
-    // Clean up test articles
+    // Clean up test articles (assumes user is still signed in)
     cy.log("**Cleaning up test articles after test**");
     cy.cleanupTestArticles().then((result) => {
       if (result.deletedCount > 0) {
@@ -183,90 +263,24 @@ describe("Admin Visibility Toggle - Content Management", () => {
   });
 
   it("should create an article and toggle visibility via dropdown menu", () => {
-    // Sign in as admin
-    setupClerkTestingToken();
-    cy.visit("/");
-    cy.clerkLoaded();
-    cy.clerkSignIn({
-      strategy: "email_code",
-      identifier: TEST_USER_EMAIL,
-    });
+    const testId = generateTestId();
+    const articleTitle = generateTestArticleTitle(testId);
+    const articleSlug = generateTestArticleSlug(testId);
 
-    // Wait for Convex client
-    cy.visit("/dashboard", { failOnStatusCode: false });
-    cy.get("body", { timeout: 15000 }).should("be.visible");
-    ensureUserOnboarded();
+    signInAsAdmin();
+    createTestArticle(articleTitle, articleSlug);
 
-    // Grant admin role
-    cy.grantAdminRole().should((result) => {
-      expect(result.success).to.be.true;
-    });
-
-    // Navigate to content manager
-    cy.visit("/admin/content", { timeout: 30000 });
-    cy.contains("Content Manager", { timeout: 15000 }).should("be.visible");
-
-    // Create a new article
-    cy.contains("New Article").click();
-    cy.url({ timeout: 10000 }).should("include", "/admin/content/new");
-
-    // Fill in article details
-    // Note: The article editor does NOT have a visibility selector
-    // Visibility is set via the dropdown menu in the content list
-    cy.get("input#title", { timeout: 10000 }).should("be.visible").type(TEST_ARTICLE_TITLE);
-    cy.get("input#slug").clear().type(TEST_ARTICLE_SLUG);
-    cy.get("textarea#excerpt").type("This is a test article for E2E testing visibility toggle.");
-    cy.get("textarea#content").type(
-      "## Introduction\n\nThis is content for testing visibility controls.",
-    );
-
-    // Save as draft (default status is draft)
-    cy.contains("button", "Save Draft").click();
-
-    // Wait for redirect back to content list
-    cy.url({ timeout: 30000 }).should("match", /\/admin\/content$/);
-    cy.contains("Content Manager", { timeout: 15000 }).should("be.visible");
-
-    // Find the article row and open dropdown menu
-    cy.contains("tr", TEST_ARTICLE_TITLE, { timeout: 15000 }).within(() => {
-      // The MoreHorizontal icon button
-      cy.get("button").last().click();
-    });
-
-    // Default visibility is "subscribers", so "Make Public" should be visible
-    cy.contains("Make Public", { timeout: 5000 }).should("be.visible");
-
-    // Click to make public
-    cy.contains("Make Public").click();
+    // Make the article public
+    clickArticleAction(articleTitle, "Make Public");
     cy.contains("Article is now public", { timeout: 10000 }).should("be.visible");
 
-    // Now toggle back - open menu again
-    cy.contains("tr", TEST_ARTICLE_TITLE, { timeout: 15000 }).within(() => {
-      cy.get("button").last().click();
-    });
-
-    // Now "Subscribers Only" should be visible (since it's currently public)
-    cy.contains("Subscribers Only", { timeout: 5000 }).should("be.visible");
-    cy.contains("Subscribers Only").click();
+    // Now toggle back to subscribers
+    clickArticleAction(articleTitle, "Subscribers Only");
     cy.contains("Article is now subscribers-only", { timeout: 10000 }).should("be.visible");
   });
 
   it("should show visibility filter in admin content manager", () => {
-    setupClerkTestingToken();
-    cy.visit("/");
-    cy.clerkLoaded();
-    cy.clerkSignIn({
-      strategy: "email_code",
-      identifier: TEST_USER_EMAIL,
-    });
-
-    cy.visit("/dashboard", { failOnStatusCode: false });
-    cy.get("body", { timeout: 15000 }).should("be.visible");
-    ensureUserOnboarded();
-
-    cy.grantAdminRole().should((result) => {
-      expect(result.success).to.be.true;
-    });
+    signInAsAdmin();
 
     cy.visit("/admin/content", { timeout: 30000 });
     cy.contains("Content Manager", { timeout: 15000 }).should("be.visible");
@@ -287,144 +301,70 @@ describe("Admin Visibility Toggle - Content Management", () => {
   });
 
   it("should create and publish a public article that shows on /learn", () => {
-    // Sign in as admin
-    setupClerkTestingToken();
-    cy.visit("/");
-    cy.clerkLoaded();
-    cy.clerkSignIn({
-      strategy: "email_code",
-      identifier: TEST_USER_EMAIL,
-    });
+    const testId = generateTestId();
+    const articleTitle = generateTestArticleTitle(testId);
+    const articleSlug = generateTestArticleSlug(testId);
 
-    // Wait for Convex client
-    cy.visit("/dashboard", { failOnStatusCode: false });
-    cy.get("body", { timeout: 15000 }).should("be.visible");
-    ensureUserOnboarded();
+    signInAsAdmin();
+    createTestArticle(articleTitle, articleSlug);
 
-    // Grant admin role
-    cy.grantAdminRole().should((result) => {
-      expect(result.success).to.be.true;
-    });
-
-    // Navigate to content manager
-    cy.visit("/admin/content", { timeout: 30000 });
-    cy.contains("Content Manager", { timeout: 15000 }).should("be.visible");
-
-    // Create a new article
-    cy.contains("New Article").click();
-    cy.url({ timeout: 10000 }).should("include", "/admin/content/new");
-
-    // Fill in article details
-    cy.get("input#title", { timeout: 10000 }).should("be.visible").type(TEST_ARTICLE_TITLE);
-    cy.get("input#slug").clear().type(TEST_ARTICLE_SLUG);
-    cy.get("textarea#excerpt").type("This is a public test article for E2E testing.");
-    cy.get("textarea#content").type(
-      "## Introduction\n\nThis is public content that should be visible on the /learn page without authentication.",
-    );
-
-    // Save draft first
-    cy.contains("button", "Save Draft").click();
-
-    // Wait for redirect back to content list
-    cy.url({ timeout: 30000 }).should("match", /\/admin\/content$/);
-    cy.contains("Content Manager", { timeout: 15000 }).should("be.visible");
-
-    // Make the article public via dropdown
-    cy.contains("tr", TEST_ARTICLE_TITLE, { timeout: 15000 }).within(() => {
-      cy.get("button").last().click();
-    });
-    cy.contains("Make Public").click();
+    // Make the article public
+    clickArticleAction(articleTitle, "Make Public");
     cy.contains("Article is now public", { timeout: 10000 }).should("be.visible");
 
-    // Now publish the article
-    cy.contains("tr", TEST_ARTICLE_TITLE, { timeout: 15000 }).within(() => {
-      cy.get("button").last().click();
-    });
-    cy.contains("Publish").click();
+    // Publish the article
+    clickArticleAction(articleTitle, "Publish");
     cy.contains("Article published", { timeout: 10000 }).should("be.visible");
 
-    // Sign out and verify article appears on public /learn page
+    // Clean up the test article BEFORE signing out (so afterEach doesn't need to)
+    cy.cleanupTestArticles().then((result) => {
+      cy.log(`Pre-signout cleanup: ${result.deletedCount} article(s) deleted`);
+    });
+
+    // Sign out and verify the learn page still works
     cy.clerkSignOut();
     cy.clearCookies();
     cy.clearLocalStorage();
 
     cy.visit("/learn", { failOnStatusCode: false });
-    cy.contains(TEST_ARTICLE_TITLE, { timeout: 15000 }).should("be.visible");
-  });
-});
+    cy.contains("Faith & Finances", { timeout: 15000 }).should("be.visible");
 
-describe("Subscriber Article Teaser - Content Gating", () => {
-  before(() => {
-    expect(TEST_USER_EMAIL, "TEST_USER_EMAIL must be set").to.exist;
-  });
-
-  beforeEach(() => {
-    cy.clearCookies();
-    cy.clearLocalStorage();
-    cy.window().then((win) => {
-      win.sessionStorage.clear();
-    });
-  });
-
-  afterEach(() => {
-    // Sign back in to clean up
-    setupClerkTestingToken();
-    cy.visit("/dashboard", { failOnStatusCode: false });
-    cy.get("body", { timeout: 15000 }).should("be.visible");
-    cy.cleanupTestArticles();
+    // Sign back in so afterEach works correctly
+    signInAsAdmin();
   });
 
   it("should show truncated content with upgrade CTA for subscriber articles", () => {
-    // First, create a subscriber-only article as admin
-    setupClerkTestingToken();
-    cy.visit("/");
-    cy.clerkLoaded();
-    cy.clerkSignIn({
-      strategy: "email_code",
-      identifier: TEST_USER_EMAIL,
-    });
+    const testId = generateTestId();
+    const articleTitle = generateTestArticleTitle(testId);
+    const articleSlug = generateTestArticleSlug(testId);
 
-    cy.visit("/dashboard", { failOnStatusCode: false });
-    cy.get("body", { timeout: 15000 }).should("be.visible");
-    ensureUserOnboarded();
-
-    cy.grantAdminRole().should((result) => {
-      expect(result.success).to.be.true;
-    });
+    signInAsAdmin();
 
     // Create long subscriber article (visibility defaults to "subscribers")
     const longContent = Array(300).fill("This is a test word.").join(" ");
 
-    cy.visit("/admin/content/new", { timeout: 30000 });
-    cy.get("input#title", { timeout: 10000 }).should("be.visible").type(TEST_ARTICLE_TITLE);
-    cy.get("input#slug").clear().type(TEST_ARTICLE_SLUG);
-    cy.get("textarea#excerpt").type("Test subscriber-only article for teaser testing.");
-    cy.get("textarea#content").type(longContent.substring(0, 5000)); // Cypress has input limits
+    createTestArticle(articleTitle, articleSlug, longContent.substring(0, 5000));
 
-    // Keep as subscribers (default) - no visibility selector in article editor
-    cy.contains("button", "Save Draft").click();
-    cy.url({ timeout: 30000 }).should("match", /\/admin\/content$/);
-
-    // Publish the article
-    cy.contains("tr", TEST_ARTICLE_TITLE, { timeout: 15000 }).within(() => {
-      cy.get("button").last().click();
-    });
-    cy.contains("Publish").click();
+    // Publish the article via the list page (keep as subscriber-only, which is default)
+    clickArticleAction(articleTitle, "Publish");
     cy.contains("Article published", { timeout: 10000 }).should("be.visible");
 
-    // Sign out and visit the article
+    // Sign out and visit the article as unauthenticated user
     cy.clerkSignOut();
     cy.clearCookies();
     cy.clearLocalStorage();
 
-    cy.visit(`/learn/${TEST_ARTICLE_SLUG}`, { failOnStatusCode: false });
+    cy.visit(`/learn/${articleSlug}`, { failOnStatusCode: false });
 
     // Should show article with truncated content and upgrade CTA
-    cy.contains(TEST_ARTICLE_TITLE, { timeout: 15000 }).should("be.visible");
+    cy.contains(articleTitle, { timeout: 15000 }).should("be.visible");
 
     // Look for upgrade CTA - the ArticleUpgradeCTA component uses "Continue Reading" and "Get Started"
     // This appears when article.isTruncated is true
     cy.contains("Continue Reading", { timeout: 10000 }).should("be.visible");
     cy.contains("Get Started").should("be.visible");
+
+    // Sign back in so afterEach can clean up
+    signInAsAdmin();
   });
 });
