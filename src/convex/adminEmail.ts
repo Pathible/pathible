@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin } from "./auth";
+import { getScheduleDescription, markdownToEmailHtml } from "./shared/emailUtils";
 
 /**
  * Admin Email Management
@@ -13,11 +14,193 @@ import { requireAdmin } from "./auth";
  */
 
 // ============================================================================
+// SYSTEM TEMPLATES (AUTOMATED EMAILS - Database-Driven)
+// ============================================================================
+
+// Validators for system templates
+const scheduleValidator = v.object({
+  frequency: v.union(v.literal("weekly"), v.literal("daily")),
+  dayOfWeek: v.optional(v.number()),
+  hourUtc: v.number(),
+});
+
+const triggerConditionsValidator = v.object({
+  onboardingStatus: v.optional(v.string()),
+  minDaysSinceOnboarding: v.optional(v.number()),
+  vaultEmpty: v.optional(v.boolean()),
+  requireEmailNotifications: v.optional(v.boolean()),
+});
+
+/**
+ * Get all system (automated) email templates from the database
+ */
+export const getSystemTemplates = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      _id: v.id("emailTemplates"),
+      name: v.string(),
+      subject: v.string(),
+      description: v.string(),
+      trigger: v.string(),
+      category: v.string(),
+      variables: v.array(v.string()),
+      previewHtml: v.string(),
+      enabled: v.boolean(),
+    }),
+  ),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    // Fetch system templates from database
+    const templates = await ctx.db
+      .query("emailTemplates")
+      .withIndex("by_isSystemTemplate", (q) => q.eq("isSystemTemplate", true))
+      .collect();
+
+    return templates
+      .filter((t) => t.systemTemplateKey && t.schedule)
+      .map((template) => {
+        // Generate preview HTML from markdown content
+        const previewHtml = markdownToEmailHtml(template.content, template.subject, {
+          firstName: "Jim",
+          householdName: "Gibbs Family",
+        });
+
+        // Get human-readable schedule description
+        const trigger = template.schedule
+          ? getScheduleDescription(template.schedule)
+          : "Not scheduled";
+
+        return {
+          id: template.systemTemplateKey as string,
+          _id: template._id,
+          name: template.name,
+          subject: template.subject,
+          description: template.description || "",
+          trigger,
+          category: template.category || "system",
+          variables: template.variables,
+          previewHtml,
+          enabled: template.enabled ?? true,
+        };
+      });
+  },
+});
+
+/**
+ * Get a single system template by ID for editing
+ */
+export const getSystemTemplateById = query({
+  args: { templateId: v.id("emailTemplates") },
+  returns: v.union(
+    v.object({
+      _id: v.id("emailTemplates"),
+      _creationTime: v.number(),
+      name: v.string(),
+      systemTemplateKey: v.string(),
+      subject: v.string(),
+      content: v.string(),
+      description: v.optional(v.string()),
+      variables: v.array(v.string()),
+      enabled: v.boolean(),
+      schedule: scheduleValidator,
+      triggerConditions: triggerConditionsValidator,
+      campaignType: v.union(
+        v.literal("weekly_vault_empty"),
+        v.literal("weekly_digest"),
+        v.literal("admin_broadcast"),
+        v.literal("other"),
+      ),
+      updatedAt: v.number(),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const template = await ctx.db.get(args.templateId);
+    if (!template || !template.isSystemTemplate) {
+      return null;
+    }
+
+    // System templates must have schedule and triggerConditions
+    if (!template.schedule || !template.triggerConditions) {
+      return null;
+    }
+
+    return {
+      _id: template._id,
+      _creationTime: template._creationTime,
+      name: template.name,
+      systemTemplateKey: template.systemTemplateKey as string,
+      subject: template.subject,
+      content: template.content,
+      description: template.description,
+      variables: template.variables,
+      enabled: template.enabled ?? true,
+      schedule: template.schedule,
+      triggerConditions: template.triggerConditions,
+      campaignType: template.campaignType ?? "other",
+      updatedAt: template.updatedAt,
+    };
+  },
+});
+
+/**
+ * Update a system template
+ */
+export const updateSystemTemplate = mutation({
+  args: {
+    templateId: v.id("emailTemplates"),
+    subject: v.optional(v.string()),
+    content: v.optional(v.string()),
+    description: v.optional(v.string()),
+    variables: v.optional(v.array(v.string())),
+    enabled: v.optional(v.boolean()),
+    schedule: v.optional(scheduleValidator),
+    triggerConditions: v.optional(triggerConditionsValidator),
+  },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const template = await ctx.db.get(args.templateId);
+    if (!template) {
+      throw new Error("Template not found");
+    }
+
+    if (!template.isSystemTemplate) {
+      throw new Error("This is not a system template");
+    }
+
+    const updates: Record<string, unknown> = {
+      updatedAt: Date.now(),
+    };
+
+    if (args.subject !== undefined) updates.subject = args.subject;
+    if (args.content !== undefined) updates.content = args.content;
+    if (args.description !== undefined) updates.description = args.description;
+    if (args.variables !== undefined) updates.variables = args.variables;
+    if (args.enabled !== undefined) updates.enabled = args.enabled;
+    if (args.schedule !== undefined) updates.schedule = args.schedule;
+    if (args.triggerConditions !== undefined) updates.triggerConditions = args.triggerConditions;
+
+    await ctx.db.patch(args.templateId, updates);
+
+    console.log(`[Admin Email] Updated system template: ${template.name}`);
+
+    return { success: true };
+  },
+});
+
+// ============================================================================
 // EMAIL TEMPLATE QUERIES
 // ============================================================================
 
 /**
- * List all email templates
+ * List all email templates (unified - includes automation status)
  */
 export const listTemplates = query({
   args: {},
@@ -41,6 +224,10 @@ export const listTemplates = query({
         ),
       ),
       updatedAt: v.number(),
+      // Automation fields
+      isAutomated: v.boolean(),
+      enabled: v.optional(v.boolean()),
+      scheduleDescription: v.optional(v.string()),
     }),
   ),
   handler: async (ctx) => {
@@ -48,20 +235,38 @@ export const listTemplates = query({
 
     const templates = await ctx.db.query("emailTemplates").order("desc").collect();
 
-    return templates.map((t) => ({
-      _id: t._id,
-      _creationTime: t._creationTime,
-      name: t.name,
-      subject: t.subject,
-      description: t.description,
-      category: t.category,
-      updatedAt: t.updatedAt,
-    }));
+    return templates.map((t) => {
+      const isAutomated = !!(t.schedule && t.triggerConditions);
+      let scheduleDescription: string | undefined;
+
+      if (isAutomated && t.schedule) {
+        const { frequency, dayOfWeek, hourUtc } = t.schedule;
+        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        if (frequency === "weekly" && dayOfWeek !== undefined) {
+          scheduleDescription = `Weekly (${dayNames[dayOfWeek]}s ${hourUtc}:00 UTC)`;
+        } else {
+          scheduleDescription = `Daily (${hourUtc}:00 UTC)`;
+        }
+      }
+
+      return {
+        _id: t._id,
+        _creationTime: t._creationTime,
+        name: t.name,
+        subject: t.subject,
+        description: t.description,
+        category: t.category,
+        updatedAt: t.updatedAt,
+        isAutomated,
+        enabled: isAutomated ? (t.enabled ?? true) : undefined,
+        scheduleDescription,
+      };
+    });
   },
 });
 
 /**
- * Get a single template by ID
+ * Get a single template by ID (unified - includes all fields)
  */
 export const getTemplate = query({
   args: { templateId: v.id("emailTemplates") },
@@ -87,6 +292,23 @@ export const getTemplate = query({
         ),
       ),
       updatedAt: v.number(),
+      // Automation fields
+      enabled: v.optional(v.boolean()),
+      schedule: v.optional(
+        v.object({
+          frequency: v.union(v.literal("weekly"), v.literal("daily")),
+          dayOfWeek: v.optional(v.number()),
+          hourUtc: v.number(),
+        }),
+      ),
+      triggerConditions: v.optional(
+        v.object({
+          onboardingStatus: v.optional(v.string()),
+          minDaysSinceOnboarding: v.optional(v.number()),
+          vaultEmpty: v.optional(v.boolean()),
+          requireEmailNotifications: v.optional(v.boolean()),
+        }),
+      ),
     }),
     v.null(),
   ),
@@ -108,6 +330,9 @@ export const getTemplate = query({
       variables: template.variables,
       category: template.category,
       updatedAt: template.updatedAt,
+      enabled: template.enabled,
+      schedule: template.schedule,
+      triggerConditions: template.triggerConditions,
     };
   },
 });
@@ -170,7 +395,7 @@ export const createTemplate = mutation({
 });
 
 /**
- * Update an existing email template
+ * Update an existing email template (unified - supports automation fields)
  */
 export const updateTemplate = mutation({
   args: {
@@ -190,6 +415,29 @@ export const updateTemplate = mutation({
         v.literal("digest"),
         v.literal("system"),
         v.literal("other"),
+      ),
+    ),
+    // Automation fields
+    enabled: v.optional(v.boolean()),
+    schedule: v.optional(
+      v.union(
+        v.object({
+          frequency: v.union(v.literal("weekly"), v.literal("daily")),
+          dayOfWeek: v.optional(v.number()),
+          hourUtc: v.number(),
+        }),
+        v.null(), // Allow null to clear automation
+      ),
+    ),
+    triggerConditions: v.optional(
+      v.union(
+        v.object({
+          onboardingStatus: v.optional(v.string()),
+          minDaysSinceOnboarding: v.optional(v.number()),
+          vaultEmpty: v.optional(v.boolean()),
+          requireEmailNotifications: v.optional(v.boolean()),
+        }),
+        v.null(), // Allow null to clear automation
       ),
     ),
   },
@@ -215,15 +463,31 @@ export const updateTemplate = mutation({
       }
     }
 
-    await ctx.db.patch(args.templateId, {
-      ...(args.name && { name: args.name }),
-      ...(args.subject && { subject: args.subject }),
-      ...(args.content && { content: args.content }),
-      ...(args.description !== undefined && { description: args.description }),
-      ...(args.variables && { variables: args.variables }),
-      ...(args.category !== undefined && { category: args.category }),
+    // Build update object
+    const updates: Record<string, unknown> = {
       updatedAt: Date.now(),
-    });
+    };
+
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.subject !== undefined) updates.subject = args.subject;
+    if (args.content !== undefined) updates.content = args.content;
+    if (args.description !== undefined) updates.description = args.description;
+    if (args.variables !== undefined) updates.variables = args.variables;
+    if (args.category !== undefined) updates.category = args.category;
+    if (args.enabled !== undefined) updates.enabled = args.enabled;
+
+    // Handle schedule - null clears it, undefined leaves it unchanged
+    if (args.schedule !== undefined) {
+      updates.schedule = args.schedule === null ? undefined : args.schedule;
+    }
+
+    // Handle triggerConditions - null clears it, undefined leaves it unchanged
+    if (args.triggerConditions !== undefined) {
+      updates.triggerConditions =
+        args.triggerConditions === null ? undefined : args.triggerConditions;
+    }
+
+    await ctx.db.patch(args.templateId, updates);
 
     console.log(`[Admin Email] Updated template: ${template.name}`);
 
@@ -250,6 +514,134 @@ export const deleteTemplate = mutation({
     console.log(`[Admin Email] Deleted template: ${template.name}`);
 
     return { success: true };
+  },
+});
+
+// ============================================================================
+// CAMPAIGN QUERIES
+// ============================================================================
+
+/**
+ * List all email campaigns with stats
+ */
+export const listCampaigns = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: v.object({
+    page: v.array(
+      v.object({
+        _id: v.id("emailCampaigns"),
+        _creationTime: v.number(),
+        campaignId: v.string(),
+        type: v.union(
+          v.literal("weekly_vault_empty"),
+          v.literal("weekly_digest"),
+          v.literal("admin_broadcast"),
+          v.literal("other"),
+        ),
+        status: v.union(
+          v.literal("pending"),
+          v.literal("sending"),
+          v.literal("completed"),
+          v.literal("failed"),
+        ),
+        totalRecipients: v.number(),
+        sentCount: v.number(),
+        failedCount: v.number(),
+        startedAt: v.number(),
+        completedAt: v.optional(v.number()),
+      }),
+    ),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const results = await ctx.db
+      .query("emailCampaigns")
+      .order("desc")
+      .paginate(args.paginationOpts);
+
+    return {
+      page: results.page.map((c) => ({
+        _id: c._id,
+        _creationTime: c._creationTime,
+        campaignId: c.campaignId,
+        type: c.type,
+        status: c.status,
+        totalRecipients: c.totalRecipients,
+        sentCount: c.sentCount,
+        failedCount: c.failedCount,
+        startedAt: c.startedAt,
+        completedAt: c.completedAt,
+      })),
+      isDone: results.isDone,
+      continueCursor: results.continueCursor,
+    };
+  },
+});
+
+/**
+ * Get email queue statistics for monitoring
+ */
+export const getQueueStats = query({
+  args: {},
+  returns: v.object({
+    queued: v.number(),
+    processing: v.number(),
+    sent: v.number(),
+    failed: v.number(),
+    recentEmails: v.array(
+      v.object({
+        _id: v.id("emailQueue"),
+        to: v.string(),
+        subject: v.string(),
+        status: v.union(
+          v.literal("queued"),
+          v.literal("processing"),
+          v.literal("sent"),
+          v.literal("failed"),
+        ),
+        scheduledFor: v.number(),
+        sentAt: v.optional(v.number()),
+        errorMessage: v.optional(v.string()),
+      }),
+    ),
+  }),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    // Single query to get all emails, count by status in memory
+    const allEmails = await ctx.db.query("emailQueue").order("desc").collect();
+
+    // Count by status
+    const stats = { queued: 0, processing: 0, sent: 0, failed: 0 };
+    for (const email of allEmails) {
+      if (email.status in stats) {
+        stats[email.status]++;
+      }
+    }
+
+    // Get 10 most recent for activity feed (already sorted desc)
+    const recentEmails = allEmails.slice(0, 10);
+
+    return {
+      queued: stats.queued,
+      processing: stats.processing,
+      sent: stats.sent,
+      failed: stats.failed,
+      recentEmails: recentEmails.map((e) => ({
+        _id: e._id,
+        to: e.to,
+        subject: e.subject,
+        status: e.status,
+        scheduledFor: e.scheduledFor,
+        sentAt: e.sentAt,
+        errorMessage: e.errorMessage,
+      })),
+    };
   },
 });
 
@@ -539,9 +931,15 @@ export const recordSentEmail = internalMutation({
     ),
     recipientCount: v.number(),
     sentBy: v.id("profiles"),
-    status: v.union(v.literal("sent"), v.literal("partial"), v.literal("failed")),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("partial"),
+      v.literal("failed"),
+      v.literal("queued"),
+    ),
     errorMessage: v.optional(v.string()),
     resendBatchId: v.optional(v.string()),
+    campaignId: v.optional(v.string()),
   },
   returns: v.id("sentEmails"),
   handler: async (ctx, args) => {
@@ -557,6 +955,7 @@ export const recordSentEmail = internalMutation({
       status: args.status,
       errorMessage: args.errorMessage,
       resendBatchId: args.resendBatchId,
+      campaignId: args.campaignId,
     });
   },
 });
@@ -720,7 +1119,38 @@ export const getRecipientsForEmail = query({
 });
 
 /**
- * Send email action - handles Resend API call
+ * Helper function to personalize email content with recipient variables
+ */
+function personalizeContent(
+  template: string,
+  recipient: { firstName: string; lastName: string; email: string },
+): string {
+  const fullName = `${recipient.firstName} ${recipient.lastName}`.trim();
+  const platformVars = {
+    appName: "Pathible",
+    supportEmail: "support@pathible.com",
+    currentYear: new Date().getFullYear().toString(),
+    loginUrl: "https://pathible.com/login",
+    dashboardUrl: "https://pathible.com/dashboard",
+  };
+
+  return template
+    .replace(/\{\{firstName\}\}/g, recipient.firstName || "")
+    .replace(/\{\{lastName\}\}/g, recipient.lastName || "")
+    .replace(/\{\{fullName\}\}/g, fullName || "")
+    .replace(/\{\{email\}\}/g, recipient.email || "")
+    .replace(/\{\{appName\}\}/g, platformVars.appName)
+    .replace(/\{\{supportEmail\}\}/g, platformVars.supportEmail)
+    .replace(/\{\{currentYear\}\}/g, platformVars.currentYear)
+    .replace(/\{\{loginUrl\}\}/g, platformVars.loginUrl)
+    .replace(/\{\{dashboardUrl\}\}/g, platformVars.dashboardUrl);
+}
+
+/**
+ * Send email action - queues emails for rate-limited sending
+ *
+ * Instead of sending directly via Resend, emails are added to the queue
+ * and processed by the cron job (respecting 2 emails/second rate limit).
  */
 export const sendEmail = action({
   args: {
@@ -748,123 +1178,118 @@ export const sendEmail = action({
     success: v.boolean(),
     sentCount: v.number(),
     errorMessage: v.optional(v.string()),
+    campaignId: v.optional(v.string()),
   }),
-  handler: async (ctx, args) => {
-    // Get current admin profile
-    const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal, {});
-
-    const { Resend } = await import("resend");
-    const resend = new Resend(process.env.RESEND_API_KEY);
-
-    let sentCount = 0;
-    let errorMessage: string | undefined;
-    let resendBatchId: string | undefined;
-    let status: "sent" | "partial" | "failed" = "sent";
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    success: boolean;
+    sentCount: number;
+    errorMessage?: string;
+    campaignId?: string;
+  }> => {
+    // Verify admin access and get profile
+    const { profile } = await ctx.runQuery(internal.auth.requireAdminInternal, {});
 
     try {
       if (args.recipientEmails.length === 0) {
         throw new Error("No recipients specified");
       }
 
-      // Send emails in batches (Resend recommends max 100 per batch)
-      const batchSize = 100;
-      const batches: Array<typeof args.recipientEmails> = [];
+      // Create campaign ID for tracking
+      const dateStr = new Date().toISOString().replace(/[:.]/g, "-");
+      const campaignId = `admin_broadcast_${dateStr}`;
 
-      for (let i = 0; i < args.recipientEmails.length; i += batchSize) {
-        batches.push(args.recipientEmails.slice(i, i + batchSize));
-      }
+      // Create campaign record
+      await ctx.runMutation(internal.emailQueue.createCampaign, {
+        campaignId,
+        type: "admin_broadcast",
+        totalRecipients: args.recipientEmails.length,
+      });
 
-      // Platform variables (same for all recipients)
-      const platformVars = {
-        appName: "Pathible",
-        supportEmail: "support@pathible.com",
-        currentYear: new Date().getFullYear().toString(),
-        loginUrl: "https://pathible.com/login",
-        dashboardUrl: "https://pathible.com/dashboard",
+      // Update campaign status to sending
+      await ctx.runMutation(internal.emailQueue.updateCampaignStatus, {
+        campaignId,
+        status: "sending",
+      });
+
+      // Prepare personalized emails for batch enqueue
+      const emails = args.recipientEmails.map((recipient) => {
+        const personalizedSubject = personalizeContent(args.subject, recipient);
+        const personalizedHtml = personalizeContent(args.htmlContent, recipient);
+
+        return {
+          to: recipient.email,
+          subject: personalizedSubject,
+          htmlContent: personalizedHtml,
+          recipientContext: {
+            firstName: recipient.firstName,
+            lastName: recipient.lastName,
+          },
+        };
+      });
+
+      // Enqueue all emails with rate limiting (500ms stagger between each)
+      const result: { queuedCount: number; emailIds: Id<"emailQueue">[] } = await ctx.runMutation(
+        internal.emailQueue.enqueueEmailBatch,
+        {
+          emails,
+          templateId: args.templateId,
+          campaignId,
+        },
+      );
+
+      // Record the sent email with "queued" status
+      await ctx.runMutation(internal.adminEmail.recordSentEmail, {
+        subject: args.subject,
+        content: args.content,
+        htmlContent: args.htmlContent,
+        templateId: args.templateId,
+        recipientType: args.recipientType,
+        recipientFilter: {
+          tiers: args.tiers,
+          userIds: args.userIds,
+        },
+        recipientCount: result.queuedCount,
+        sentBy: profile._id,
+        status: "queued",
+        campaignId,
+      });
+
+      console.log(`[Admin Email] Queued ${result.queuedCount} emails for campaign ${campaignId}`);
+
+      return {
+        success: true,
+        sentCount: result.queuedCount,
+        campaignId,
       };
-
-      for (const batch of batches) {
-        for (const recipient of batch) {
-          try {
-            // Substitute variables for this recipient
-            const fullName = `${recipient.firstName} ${recipient.lastName}`.trim();
-            const personalizedSubject = args.subject
-              .replace(/\{\{firstName\}\}/g, recipient.firstName || "")
-              .replace(/\{\{lastName\}\}/g, recipient.lastName || "")
-              .replace(/\{\{fullName\}\}/g, fullName || "")
-              .replace(/\{\{email\}\}/g, recipient.email || "")
-              .replace(/\{\{appName\}\}/g, platformVars.appName)
-              .replace(/\{\{supportEmail\}\}/g, platformVars.supportEmail)
-              .replace(/\{\{currentYear\}\}/g, platformVars.currentYear)
-              .replace(/\{\{loginUrl\}\}/g, platformVars.loginUrl)
-              .replace(/\{\{dashboardUrl\}\}/g, platformVars.dashboardUrl);
-
-            const personalizedHtml = args.htmlContent
-              .replace(/\{\{firstName\}\}/g, recipient.firstName || "")
-              .replace(/\{\{lastName\}\}/g, recipient.lastName || "")
-              .replace(/\{\{fullName\}\}/g, fullName || "")
-              .replace(/\{\{email\}\}/g, recipient.email || "")
-              .replace(/\{\{appName\}\}/g, platformVars.appName)
-              .replace(/\{\{supportEmail\}\}/g, platformVars.supportEmail)
-              .replace(/\{\{currentYear\}\}/g, platformVars.currentYear)
-              .replace(/\{\{loginUrl\}\}/g, platformVars.loginUrl)
-              .replace(/\{\{dashboardUrl\}\}/g, platformVars.dashboardUrl);
-
-            const response = await resend.emails.send({
-              from: "Pathible <noreply@app.pathible.com>",
-              replyTo: "support@pathible.com",
-              to: recipient.email,
-              subject: personalizedSubject,
-              html: personalizedHtml,
-            });
-
-            if (response.data?.id) {
-              sentCount++;
-              if (!resendBatchId) {
-                resendBatchId = response.data.id;
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to send to ${recipient.email}:`, err);
-          }
-        }
-      }
-
-      if (sentCount === 0) {
-        status = "failed";
-        errorMessage = "Failed to send to any recipients";
-      } else if (sentCount < args.recipientEmails.length) {
-        status = "partial";
-        errorMessage = `Sent ${sentCount} of ${args.recipientEmails.length} emails`;
-      }
     } catch (err) {
-      status = "failed";
-      errorMessage = err instanceof Error ? err.message : "Unknown error";
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+
+      // Record the failed attempt
+      await ctx.runMutation(internal.adminEmail.recordSentEmail, {
+        subject: args.subject,
+        content: args.content,
+        htmlContent: args.htmlContent,
+        templateId: args.templateId,
+        recipientType: args.recipientType,
+        recipientFilter: {
+          tiers: args.tiers,
+          userIds: args.userIds,
+        },
+        recipientCount: 0,
+        sentBy: profile._id,
+        status: "failed",
+        errorMessage,
+      });
+
+      return {
+        success: false,
+        sentCount: 0,
+        errorMessage,
+      };
     }
-
-    // Record the sent email
-    await ctx.runMutation(internal.adminEmail.recordSentEmail, {
-      subject: args.subject,
-      content: args.content,
-      htmlContent: args.htmlContent,
-      templateId: args.templateId,
-      recipientType: args.recipientType,
-      recipientFilter: {
-        tiers: args.tiers,
-        userIds: args.userIds,
-      },
-      recipientCount: sentCount,
-      sentBy: profile._id,
-      status,
-      errorMessage,
-      resendBatchId,
-    });
-
-    return {
-      success: status !== "failed",
-      sentCount,
-      errorMessage,
-    };
   },
 });
 
@@ -882,7 +1307,13 @@ export const sendTestEmail = action({
   returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
   handler: async (ctx, args) => {
     // Verify admin access
-    const { profile } = await ctx.runQuery(internal.auth.requireAuthInternal, {});
+    const { profile } = await ctx.runQuery(internal.auth.requireAdminInternal, {});
+
+    // Validate email format
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!EMAIL_REGEX.test(args.toEmail)) {
+      return { success: false, error: "Invalid email format" };
+    }
 
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);

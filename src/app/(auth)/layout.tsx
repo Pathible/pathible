@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getIsAdmin, getOnboardingStatus } from "@/lib/auth-session";
-import { checkHasActivePlan } from "@/lib/subscription-plans";
+import { checkHasActivePlan } from "@/lib/feature-access";
 
 /**
  * Auth Layout - Wraps all authenticated routes

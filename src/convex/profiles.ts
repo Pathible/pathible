@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAuth } from "./auth";
+import { validateStateCode, validateZipCode } from "./shared/validators";
 
 /**
  * Profile management functions
@@ -67,6 +68,7 @@ export const get = query({
 /**
  * Get a profile by ID (public information only)
  * Used for displaying user information to other household members
+ * Requires authentication to prevent profile enumeration
  */
 export const getById = query({
   args: {
@@ -82,6 +84,12 @@ export const getById = query({
     v.null(),
   ),
   handler: async (ctx, args) => {
+    // Require authentication to prevent profile enumeration attacks
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
     const profile = await ctx.db.get(args.profileId);
     // Return null for non-existent or soft-deleted profiles
     if (!profile || profile.deletedAt) return null;
@@ -301,21 +309,11 @@ export const updateContactInfo = mutation({
     }
 
     if (args.state !== undefined) {
-      // Allow empty string to clear state, but validate non-empty values
-      // Must be exactly 2 letters (A-Z)
-      if (args.state && !/^[A-Za-z]{2}$/.test(args.state)) {
-        throw new Error("State must be a 2-letter code (e.g., CA, NY)");
-      }
-      updates.state = args.state ? args.state.toUpperCase() : args.state;
+      updates.state = validateStateCode(args.state);
     }
 
     if (args.zipCode !== undefined) {
-      // Allow empty string to clear zipCode, but validate non-empty values
-      // US ZIP format: 5 digits or 5+4 with optional dash
-      if (args.zipCode && !/^\d{5}(-?\d{4})?$/.test(args.zipCode)) {
-        throw new Error("ZIP code must be 5 digits (e.g., 12345) or 9 digits (e.g., 12345-6789)");
-      }
-      updates.zipCode = args.zipCode;
+      updates.zipCode = validateZipCode(args.zipCode);
     }
 
     // Update the profile

@@ -4,13 +4,10 @@ import { useAuth } from "@clerk/nextjs";
 import {
   checkHasActivePlan,
   getCurrentPlanTier,
-  PLAN_DESCRIPTIONS,
-  PLAN_LABELS,
-  PLAN_TIERS,
-  type PlanTier,
-} from "@/lib/subscription-plans";
+  type SubscriptionTier,
+} from "@/lib/feature-access";
 
-export type SubscriptionPlan = PlanTier | null;
+export type SubscriptionPlan = SubscriptionTier | null;
 
 /**
  * Hook to check user's subscription status using Clerk Billing
@@ -63,21 +60,3 @@ export function useSubscription() {
     hasAnyPlan,
   };
 }
-
-/**
- * Plan tier labels for display
- * Re-exported from shared utility for backwards compatibility
- */
-export const planLabels = PLAN_LABELS;
-
-/**
- * Plan tier descriptions
- * Re-exported from shared utility for backwards compatibility
- */
-export const planDescriptions = PLAN_DESCRIPTIONS;
-
-/**
- * Available plan tiers
- * Re-exported from shared utility
- */
-export const planTiers = PLAN_TIERS;

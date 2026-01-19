@@ -1,6 +1,13 @@
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireAuth, requireHouseholdAccess } from "./auth";
+import {
+  keyContactRoleValidator,
+  personSourceTypeValidator,
+  relationshipTypeValidator,
+} from "./shared/commonValidators";
+import { validateStateCode, validateZipCode } from "./shared/validators";
 
 /**
  * Person Resolution Module
@@ -16,39 +23,8 @@ import { requireAuth, requireHouseholdAccess } from "./auth";
 // VALIDATORS
 // ============================================================================
 
-const relationshipTypeValidator = v.union(
-  v.literal("parent"),
-  v.literal("child"),
-  v.literal("spouse"),
-  v.literal("partner"),
-  v.literal("sibling"),
-  v.literal("grandparent"),
-  v.literal("grandchild"),
-  v.literal("aunt_uncle"),
-  v.literal("niece_nephew"),
-  v.literal("cousin"),
-  v.literal("in_law"),
-  v.literal("other"),
-);
-
-const keyContactRoleValidator = v.union(
-  v.literal("attorney"),
-  v.literal("financial_advisor"),
-  v.literal("executor"),
-  v.literal("trustee"),
-  v.literal("guardian"),
-  v.literal("healthcare_proxy"),
-  v.literal("friend"),
-  v.literal("neighbor"),
-  v.literal("business_partner"),
-  v.literal("caregiver"),
-  v.literal("charitable_org"),
-  v.literal("religious_org"),
-  v.literal("other"),
-);
-
 const personReferenceValidator = v.object({
-  sourceType: v.union(v.literal("familyMember"), v.literal("keyContact"), v.literal("manual")),
+  sourceType: personSourceTypeValidator,
   familyMemberId: v.optional(v.id("familyMembers")),
   keyContactId: v.optional(v.id("keyContacts")),
   // Resolved or manually entered data
@@ -547,6 +523,104 @@ export const updateFamilyMemberAddress = mutation({
       zipCode: args.zipCode?.trim(),
       updatedAt: Date.now(),
     });
+
+    return null;
+  },
+});
+
+/**
+ * Sync person data back to source record (familyMember or keyContact)
+ * Called when a person is edited in the legal document wizard
+ * This ensures data consistency between legal documents and the family ecosystem
+ */
+export const syncPersonToSource = mutation({
+  args: {
+    sourceType: v.union(v.literal("familyMember"), v.literal("keyContact"), v.literal("manual")),
+    familyMemberId: v.optional(v.id("familyMembers")),
+    keyContactId: v.optional(v.id("keyContacts")),
+    // Person data to sync
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    fullName: v.optional(v.string()),
+    address: v.optional(v.string()),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    zipCode: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    dateOfBirth: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
+    // Manual entries don't have a source to sync to
+    if (args.sourceType === "manual") {
+      return null;
+    }
+
+    // Sync to family member
+    if (args.sourceType === "familyMember" && args.familyMemberId) {
+      const member = await ctx.db.get(args.familyMemberId);
+      if (!member) {
+        throw new Error("Family member not found");
+      }
+
+      await requireHouseholdAccess(ctx, member.householdId);
+
+      // Build update object with only defined fields
+      const updates: Partial<Doc<"familyMembers">> = {};
+
+      if (args.firstName !== undefined) updates.firstName = args.firstName.trim();
+      if (args.lastName !== undefined) updates.lastName = args.lastName.trim();
+      if (args.address !== undefined) updates.address = args.address.trim() || undefined;
+      if (args.city !== undefined) updates.city = args.city.trim() || undefined;
+      if (args.state !== undefined) updates.state = validateStateCode(args.state);
+      if (args.zipCode !== undefined) updates.zipCode = validateZipCode(args.zipCode);
+      if (args.phone !== undefined) updates.phone = args.phone.trim() || undefined;
+      if (args.email !== undefined) updates.email = args.email.trim().toLowerCase() || undefined;
+      if (args.dateOfBirth !== undefined) updates.dateOfBirth = args.dateOfBirth;
+
+      updates.updatedAt = Date.now();
+
+      await ctx.db.patch(args.familyMemberId, updates);
+      return null;
+    }
+
+    // Sync to key contact
+    if (args.sourceType === "keyContact" && args.keyContactId) {
+      const contact = await ctx.db.get(args.keyContactId);
+      if (!contact) {
+        throw new Error("Key contact not found");
+      }
+
+      await requireHouseholdAccess(ctx, contact.householdId);
+
+      // Build update object with only defined fields
+      const updates: Partial<Doc<"keyContacts">> = {};
+
+      // Key contacts have a single "name" field, not firstName/lastName
+      if (args.fullName !== undefined) {
+        updates.name = args.fullName.trim();
+      } else if (args.firstName !== undefined || args.lastName !== undefined) {
+        // Reconstruct name from first/last if fullName not provided
+        const firstName = args.firstName?.trim() || "";
+        const lastName = args.lastName?.trim() || "";
+        const name = [firstName, lastName].filter(Boolean).join(" ");
+        if (name) updates.name = name;
+      }
+
+      if (args.address !== undefined) updates.address = args.address.trim() || undefined;
+      if (args.city !== undefined) updates.city = args.city.trim() || undefined;
+      if (args.state !== undefined) updates.state = validateStateCode(args.state);
+      if (args.zipCode !== undefined) updates.zipCode = validateZipCode(args.zipCode);
+      if (args.phone !== undefined) updates.phone = args.phone.trim() || undefined;
+      if (args.email !== undefined) updates.email = args.email.trim().toLowerCase() || undefined;
+      if (args.dateOfBirth !== undefined) updates.dateOfBirth = args.dateOfBirth;
+
+      await ctx.db.patch(args.keyContactId, updates);
+      return null;
+    }
 
     return null;
   },

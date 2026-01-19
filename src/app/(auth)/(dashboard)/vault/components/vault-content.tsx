@@ -1,12 +1,17 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { AlertCircle, Loader2, Settings, Shield } from "lucide-react";
+import { Settings, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  AuthLoadingSpinner,
+  ConnectionErrorCard,
+  SetupRequiredCard,
+  SignInRequiredCard,
+} from "@/components/auth-states";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
+import { useAuthenticatedHousehold } from "@/hooks/use-authenticated-household";
 import { CategoryManager } from "./category-manager";
 import { DocumentList } from "./document-list";
 import { SearchAndFilter } from "./search-and-filter";
@@ -17,33 +22,9 @@ export function VaultContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
-  // Track retry attempts for auth sync
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 10; // Max retries before giving up (5 seconds total)
 
-  // Check Clerk session status
-  const { user, isLoaded: isUserLoaded } = useUser();
-
-  // Get user's households - run when session is ready
-  const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
-
-  // Unified retry logic for auth race conditions
-  useEffect(() => {
-    const needsRetry = isUserLoaded && retryCount < maxRetries && (!user || households === null);
-
-    if (needsRetry) {
-      const timer = setTimeout(() => {
-        setRetryCount((c) => c + 1);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isUserLoaded, user, households, retryCount]);
-
-  // Determine if we're still in the auth loading phase
-  const isAuthLoading = !isUserLoaded || (!user && retryCount < maxRetries);
-
-  // Use the first household (most users will only have one)
-  const householdId = households?.[0]?._id;
+  // Use consolidated auth + household hook
+  const { householdId, isLoading: isAuthLoading, error } = useAuthenticatedHousehold();
 
   // Only fetch vault data once we have a household ID
   const stats = useQuery(api.vault.getStats, householdId ? { householdId } : "skip");
@@ -78,68 +59,21 @@ export function VaultContent() {
     }
   }, [householdId, categories, categoriesInitialized, initializeCategories]);
 
-  // Loading state - wait for Better Auth session and retries to complete
+  // Handle auth loading and error states
   if (isAuthLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <AuthLoadingSpinner />;
   }
 
-  // Not authenticated - only show after all retries exhausted
-  if (!user) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Signed In</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Sign in to access your family&apos;s secure document vault.
-          </p>
-        </CardContent>
-      </Card>
-    );
+  if (error === "not-authenticated") {
+    return <SignInRequiredCard context="secure document vault" />;
   }
 
-  // Still loading households query (undefined = query pending, null = auth not ready yet)
-  // Show loading while retrying, show error if retries exhausted
-  if (households === undefined || (households === null && retryCount < maxRetries)) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+  if (error === "connection-failed") {
+    return <ConnectionErrorCard />;
   }
 
-  // Auth sync failed after all retries - show helpful error
-  if (households === null) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Having Trouble Connecting</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-            We&apos;re having trouble reaching your family&apos;s data. Mind giving it another try?
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // No household found (empty array means auth worked but user has no households)
-  if (!householdId) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Set Up</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Complete your profile to start organizing your family&apos;s important documents.
-          </p>
-        </CardContent>
-      </Card>
-    );
+  if (error === "no-household" || !householdId) {
+    return <SetupRequiredCard context="important documents" />;
   }
 
   const isLoading =

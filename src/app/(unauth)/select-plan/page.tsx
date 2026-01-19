@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { FullPageLoader } from "@/components/full-page-loader";
 import { Button } from "@/components/ui/button";
-import { checkHasActivePlan } from "@/lib/subscription-plans";
+import { checkHasActivePlan } from "@/lib/feature-access";
 
 /**
  * Select Plan Page

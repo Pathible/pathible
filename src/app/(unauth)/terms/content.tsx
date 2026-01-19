@@ -1,118 +1,12 @@
-import { AlertTriangle } from "lucide-react";
-
-// Styled section components for consistent formatting
-function Section({
-  id,
-  title,
-  children,
-}: {
-  id: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section id={id} className="scroll-mt-24">
-      <h2 className="font-crimson text-2xl sm:text-3xl leading-snug text-foreground mb-6 mt-14 pb-3 border-b border-pathible-sage/20">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function SubSection({
-  id,
-  title,
-  children,
-}: {
-  id?: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div id={id} className="scroll-mt-24 mt-8">
-      <h3 className="font-crimson text-xl sm:text-2xl leading-snug text-foreground mb-4">
-        {title}
-      </h3>
-      {children}
-    </div>
-  );
-}
-
-function Paragraph({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-muted-foreground leading-relaxed mb-5 text-base sm:text-lg">{children}</p>
-  );
-}
-
-function Strong({ children }: { children: React.ReactNode }) {
-  return <strong className="font-semibold text-foreground">{children}</strong>;
-}
-
-function BulletList({ items }: { items: (string | React.ReactNode)[] }) {
-  return (
-    <ul className="list-none space-y-3 mb-6 pl-0">
-      {items.map((item, index) => {
-        const key = typeof item === "string" ? item : `bullet-${index}`;
-        return (
-          <li
-            key={key}
-            className="text-muted-foreground leading-relaxed text-base sm:text-lg pl-6 relative before:content-[''] before:absolute before:left-0 before:top-[0.6em] before:w-2 before:h-2 before:bg-pathible-sage/40 before:rounded-full"
-          >
-            {item}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function NumberedList({ items }: { items: (string | React.ReactNode)[] }) {
-  return (
-    <ol className="list-none space-y-3 mb-6 pl-0 counter-reset-list">
-      {items.map((item, index) => {
-        const key = typeof item === "string" ? item : `numbered-${index}`;
-        return (
-          <li
-            key={key}
-            className="text-muted-foreground leading-relaxed text-base sm:text-lg pl-10 relative"
-          >
-            <span className="absolute left-0 top-0 w-7 h-7 rounded-full bg-pathible-forest/10 flex items-center justify-center text-sm font-medium text-pathible-forest">
-              {String.fromCharCode(97 + index)}
-            </span>
-            {item}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
-function ImportantNotice({
-  children,
-  variant = "warning",
-}: {
-  children: React.ReactNode;
-  variant?: "warning" | "info";
-}) {
-  const styles = {
-    warning: "bg-amber-50 border-amber-200 text-amber-900",
-    info: "bg-pathible-forest/5 border-pathible-forest/20 text-foreground",
-  };
-
-  return (
-    <div className={`my-8 p-6 border rounded-2xl ${styles[variant]}`}>
-      <div className="flex gap-4">
-        <AlertTriangle
-          className={`w-6 h-6 shrink-0 mt-0.5 ${
-            variant === "warning" ? "text-amber-600" : "text-pathible-forest"
-          }`}
-        />
-        <div className="font-medium">{children}</div>
-      </div>
-    </div>
-  );
-}
+import {
+  BulletList,
+  ImportantNotice,
+  NumberedList,
+  Paragraph,
+  Section,
+  Strong,
+  SubSection,
+} from "@/components/legal-content";
 
 function Divider() {
   return <hr className="my-12 border-t-2 border-pathible-sage/20" />;
@@ -551,7 +445,7 @@ export function TermsOfServiceContent() {
           <BulletList
             items={[
               "You retain full access to paid features until the end of your current billing period",
-              "After cancellation takes effect, your account will be downgraded to free tier (if available) or deactivated",
+              "After cancellation takes effect, your account will be downgraded to the lowest tier or deactivated",
               "You will lose access to premium features",
               "Your data will be retained according to our Privacy Policy (you may request deletion)",
               "You may resubscribe at any time at the then-current rates",
@@ -1245,7 +1139,14 @@ export function TermsOfServiceContent() {
                 </a>
               </p>
               <p>
-                <Strong>Address:</Strong> [Address to be provided]
+                <Strong>Address:</Strong> <br />
+                390 NE 191st St
+                <br />
+                STE 18899
+                <br />
+                Miami, FL 33179
+                <br />
+                United States
               </p>
             </div>
           </div>

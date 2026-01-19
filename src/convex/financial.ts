@@ -3,6 +3,7 @@ import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireActiveSubscription, requireAuth, requireHouseholdAccess } from "./auth";
 import { logActivity } from "./shared/activity";
+import { STRING_LIMITS, validateOptionalString, validateRequiredString } from "./shared/validators";
 
 /**
  * Financial Intelligence - Financial Account & Asset Management
@@ -486,17 +487,12 @@ export const createAccount = mutation({
     await requireActiveSubscription(ctx, args.householdId);
 
     // Validate inputs
-    if (!args.name.trim()) {
-      throw new Error("Account name is required");
-    }
-
-    if (args.name.length > 100) {
-      throw new Error("Account name is too long (max 100 characters)");
-    }
-
-    if (!args.institution.trim()) {
-      throw new Error("Institution name is required");
-    }
+    const name = validateRequiredString(args.name, "Account name", STRING_LIMITS.name);
+    const institution = validateRequiredString(
+      args.institution,
+      "Institution name",
+      STRING_LIMITS.name,
+    );
 
     if (args.accountNumberLast4 && args.accountNumberLast4.length !== 4) {
       throw new Error("Account number must be exactly 4 digits");
@@ -508,9 +504,9 @@ export const createAccount = mutation({
     // Create account
     const accountId = await ctx.db.insert("financialAccounts", {
       householdId: args.householdId,
-      name: args.name.trim(),
+      name,
       type: args.type,
-      institution: args.institution.trim(),
+      institution,
       accountNumberLast4: args.accountNumberLast4,
       balance,
       currency: args.currency || "USD",
@@ -566,13 +562,11 @@ export const updateAccount = mutation({
     };
 
     if (args.name !== undefined) {
-      if (!args.name.trim()) {
+      const validated = validateOptionalString(args.name, "Account name", STRING_LIMITS.name);
+      if (validated === undefined) {
         throw new Error("Account name cannot be empty");
       }
-      if (args.name.length > 100) {
-        throw new Error("Account name is too long (max 100 characters)");
-      }
-      updates.name = args.name.trim();
+      updates.name = validated;
     }
 
     if (args.type !== undefined) {
@@ -580,10 +574,15 @@ export const updateAccount = mutation({
     }
 
     if (args.institution !== undefined) {
-      if (!args.institution.trim()) {
+      const validated = validateOptionalString(
+        args.institution,
+        "Institution name",
+        STRING_LIMITS.name,
+      );
+      if (validated === undefined) {
         throw new Error("Institution name cannot be empty");
       }
-      updates.institution = args.institution.trim();
+      updates.institution = validated;
     }
 
     if (args.accountNumberLast4 !== undefined) {
@@ -686,17 +685,9 @@ export const createProperty = mutation({
     await requireActiveSubscription(ctx, args.householdId);
 
     // Validate inputs
-    if (!args.name.trim()) {
-      throw new Error("Property name is required");
-    }
-
-    if (args.name.length > 200) {
-      throw new Error("Property name is too long (max 200 characters)");
-    }
-
-    if (args.notes && args.notes.length > 1000) {
-      throw new Error("Notes are too long (max 1000 characters)");
-    }
+    // Property names can be longer (e.g., "123 Main Street, Apartment 4B")
+    const name = validateRequiredString(args.name, "Property name", 200);
+    const notes = validateOptionalString(args.notes, "Notes", STRING_LIMITS.notes);
 
     // Validate numeric inputs
     const estimatedValue = validateNumber(args.estimatedValue, "Estimated value");
@@ -704,12 +695,12 @@ export const createProperty = mutation({
     // Create property
     const propertyId = await ctx.db.insert("properties", {
       householdId: args.householdId,
-      name: args.name.trim(),
+      name,
       type: args.type,
       address: args.address?.trim(),
       estimatedValue,
       purchaseDate: args.purchaseDate,
-      notes: args.notes?.trim(),
+      notes,
       updatedAt: Date.now(),
     });
 
@@ -761,13 +752,11 @@ export const updateProperty = mutation({
     };
 
     if (args.name !== undefined) {
-      if (!args.name.trim()) {
+      const validated = validateOptionalString(args.name, "Property name", 200);
+      if (validated === undefined) {
         throw new Error("Property name cannot be empty");
       }
-      if (args.name.length > 200) {
-        throw new Error("Property name is too long (max 200 characters)");
-      }
-      updates.name = args.name.trim();
+      updates.name = validated;
     }
 
     if (args.type !== undefined) {
@@ -787,10 +776,7 @@ export const updateProperty = mutation({
     }
 
     if (args.notes !== undefined) {
-      if (args.notes && args.notes.length > 1000) {
-        throw new Error("Notes are too long (max 1000 characters)");
-      }
-      updates.notes = args.notes?.trim();
+      updates.notes = validateOptionalString(args.notes, "Notes", STRING_LIMITS.notes);
     }
 
     // Update property
@@ -878,21 +864,17 @@ export const createInsurancePolicy = mutation({
     await requireActiveSubscription(ctx, args.householdId);
 
     // Validate inputs
-    if (!args.provider.trim()) {
-      throw new Error("Provider name is required");
-    }
-
-    if (args.provider.length > 100) {
-      throw new Error("Provider name is too long (max 100 characters)");
-    }
+    const provider = validateRequiredString(args.provider, "Provider name", STRING_LIMITS.name);
 
     if (args.policyNumberLast4 && args.policyNumberLast4.length !== 4) {
       throw new Error("Policy number must be exactly 4 digits");
     }
 
-    if (args.beneficiaries && args.beneficiaries.length > 500) {
-      throw new Error("Beneficiaries information is too long (max 500 characters)");
-    }
+    const beneficiaries = validateOptionalString(
+      args.beneficiaries,
+      "Beneficiaries information",
+      STRING_LIMITS.description,
+    );
 
     // Validate numeric inputs
     const coverageAmount = validateNumber(args.coverageAmount, "Coverage amount");
@@ -902,12 +884,12 @@ export const createInsurancePolicy = mutation({
     const policyId = await ctx.db.insert("insurancePolicies", {
       householdId: args.householdId,
       type: args.type,
-      provider: args.provider.trim(),
+      provider,
       policyNumberLast4: args.policyNumberLast4,
       coverageAmount,
       premiumAmount,
       premiumFrequency: args.premiumFrequency,
-      beneficiaries: args.beneficiaries?.trim(),
+      beneficiaries,
       expirationDate: args.expirationDate,
       updatedAt: Date.now(),
     });
@@ -966,13 +948,11 @@ export const updateInsurancePolicy = mutation({
     }
 
     if (args.provider !== undefined) {
-      if (!args.provider.trim()) {
+      const validated = validateOptionalString(args.provider, "Provider name", STRING_LIMITS.name);
+      if (validated === undefined) {
         throw new Error("Provider name cannot be empty");
       }
-      if (args.provider.length > 100) {
-        throw new Error("Provider name is too long (max 100 characters)");
-      }
-      updates.provider = args.provider.trim();
+      updates.provider = validated;
     }
 
     if (args.policyNumberLast4 !== undefined) {
@@ -995,10 +975,11 @@ export const updateInsurancePolicy = mutation({
     }
 
     if (args.beneficiaries !== undefined) {
-      if (args.beneficiaries && args.beneficiaries.length > 500) {
-        throw new Error("Beneficiaries information is too long (max 500 characters)");
-      }
-      updates.beneficiaries = args.beneficiaries?.trim();
+      updates.beneficiaries = validateOptionalString(
+        args.beneficiaries,
+        "Beneficiaries information",
+        STRING_LIMITS.description,
+      );
     }
 
     if (args.expirationDate !== undefined) {

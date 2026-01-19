@@ -6,13 +6,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardList,
-  Edit,
   Eye,
   FileText,
   Heart,
   Info,
   Landmark,
   Loader2,
+  Pencil,
   Plus,
   ScrollText,
   Shield,
@@ -118,8 +118,8 @@ const ALL_DOCUMENT_TYPES: DocumentType[] = [
 // TODO: Gradually enable more document types as they are tested
 const ENABLED_DOCUMENT_TYPES: DocumentType[] = [
   "will",
-  // "trust",           // Coming soon - needs asset integration testing
-  // "pour_over_will",  // Coming soon - depends on trust
+  "trust", // Coming soon - needs asset integration testing
+  "pour_over_will", // Coming soon - depends on trust
   // "financial_poa",   // Coming soon
   // "healthcare_poa",  // Coming soon
   // "advance_directive", // Coming soon
@@ -270,7 +270,10 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
         </CardHeader>
         <CardContent>
           {/* Important Notice */}
-          <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <div
+            className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+            data-tour="legal-docs-disclaimer"
+          >
             <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
             <div className="text-sm">
               <p className="font-medium text-amber-800 dark:text-amber-300">
@@ -304,6 +307,11 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
+                  {/* Status badges:
+                      - draft: User is still filling out the wizard
+                      - complete: Wizard finished, PDF not yet downloaded
+                      - generated: User has downloaded the PDF at least once
+                  */}
                   {existingDoc && (
                     <Badge
                       variant={
@@ -318,10 +326,10 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                       )}
                       {existingDoc.status === "generated"
-                        ? "Generated"
+                        ? "PDF Downloaded"
                         : existingDoc.status === "complete"
-                          ? "Ready"
-                          : "Draft"}
+                          ? "Ready to Download"
+                          : "In Progress"}
                     </Badge>
                   )}
                 </div>
@@ -339,7 +347,7 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
                       className="flex-1"
                       onClick={() => handleEditDocument(existingDoc._id)}
                     >
-                      <Edit className="h-4 w-4 mr-1" />
+                      <Pencil className="h-4 w-4 mr-1" />
                       {existingDoc.status === "draft" ? "Continue" : "Edit"}
                     </Button>
                     {(existingDoc.status === "complete" || existingDoc.status === "generated") && (
@@ -378,7 +386,10 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
       </div>
 
       {/* Quick Info Card */}
-      <Card className="bg-amber-50 border-amber-200 text-amber-900 ">
+      <Card
+        className="bg-amber-50 border-amber-200 text-amber-900"
+        data-tour="legal-docs-getting-started"
+      >
         <CardContent>
           <div className="flex items-start gap-3">
             <Info className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -388,7 +399,7 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
                 <li>Each document guides you through the required information step by step</li>
                 <li>Your progress is saved automatically as you go</li>
                 <li>State-specific requirements are shown based on your location</li>
-                <li>Download PDFs to review with an attorney or store for your records</li>
+                <li>Download PDFs to review with an attorney or store in the Heritage Vault</li>
               </ul>
             </div>
           </div>

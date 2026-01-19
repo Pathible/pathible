@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { articleCategoryValidator } from "./shared/categories";
 
 /**
  * Pathible Database Schema
@@ -29,8 +30,20 @@ export default defineSchema({
     // Address fields for contact information
     address: v.optional(v.string()), // Street address
     city: v.optional(v.string()),
+    county: v.optional(v.string()), // County of residence (for legal documents)
     state: v.optional(v.string()), // 2-letter state code (e.g., "CA")
     zipCode: v.optional(v.string()), // ZIP/Postal code
+    // Legal document fields
+    maritalStatus: v.optional(
+      v.union(
+        v.literal("single"),
+        v.literal("married"),
+        v.literal("divorced"),
+        v.literal("widowed"),
+        v.literal("domestic_partnership"),
+        v.literal("separated"),
+      ),
+    ),
     // Onboarding tracking
     onboardingStatus: v.optional(
       v.union(
@@ -258,6 +271,7 @@ export default defineSchema({
     .index("by_familyUnit", ["familyUnitId"])
     .index("by_household", ["householdId"])
     .index("by_household_and_status", ["householdId", "status"])
+    .index("by_household_and_email", ["householdId", "email"])
     .index("by_profileId", ["profileId"])
     .index("by_familyUnit_and_status", ["familyUnitId", "status"])
     .index("by_familyUnit_and_profileId", ["familyUnitId", "profileId"]),
@@ -651,26 +665,19 @@ export default defineSchema({
 
   /**
    * Educational articles - admin-authored educational content
+   * visibility: "public" = accessible without auth, "subscribers" = requires subscription
    */
   educationalArticles: defineTable({
     title: v.string(),
     slug: v.string(), // URL-friendly identifier
     content: v.string(), // Rich text/markdown
     excerpt: v.string(), // Short description
-    category: v.union(
-      v.literal("estate_planning"),
-      v.literal("financial_planning"),
-      v.literal("family_legacy"),
-      v.literal("legal"),
-      v.literal("insurance"),
-      v.literal("digital_legacy"),
-      v.literal("end_of_life"),
-      v.literal("faith_stewardship"),
-      v.literal("other"),
-    ),
+    category: articleCategoryValidator,
     readTimeMinutes: v.number(),
     featuredImageUrl: v.optional(v.string()),
     status: v.union(v.literal("draft"), v.literal("published"), v.literal("archived")),
+    // Visibility controls public access - defaults to "subscribers" for existing articles
+    visibility: v.optional(v.union(v.literal("public"), v.literal("subscribers"))),
     viewCount: v.number(),
     authorId: v.string(), // Better Auth user ID (admin author)
     publishedAt: v.optional(v.number()), // Unix timestamp
@@ -679,7 +686,11 @@ export default defineSchema({
     .index("by_slug", ["slug"])
     .index("by_status", ["status"])
     .index("by_category", ["category"])
-    .index("by_status_and_publishedAt", ["status", "publishedAt"]),
+    .index("by_status_and_publishedAt", ["status", "publishedAt"])
+    .index("by_visibility", ["visibility"])
+    .index("by_status_and_visibility", ["status", "visibility"])
+    .index("by_status_category", ["status", "category"])
+    .index("by_status_visibility_category", ["status", "visibility", "category"]),
 
   /**
    * User article reads - tracks which articles each user has read
@@ -760,9 +771,13 @@ export default defineSchema({
     .index("by_household_and_status", ["householdId", "status"]),
 
   /**
-   * Email templates - transactional email templates
+   * Email templates - transactional and system email templates
+   *
+   * Supports both manual templates (created by admins) and system templates
+   * (automated emails triggered by cron jobs with configurable schedules).
    */
   emailTemplates: defineTable({
+    // Core template fields
     name: v.string(), // Unique template identifier
     subject: v.string(),
     content: v.string(), // Markdown template with variable placeholders
@@ -781,7 +796,44 @@ export default defineSchema({
       ),
     ),
     updatedAt: v.number(),
-  }).index("by_name", ["name"]),
+
+    // System template fields (for automated emails)
+    isSystemTemplate: v.optional(v.boolean()), // True for automated system templates
+    systemTemplateKey: v.optional(v.string()), // Unique key e.g., "vault_empty"
+    enabled: v.optional(v.boolean()), // Allow disabling without deleting
+
+    // Schedule configuration for automated emails
+    schedule: v.optional(
+      v.object({
+        frequency: v.union(v.literal("weekly"), v.literal("daily")),
+        dayOfWeek: v.optional(v.number()), // 0-6, Sunday=0 (for weekly)
+        hourUtc: v.number(), // 0-23
+      }),
+    ),
+
+    // Trigger conditions - criteria for selecting recipients
+    triggerConditions: v.optional(
+      v.object({
+        onboardingStatus: v.optional(v.string()), // e.g., "complete"
+        minDaysSinceOnboarding: v.optional(v.number()), // e.g., 3
+        vaultEmpty: v.optional(v.boolean()), // true = vault has no documents
+        requireEmailNotifications: v.optional(v.boolean()), // true = user opted in
+      }),
+    ),
+
+    // Campaign type for tracking and reporting
+    campaignType: v.optional(
+      v.union(
+        v.literal("weekly_vault_empty"),
+        v.literal("weekly_digest"),
+        v.literal("admin_broadcast"),
+        v.literal("other"),
+      ),
+    ),
+  })
+    .index("by_name", ["name"])
+    .index("by_systemTemplateKey", ["systemTemplateKey"])
+    .index("by_isSystemTemplate", ["isSystemTemplate"]),
 
   /**
    * Sent emails - log of all emails sent through the admin system
@@ -809,13 +861,80 @@ export default defineSchema({
       v.literal("sent"),
       v.literal("partial"), // Some failed
       v.literal("failed"),
+      v.literal("queued"), // Added for queue support
     ),
     errorMessage: v.optional(v.string()),
     resendBatchId: v.optional(v.string()), // For tracking with Resend
+    campaignId: v.optional(v.string()), // Link to email campaign
   })
     .index("by_sentBy", ["sentBy"])
     .index("by_status", ["status"])
-    .index("by_templateId", ["templateId"]),
+    .index("by_templateId", ["templateId"])
+    .index("by_campaignId", ["campaignId"]),
+
+  /**
+   * Email queue - rate-limited email processing queue
+   * Respects Resend's 2 emails/second limit by scheduling emails 500ms apart
+   */
+  emailQueue: defineTable({
+    to: v.string(), // Recipient email address
+    subject: v.string(),
+    htmlContent: v.string(), // Pre-rendered HTML content
+    // Recipient context for personalization tracking
+    recipientContext: v.optional(
+      v.object({
+        profileId: v.optional(v.id("profiles")),
+        firstName: v.optional(v.string()),
+        lastName: v.optional(v.string()),
+        householdName: v.optional(v.string()),
+      }),
+    ),
+    templateId: v.optional(v.id("emailTemplates")),
+    campaignId: v.optional(v.string()), // Links to emailCampaigns
+    status: v.union(
+      v.literal("queued"),
+      v.literal("processing"),
+      v.literal("sent"),
+      v.literal("failed"),
+    ),
+    attempts: v.number(), // Number of send attempts
+    maxAttempts: v.number(), // Maximum retry attempts (default: 3)
+    lastAttemptAt: v.optional(v.number()), // Unix timestamp of last attempt
+    errorMessage: v.optional(v.string()), // Last error message
+    scheduledFor: v.number(), // Unix timestamp - when to send
+    sentAt: v.optional(v.number()), // Unix timestamp when successfully sent
+    resendId: v.optional(v.string()), // Resend message ID for tracking
+  })
+    .index("by_status", ["status"])
+    .index("by_status_scheduledFor", ["status", "scheduledFor"])
+    .index("by_campaignId", ["campaignId"]),
+
+  /**
+   * Email campaigns - tracking for bulk email operations
+   * Used for reporting and monitoring batch email sends
+   */
+  emailCampaigns: defineTable({
+    campaignId: v.string(), // Unique identifier (e.g., "weekly_vault_empty_2024-01-15")
+    type: v.union(
+      v.literal("weekly_vault_empty"),
+      v.literal("weekly_digest"),
+      v.literal("admin_broadcast"),
+      v.literal("other"),
+    ),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("sending"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ),
+    totalRecipients: v.number(),
+    sentCount: v.number(),
+    failedCount: v.number(),
+    startedAt: v.number(), // Unix timestamp
+    completedAt: v.optional(v.number()), // Unix timestamp when all emails processed
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_type_status", ["type", "status"]),
 
   // ============================================================================
   // GUIDED TOURS

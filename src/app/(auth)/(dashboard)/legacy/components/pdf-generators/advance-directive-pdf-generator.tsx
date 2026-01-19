@@ -8,6 +8,8 @@ import {
 } from "@/lib/state-legal-requirements";
 import {
   Checkbox,
+  DocumentFooter,
+  DocumentHeader,
   HealthcareWitnessAttestation,
   type LegalDocumentPDFData,
   NotaryAcknowledgment,
@@ -80,11 +82,11 @@ export function AdvanceDirectivePDFGenerator({ data }: { data: LegalDocumentPDFD
     <Document>
       {/* ==================== PAGE 1 ==================== */}
       <Page size="LETTER" style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{documentTitle}</Text>
-          <Text style={styles.subtitle}>(Living Will Declaration)</Text>
-          <Text style={styles.stateInfo}>State of {stateName}</Text>
-        </View>
+        <DocumentHeader
+          title={documentTitle}
+          subtitle="(Living Will Declaration)"
+          state={data.state}
+        />
 
         {/* IMPORTANT NOTICE */}
         <View
@@ -200,9 +202,11 @@ export function AdvanceDirectivePDFGenerator({ data }: { data: LegalDocumentPDFD
           </Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text>Advance Directive of {r.fullName || "[YOUR NAME]"} | Page 1</Text>
-        </View>
+        <DocumentFooter
+          documentName="Advance Directive"
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={1}
+        />
       </Page>
 
       {/* ==================== PAGE 2 ==================== */}
@@ -390,9 +394,11 @@ export function AdvanceDirectivePDFGenerator({ data }: { data: LegalDocumentPDFD
           </Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text>Advance Directive of {r.fullName || "[YOUR NAME]"} | Page 2</Text>
-        </View>
+        <DocumentFooter
+          documentName="Advance Directive"
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={2}
+        />
       </Page>
 
       {/* ==================== PAGE 3 ==================== */}
@@ -540,9 +546,11 @@ export function AdvanceDirectivePDFGenerator({ data }: { data: LegalDocumentPDFD
           </View>
         )}
 
-        <View style={styles.footer}>
-          <Text>Advance Directive of {r.fullName || "[YOUR NAME]"} | Page 3</Text>
-        </View>
+        <DocumentFooter
+          documentName="Advance Directive"
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={3}
+        />
       </Page>
 
       {/* ==================== PAGE 4 ==================== */}
@@ -657,9 +665,11 @@ export function AdvanceDirectivePDFGenerator({ data }: { data: LegalDocumentPDFD
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Text>Advance Directive of {r.fullName || "[YOUR NAME]"} | Page 4</Text>
-        </View>
+        <DocumentFooter
+          documentName="Advance Directive"
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={4}
+        />
       </Page>
 
       {/* ==================== PAGE 5 ==================== */}
@@ -712,9 +722,11 @@ export function AdvanceDirectivePDFGenerator({ data }: { data: LegalDocumentPDFD
           </View>
         )}
 
-        <View style={styles.footer}>
-          <Text>Advance Directive of {r.fullName || "[YOUR NAME]"} | Page 5</Text>
-        </View>
+        <DocumentFooter
+          documentName="Advance Directive"
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={5}
+        />
       </Page>
     </Document>
   );

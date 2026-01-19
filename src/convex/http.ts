@@ -1,14 +1,22 @@
 import { httpRouter } from "convex/server";
+import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 
 const http = httpRouter();
+
+// Valid subscription tiers from Clerk Billing
+const VALID_TIERS = ["foundations", "heritage", "legacy", "founders"] as const;
+type SubscriptionTier = (typeof VALID_TIERS)[number];
+
+// Valid subscription statuses
+const VALID_STATUSES = ["active", "inactive", "cancelled", "past_due"] as const;
+type SubscriptionStatus = (typeof VALID_STATUSES)[number];
 
 /**
  * Clerk Webhook Handler (Convex HTTP Action)
  *
  * This endpoint receives webhooks directly from Clerk and verifies the signature.
- * Currently just logs events - subscription data is managed via Clerk Billing
- * and accessed directly through Clerk's `has()` function.
+ * Syncs subscription tier changes from Clerk Billing to the Convex household.
  *
  * SECURITY: This is an httpAction, not a mutation, so it can only be called
  * via HTTP requests to the Convex deployment URL. The webhook signature
@@ -21,7 +29,7 @@ const http = httpRouter();
 http.route({
   path: "/clerk-webhook",
   method: "POST",
-  handler: httpAction(async (_ctx, request) => {
+  handler: httpAction(async (ctx, request) => {
     // Get webhook secret from environment
     const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
     if (!webhookSecret) {
@@ -62,8 +70,7 @@ http.route({
     const eventType = payload.type as string;
     console.log(`[Clerk Webhook] Processing event: ${eventType}`);
 
-    // Log subscription events for debugging
-    // Subscription data is now managed via Clerk Billing and effective tier system
+    // Handle subscription events - sync tier and status to Convex household
     if (
       eventType === "user.updated" ||
       eventType.startsWith("subscription.") ||
@@ -72,6 +79,75 @@ http.route({
       const data = payload.data as Record<string, unknown>;
       const userId = data.id as string | undefined;
       console.log(`[Clerk Webhook] Subscription event for user: ${userId}`);
+
+      // Extract subscription/plan info from the webhook payload
+      // Clerk Billing sends plan info in different formats depending on the event
+      let tier: SubscriptionTier | null = null;
+      let status: SubscriptionStatus | null = null;
+
+      // Check for plan in various locations in the payload
+      // subscription.created/updated events have plan info in data.plan or data.subscription.plan
+      const planName =
+        (data.plan as string | undefined) ||
+        ((data.subscription as Record<string, unknown> | undefined)?.plan as string | undefined) ||
+        // user.updated might have it in public_metadata or private_metadata
+        ((data.public_metadata as Record<string, unknown> | undefined)?.subscription_tier as
+          | string
+          | undefined);
+
+      if (planName && VALID_TIERS.includes(planName as SubscriptionTier)) {
+        tier = planName as SubscriptionTier;
+      }
+
+      // Extract subscription status from the webhook payload
+      // Handle different event types for status determination
+      if (eventType === "subscription.cancelled" || eventType === "subscription.deleted") {
+        status = "cancelled";
+      } else if (eventType === "subscription.created" || eventType === "subscription.updated") {
+        // Check for status in subscription data
+        const subscriptionStatus =
+          (data.status as string | undefined) ||
+          ((data.subscription as Record<string, unknown> | undefined)?.status as
+            | string
+            | undefined);
+
+        if (subscriptionStatus === "active") {
+          status = "active";
+        } else if (subscriptionStatus === "past_due" || subscriptionStatus === "unpaid") {
+          status = "past_due";
+        } else if (subscriptionStatus === "canceled" || subscriptionStatus === "cancelled") {
+          status = "cancelled";
+        } else if (subscriptionStatus === "inactive" || subscriptionStatus === "paused") {
+          status = "inactive";
+        }
+      } else if (eventType === "user.updated") {
+        // user.updated might have status in public_metadata
+        const metadataStatus = (data.public_metadata as Record<string, unknown> | undefined)
+          ?.subscription_status as string | undefined;
+
+        if (metadataStatus && VALID_STATUSES.includes(metadataStatus as SubscriptionStatus)) {
+          status = metadataStatus as SubscriptionStatus;
+        }
+      }
+
+      // If we have a userId and either tier or status, sync to Convex
+      if (userId && (tier || status)) {
+        try {
+          const result = await ctx.runMutation(internal.auth.syncSubscriptionTier, {
+            clerkUserId: userId,
+            tier: tier ?? undefined,
+            status: status ?? undefined,
+          });
+          console.log(`[Clerk Webhook] Sync result: ${result.message}`);
+        } catch (error) {
+          console.error(`[Clerk Webhook] Failed to sync subscription:`, error);
+          // Don't fail the webhook - log and continue
+        }
+      } else if (userId && !tier && !status) {
+        console.log(
+          `[Clerk Webhook] No tier or status found in payload for user ${userId}, skipping sync`,
+        );
+      }
     }
 
     return new Response("OK", { status: 200 });

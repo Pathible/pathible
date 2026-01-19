@@ -68,7 +68,7 @@ describe("State Legal Requirements", () => {
         if (!witnessCounts.has(count)) {
           witnessCounts.set(count, []);
         }
-        witnessCounts.get(count)!.push(state);
+        witnessCounts.get(count)?.push(state);
       }
 
       // Most states require 2 witnesses

@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -93,6 +93,7 @@ export function DangerZoneCard({ profileName }: DangerZoneCardProps) {
             <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="w-full sm:w-auto">
+                  <Trash2 className="h-4 w-4" />
                   Delete Account
                 </Button>
               </AlertDialogTrigger>
@@ -146,7 +147,10 @@ export function DangerZoneCard({ profileName }: DangerZoneCardProps) {
                         Deleting...
                       </>
                     ) : (
-                      "Delete Account"
+                      <>
+                        <Trash2 className="h-4 w-4" />
+                        Delete Account
+                      </>
                     )}
                   </AlertDialogAction>
                 </AlertDialogFooter>

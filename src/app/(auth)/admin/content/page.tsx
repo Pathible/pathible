@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { Archive, Eye, FileText, Loader2, MoreHorizontal, Plus, Send, Trash2 } from "lucide-react";
+import { Archive, Eye, FileText, Globe, Loader2, Lock, Plus, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -20,13 +20,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -43,23 +36,36 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import {
+  ARTICLE_CATEGORY_LABELS,
+  ARTICLE_CATEGORY_OPTIONS,
+  type ArticleCategory,
+  LEGACY_CATEGORY_MAPPING,
+} from "@/convex/shared/categories";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  estate_planning: "Estate Planning",
-  financial_planning: "Financial Planning",
-  family_legacy: "Family Legacy",
-  legal: "Legal",
-  insurance: "Insurance",
-  digital_legacy: "Digital Legacy",
-  end_of_life: "End of Life",
-  faith_stewardship: "Faith & Stewardship",
-  other: "Other",
-};
+/**
+ * Get display label for a category, handling both legacy and new category values
+ */
+function getCategoryDisplayLabel(category: string): string {
+  if (category in LEGACY_CATEGORY_MAPPING) {
+    const newCategory = LEGACY_CATEGORY_MAPPING[category];
+    return ARTICLE_CATEGORY_LABELS[newCategory];
+  }
+  if (category in ARTICLE_CATEGORY_LABELS) {
+    return ARTICLE_CATEGORY_LABELS[category as ArticleCategory];
+  }
+  return category;
+}
 
 const STATUS_STYLES: Record<string, string> = {
   draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
   published: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   archived: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+};
+
+const VISIBILITY_STYLES: Record<string, string> = {
+  public: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  subscribers: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
 };
 
 function formatDate(timestamp: number): string {
@@ -74,6 +80,7 @@ export default function ContentManagerPage() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<{
     id: Id<"educationalArticles">;
@@ -83,19 +90,9 @@ export default function ContentManagerPage() {
   const articles = useQuery(api.articles.listAll, {
     status:
       statusFilter !== "all" ? (statusFilter as "draft" | "published" | "archived") : undefined,
-    category:
-      categoryFilter !== "all"
-        ? (categoryFilter as
-            | "estate_planning"
-            | "financial_planning"
-            | "family_legacy"
-            | "legal"
-            | "insurance"
-            | "digital_legacy"
-            | "end_of_life"
-            | "faith_stewardship"
-            | "other")
-        : undefined,
+    category: categoryFilter !== "all" ? (categoryFilter as ArticleCategory) : undefined,
+    visibility:
+      visibilityFilter !== "all" ? (visibilityFilter as "public" | "subscribers") : undefined,
   });
 
   const updateArticle = useMutation(api.articles.update);
@@ -116,6 +113,24 @@ export default function ContentManagerPage() {
       toast.success("Article archived");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to archive");
+    }
+  };
+
+  const handleMakePublic = async (id: Id<"educationalArticles">) => {
+    try {
+      await updateArticle({ id, visibility: "public" });
+      toast.success("Article is now public");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update visibility");
+    }
+  };
+
+  const handleMakeSubscribers = async (id: Id<"educationalArticles">) => {
+    try {
+      await updateArticle({ id, visibility: "subscribers" });
+      toast.success("Article is now subscribers-only");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update visibility");
     }
   };
 
@@ -181,11 +196,23 @@ export default function ContentManagerPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
+                  {ARTICLE_CATEGORY_OPTIONS.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-48">
+              <Select value={visibilityFilter} onValueChange={setVisibilityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by visibility" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Visibility</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                  <SelectItem value="subscribers">Subscribers Only</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -231,9 +258,10 @@ export default function ContentManagerPage() {
                     <TableHead className="min-w-[300px] max-w-[400px]">Title</TableHead>
                     <TableHead className="w-[140px]">Category</TableHead>
                     <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="w-[110px]">Visibility</TableHead>
                     <TableHead className="w-[80px]">Views</TableHead>
                     <TableHead className="w-[100px]">Updated</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="w-[160px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -252,56 +280,101 @@ export default function ContentManagerPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{CATEGORY_LABELS[article.category]}</Badge>
+                        <Badge variant="outline">{getCategoryDisplayLabel(article.category)}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge className={STATUS_STYLES[article.status]}>{article.status}</Badge>
                       </TableCell>
+                      <TableCell>
+                        <Badge className={VISIBILITY_STYLES[article.visibility]}>
+                          {article.visibility === "public" ? (
+                            <span className="flex items-center gap-1">
+                              <Globe className="h-3 w-3" />
+                              Public
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <Lock className="h-3 w-3" />
+                              Subscribers
+                            </span>
+                          )}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{article.viewCount}</TableCell>
                       <TableCell>{formatDate(article.updatedAt)}</TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                        <div
+                          className="flex items-center gap-1"
+                          role="group"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          {article.status === "published" && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={(e) => e.stopPropagation()}
+                              className="h-8 w-8"
+                              asChild
+                              title="View article"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
+                              <Link href={`/learn/${article.slug}`} target="_blank">
+                                <Eye className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                              </Link>
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {article.status === "published" && (
-                              <DropdownMenuItem asChild>
-                                <Link href={`/financial/articles/${article.slug}`} target="_blank">
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View
-                                </Link>
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            {article.status === "draft" && (
-                              <DropdownMenuItem onClick={() => handlePublish(article._id)}>
-                                <Send className="h-4 w-4 mr-2" />
-                                Publish
-                              </DropdownMenuItem>
-                            )}
-                            {article.status === "published" && (
-                              <DropdownMenuItem onClick={() => handleArchive(article._id)}>
-                                <Archive className="h-4 w-4 mr-2" />
-                                Archive
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteClick(article._id, article.title)}
-                              className="text-destructive"
+                          )}
+                          {article.status === "draft" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handlePublish(article._id)}
+                              title="Publish article"
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <Send className="h-4 w-4 text-muted-foreground hover:text-green-600" />
+                            </Button>
+                          )}
+                          {article.status === "published" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleArchive(article._id)}
+                              title="Archive article"
+                            >
+                              <Archive className="h-4 w-4 text-muted-foreground hover:text-amber-600" />
+                            </Button>
+                          )}
+                          {article.visibility === "subscribers" ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleMakePublic(article._id)}
+                              title="Make public"
+                            >
+                              <Globe className="h-4 w-4 text-muted-foreground hover:text-blue-600" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleMakeSubscribers(article._id)}
+                              title="Make subscribers only"
+                            >
+                              <Lock className="h-4 w-4 text-muted-foreground hover:text-amber-600" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDeleteClick(article._id, article.title)}
+                            title="Delete article"
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

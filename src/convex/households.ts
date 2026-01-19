@@ -10,8 +10,18 @@ import {
   requireHouseholdAdmin,
 } from "./auth";
 import { logActivity } from "./shared/activity";
+import {
+  householdRoleValidator,
+  subscriptionStatusValidator,
+  subscriptionTierValidator,
+} from "./shared/commonValidators";
 import { incrementMemberCount } from "./shared/counters";
-import { EMAIL_REGEX } from "./shared/validators";
+import {
+  EMAIL_REGEX,
+  STRING_LIMITS,
+  validateOptionalString,
+  validateRequiredString,
+} from "./shared/validators";
 
 /**
  * Household management functions
@@ -44,37 +54,15 @@ export const get = query({
       description: v.optional(v.string()),
       imageUrl: v.optional(v.string()),
       primaryContactId: v.id("profiles"),
-      subscriptionTier: v.union(
-        v.literal("foundations"),
-        v.literal("heritage"),
-        v.literal("legacy"),
-        v.literal("founders"),
-      ),
-      subscriptionStatus: v.union(
-        v.literal("active"),
-        v.literal("inactive"),
-        v.literal("cancelled"),
-        v.literal("past_due"),
-      ),
+      subscriptionTier: subscriptionTierValidator,
+      subscriptionStatus: subscriptionStatusValidator,
       // Tier override fields (for promotional pricing)
-      tierOverride: v.optional(
-        v.union(
-          v.literal("foundations"),
-          v.literal("heritage"),
-          v.literal("legacy"),
-          v.literal("founders"),
-        ),
-      ),
+      tierOverride: v.optional(subscriptionTierValidator),
       tierOverrideReason: v.optional(v.string()),
       tierOverrideExpiresAt: v.optional(v.number()),
       updatedAt: v.number(),
       // Include the user's role in this household
-      userRole: v.union(
-        v.literal("owner"),
-        v.literal("steward"),
-        v.literal("viewer"),
-        v.literal("executor"),
-      ),
+      userRole: householdRoleValidator,
       memberCount: v.number(),
       familyUnitCount: v.optional(v.number()),
       storageUsedBytes: v.optional(v.number()),
@@ -127,36 +115,15 @@ export const list = query({
         description: v.optional(v.string()),
         imageUrl: v.optional(v.string()),
         primaryContactId: v.id("profiles"),
-        subscriptionTier: v.union(
-          v.literal("foundations"),
-          v.literal("heritage"),
-          v.literal("legacy"),
-          v.literal("founders"),
-        ),
-        subscriptionStatus: v.union(
-          v.literal("active"),
-          v.literal("inactive"),
-          v.literal("cancelled"),
-          v.literal("past_due"),
-        ),
+        subscriptionTier: subscriptionTierValidator,
+        subscriptionStatus: subscriptionStatusValidator,
         // Tier override fields for promotional pricing
-        tierOverride: v.optional(
-          v.union(
-            v.literal("foundations"),
-            v.literal("heritage"),
-            v.literal("legacy"),
-            v.literal("founders"),
-          ),
-        ),
+        tierOverride: v.optional(subscriptionTierValidator),
         tierOverrideReason: v.optional(v.string()),
+        tierOverrideExpiresAt: v.optional(v.number()),
         updatedAt: v.number(),
         // Include the user's role in this household
-        userRole: v.union(
-          v.literal("owner"),
-          v.literal("steward"),
-          v.literal("viewer"),
-          v.literal("executor"),
-        ),
+        userRole: householdRoleValidator,
         memberCount: v.number(),
         familyUnitCount: v.optional(v.number()),
         storageUsedBytes: v.optional(v.number()),
@@ -225,12 +192,7 @@ export const listMembers = query({
         avatarUrl: v.optional(v.string()),
       }),
       relationship: v.optional(v.string()),
-      role: v.union(
-        v.literal("owner"),
-        v.literal("steward"),
-        v.literal("viewer"),
-        v.literal("executor"),
-      ),
+      role: householdRoleValidator,
       status: v.union(v.literal("active"), v.literal("pending"), v.literal("inactive")),
       invitedBy: v.optional(v.id("profiles")),
       joinedAt: v.optional(v.number()),
@@ -244,10 +206,19 @@ export const listMembers = query({
       .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
       .collect();
 
-    // Get profile details for each member
-    const members = await Promise.all(
-      memberships.map(async (membership) => {
-        const profile = await ctx.db.get(membership.userId);
+    // Batch fetch all profiles in parallel
+    const profileIds = memberships.map((m) => m.userId);
+    const profiles = await Promise.all(profileIds.map((id) => ctx.db.get(id)));
+
+    // Create lookup map for O(1) access
+    const profileMap = new Map(
+      profiles.filter((p): p is NonNullable<typeof p> => p !== null).map((p) => [p._id, p]),
+    );
+
+    // Build member list with profile data
+    const members = memberships
+      .map((membership) => {
+        const profile = profileMap.get(membership.userId);
         if (!profile) return null;
 
         return {
@@ -265,14 +236,12 @@ export const listMembers = query({
           invitedBy: membership.invitedBy,
           joinedAt: membership.joinedAt,
         };
-      }),
-    );
+      })
+      .filter((m): m is NonNullable<typeof m> => m !== null);
 
-    // Filter out null values and sort by role (owners first, then stewards, etc.)
-    type MemberWithProfile = NonNullable<(typeof members)[number]>;
-    const validMembers = members.filter((m): m is MemberWithProfile => m !== null);
+    // Sort by role (owners first, then stewards, etc.)
     const roleOrder = { owner: 0, steward: 1, executor: 2, viewer: 3 };
-    return validMembers.sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
+    return members.sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
   },
 });
 
@@ -358,30 +327,37 @@ export const create = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
+    // Subscription tier from Clerk Billing - passed from frontend
+    subscriptionTier: v.optional(
+      v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+        v.literal("founders"),
+      ),
+    ),
   },
   returns: v.id("households"),
   handler: async (ctx, args) => {
     const { profile } = await requireAuth(ctx);
 
-    // Validate inputs
-    if (!args.name.trim()) {
-      throw new Error("Household name is required");
-    }
+    // Validate inputs using shared validators
+    const name = validateRequiredString(args.name, "Household name", STRING_LIMITS.name);
+    const description = validateOptionalString(
+      args.description,
+      "Description",
+      STRING_LIMITS.description,
+    );
 
-    if (args.name.length > 100) {
-      throw new Error("Household name is too long (max 100 characters)");
-    }
-
-    if (args.description && args.description.length > 500) {
-      throw new Error("Description is too long (max 500 characters)");
-    }
+    // Use the tier from Clerk Billing if provided, otherwise default to foundations
+    const tier = args.subscriptionTier || "foundations";
 
     // Create the household
     const householdId = await ctx.db.insert("households", {
-      name: args.name.trim(),
-      description: args.description?.trim(),
+      name,
+      description,
       primaryContactId: profile._id,
-      subscriptionTier: "foundations",
+      subscriptionTier: tier,
       subscriptionStatus: "active",
       storageUsedBytes: 0,
       memberCount: 0,
@@ -442,20 +418,16 @@ export const update = mutation({
     };
 
     if (args.name !== undefined) {
-      if (!args.name.trim()) {
-        throw new Error("Household name cannot be empty");
-      }
-      if (args.name.length > 100) {
-        throw new Error("Household name is too long (max 100 characters)");
-      }
-      updates.name = args.name.trim();
+      // Use validateRequiredString but with error message matching existing behavior
+      updates.name = validateRequiredString(args.name, "Household name", STRING_LIMITS.name);
     }
 
     if (args.description !== undefined) {
-      if (args.description && args.description.length > 500) {
-        throw new Error("Description is too long (max 500 characters)");
-      }
-      updates.description = args.description?.trim();
+      updates.description = validateOptionalString(
+        args.description,
+        "Description",
+        STRING_LIMITS.description,
+      );
     }
 
     if (args.imageUrl !== undefined) {
@@ -592,9 +564,8 @@ export const acceptInvitation = mutation({
       throw new Error("Invitation has expired");
     }
 
-    // Check if email matches - safely access email from user object
-    const userEmail = (user as { email?: string }).email || "";
-    if (invitation.email.toLowerCase() !== userEmail.toLowerCase()) {
+    // Check if email matches
+    if (invitation.email.toLowerCase() !== user.email.toLowerCase()) {
       throw new Error("This invitation is for a different email address");
     }
 
@@ -788,12 +759,7 @@ export const updateMemberRole = mutation({
   args: {
     householdId: v.id("households"),
     membershipId: v.id("householdMemberships"),
-    role: v.union(
-      v.literal("owner"),
-      v.literal("steward"),
-      v.literal("viewer"),
-      v.literal("executor"),
-    ),
+    role: householdRoleValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {

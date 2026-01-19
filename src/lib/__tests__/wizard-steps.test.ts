@@ -18,7 +18,11 @@ import { describe, expect, it } from "vitest";
  */
 
 const EXPECTED_WILL_STEPS = [
-  { id: "personal", title: "Personal Information", requiredFields: ["testator", "county", "maritalStatus"] },
+  {
+    id: "personal",
+    title: "Personal Information",
+    requiredFields: ["testator", "county", "maritalStatus"],
+  },
   { id: "executor", title: "Executor", requiredFields: ["executor"] },
   { id: "beneficiaries", title: "Beneficiaries", requiredFields: ["residuaryBeneficiary"] },
   { id: "provisions", title: "Special Provisions", requiredFields: [] },
@@ -64,7 +68,11 @@ const EXPECTED_HEALTHCARE_POA_STEPS = [
 const EXPECTED_ADVANCE_DIRECTIVE_STEPS = [
   { id: "personal", title: "Personal Information", requiredFields: ["principal"] },
   { id: "terminal", title: "Terminal Condition", requiredFields: ["terminalConditionPreference"] },
-  { id: "unconscious", title: "Permanent Unconsciousness", requiredFields: ["permanentUnconsciousnessPreference"] },
+  {
+    id: "unconscious",
+    title: "Permanent Unconsciousness",
+    requiredFields: ["permanentUnconsciousnessPreference"],
+  },
   { id: "treatments", title: "Treatment Decisions", requiredFields: [] },
   { id: "comfort", title: "Comfort Care", requiredFields: [] },
   { id: "organ", title: "Organ Donation", requiredFields: [] },
@@ -213,7 +221,7 @@ describe("Wizard Step Consistency", () => {
   ];
 
   it("should have unique step IDs within each wizard", () => {
-    for (const { name, steps } of allStepConfigs) {
+    for (const { steps } of allStepConfigs) {
       const ids = steps.map((s) => s.id);
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
@@ -221,7 +229,7 @@ describe("Wizard Step Consistency", () => {
   });
 
   it("should have titles for all steps", () => {
-    for (const { name, steps } of allStepConfigs) {
+    for (const { steps } of allStepConfigs) {
       for (const step of steps) {
         expect(step.title).toBeTruthy();
         expect(step.title.length).toBeGreaterThan(3);
@@ -230,13 +238,13 @@ describe("Wizard Step Consistency", () => {
   });
 
   it("should start all wizards with personal information", () => {
-    for (const { name, steps } of allStepConfigs) {
+    for (const { steps } of allStepConfigs) {
       expect(steps[0].id).toBe("personal");
     }
   });
 
   it("should have reasonable number of steps (3-10)", () => {
-    for (const { name, steps } of allStepConfigs) {
+    for (const { steps } of allStepConfigs) {
       expect(steps.length).toBeGreaterThanOrEqual(3);
       expect(steps.length).toBeLessThanOrEqual(10);
     }
@@ -267,9 +275,9 @@ describe("Required Fields Validation", () => {
       { wizard: "Pour-Over", step: EXPECTED_POUR_OVER_WILL_STEPS[0] },
     ];
 
-    for (const { wizard, step } of personalSteps) {
+    for (const { step } of personalSteps) {
       const hasIdentityField = step.requiredFields.some((f) =>
-        ["testator", "grantor", "principal"].includes(f)
+        ["testator", "grantor", "principal"].includes(f),
       );
       expect(hasIdentityField).toBe(true);
     }

@@ -1,14 +1,18 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { AlertCircle, Lightbulb, TrendingUp, Wallet } from "lucide-react";
+import { Lightbulb, TrendingUp, Wallet } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import {
+  AuthLoadingSpinner,
+  ConnectionErrorCard,
+  SetupRequiredCard,
+  SignInRequiredCard,
+} from "@/components/auth-states";
 import { ComingSoonBadge } from "@/components/coming-soon";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
+import { useAuthenticatedHousehold } from "@/hooks/use-authenticated-household";
 import { AccountManager } from "./account-manager";
 import { FinancialStats } from "./financial-stats";
 import { InsuranceManager } from "./insurance-manager";
@@ -19,8 +23,6 @@ import { SuggestionsList } from "./suggestions-list";
 export function FinancialContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 10;
 
   // URL-controlled tabs for tour navigation
   const activeTab = searchParams.get("tab") || "overview";
@@ -36,29 +38,8 @@ export function FinancialContent() {
     router.push(query ? `/financial?${query}` : "/financial", { scroll: false });
   };
 
-  // Check Clerk session status
-  const { user, isLoaded: isUserLoaded } = useUser();
-
-  // Get user's households
-  const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
-
-  // Unified retry logic for auth race conditions
-  useEffect(() => {
-    const needsRetry = isUserLoaded && retryCount < maxRetries && (!user || households === null);
-
-    if (needsRetry) {
-      const timer = setTimeout(() => {
-        setRetryCount((c) => c + 1);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isUserLoaded, user, households, retryCount]);
-
-  // Determine if we're still in the auth loading phase
-  const isAuthLoading = !isUserLoaded || (!user && retryCount < maxRetries);
-
-  // Use the first household
-  const householdId = households?.[0]?._id;
+  // Use consolidated auth + household hook
+  const { householdId, isLoading: isAuthLoading, error } = useAuthenticatedHousehold();
 
   // Fetch financial data
   const stats = useQuery(api.financial.getStats, householdId ? { householdId } : "skip");
@@ -73,59 +54,21 @@ export function FinancialContent() {
     householdId ? { householdId } : "skip",
   );
 
-  // Loading state
+  // Handle auth loading and error states
   if (isAuthLoading) {
-    return null;
+    return <AuthLoadingSpinner />;
   }
 
-  // Not authenticated
-  if (!user) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Signed In</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Sign in to organize your family&apos;s financial picture.
-          </p>
-        </CardContent>
-      </Card>
-    );
+  if (error === "not-authenticated") {
+    return <SignInRequiredCard context="financial picture" />;
   }
 
-  // Still loading households
-  if (households === undefined || (households === null && retryCount < maxRetries)) {
-    return null;
+  if (error === "connection-failed") {
+    return <ConnectionErrorCard />;
   }
 
-  // Auth sync failed
-  if (households === null) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Having Trouble Connecting</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-            We&apos;re having trouble reaching your family&apos;s data. Mind giving it another try?
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // No household found
-  if (!householdId) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Let&apos;s Get You Set Up</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Complete your profile to start organizing your family&apos;s financial picture.
-          </p>
-        </CardContent>
-      </Card>
-    );
+  if (error === "no-household" || !householdId) {
+    return <SetupRequiredCard context="financial picture" />;
   }
 
   const isLoading =

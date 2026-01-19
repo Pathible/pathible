@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { ArrowLeft, MessageCircle, Plus, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { ComingSoonBadge } from "@/components/coming-soon";
 import { FeatureGate } from "@/components/feature-gate";
@@ -20,40 +20,48 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { FEATURES } from "@/lib/feature-access";
 import { MemberCard } from "./member-card";
+import { INITIAL_FORM_STATE, MemberFormDialog, type MemberFormState } from "./member-form-dialog";
 
 interface FamilyUnitDetailProps {
   unitId: string;
 }
 
+// Helper to build mutation args from form state
+// Converts empty strings to undefined for optional fields
+function buildMutationArgs(formState: MemberFormState) {
+  // Helper to convert empty strings to undefined (for union types that include "")
+  const toUndefinedIfEmpty = <T extends string>(val: T | ""): Exclude<T, ""> | undefined =>
+    val === "" ? undefined : (val as Exclude<T, "">);
+
+  return {
+    firstName: formState.firstName,
+    lastName: formState.lastName,
+    email: formState.email || undefined,
+    phone: formState.phone || undefined,
+    gender: toUndefinedIfEmpty(formState.gender),
+    dateOfBirth: formState.dateOfBirth ? new Date(formState.dateOfBirth).getTime() : undefined,
+    address: formState.address || undefined,
+    city: formState.city || undefined,
+    county: formState.county || undefined,
+    state: formState.state || undefined,
+    zipCode: formState.zipCode || undefined,
+    maritalStatus: toUndefinedIfEmpty(formState.maritalStatus),
+    relationshipType: formState.relationshipType,
+  };
+}
+
 export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
   const router = useRouter();
 
-  // Queries - run in parallel (backend handles auth/access checks)
+  // Queries
   const familyUnit = useQuery(api.familyEcosystem.getFamilyUnit, {
     familyUnitId: unitId as Id<"familyUnits">,
   });
-
   const familyMembers = useQuery(api.familyEcosystem.listFamilyMembers, {
     familyUnitId: unitId as Id<"familyUnits">,
   });
@@ -63,9 +71,8 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
   const updateFamilyMember = useMutation(api.familyEcosystem.updateFamilyMember);
   const removeFamilyMember = useMutation(api.familyEcosystem.removeFamilyMember);
 
-  // Dialog states
-  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
-  const [showEditMemberDialog, setShowEditMemberDialog] = useState(false);
+  // Dialog states - consolidated
+  const [dialogMode, setDialogMode] = useState<"add" | "edit" | null>(null);
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<{
     id: Id<"familyMembers">;
@@ -73,92 +80,88 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form states
+  // Form state - single object instead of 14 separate useState calls
   const [editingMemberId, setEditingMemberId] = useState<Id<"familyMembers"> | null>(null);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [relationshipType, setRelationshipType] = useState<string>("other");
-  const [gender, setGender] = useState<string>("");
+  const [formState, setFormState] = useState<MemberFormState>(INITIAL_FORM_STATE);
 
-  const handleAddMember = async (e: React.FormEvent) => {
+  // Form change handler
+  const handleFormChange = useCallback((updates: Partial<MemberFormState>) => {
+    setFormState((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  // Reset form to initial state
+  const resetForm = useCallback(() => {
+    setEditingMemberId(null);
+    setFormState(INITIAL_FORM_STATE);
+  }, []);
+
+  // Open add dialog
+  const openAddDialog = useCallback(() => {
+    resetForm();
+    setDialogMode("add");
+  }, [resetForm]);
+
+  // Open edit dialog with member data
+  const openEditDialog = useCallback((member: NonNullable<typeof familyMembers>[0]) => {
+    setEditingMemberId(member._id);
+    setFormState({
+      firstName: member.firstName,
+      lastName: member.lastName,
+      email: member.email || "",
+      phone: member.phone || "",
+      relationshipType: member.relationshipType,
+      gender: member.gender || "",
+      dateOfBirth: member.dateOfBirth
+        ? new Date(member.dateOfBirth).toISOString().split("T")[0]
+        : "",
+      address: member.address || "",
+      city: member.city || "",
+      county: member.county || "",
+      state: member.state || "",
+      zipCode: member.zipCode || "",
+      maritalStatus: member.maritalStatus || "",
+    });
+    setDialogMode("edit");
+  }, []);
+
+  // Close dialog
+  const closeDialog = useCallback(() => {
+    setDialogMode(null);
+    resetForm();
+  }, [resetForm]);
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setIsSubmitting(true);
-    try {
-      await addFamilyMember({
-        familyUnitId: unitId as Id<"familyUnits">,
-        firstName,
-        lastName,
-        email: email || undefined,
-        phone: phone || undefined,
-        gender: (gender as "male" | "female" | "prefer_not_to_say" | undefined) || undefined,
-        relationshipType: relationshipType as
-          | "parent"
-          | "child"
-          | "spouse"
-          | "partner"
-          | "sibling"
-          | "grandparent"
-          | "grandchild"
-          | "aunt_uncle"
-          | "niece_nephew"
-          | "cousin"
-          | "in_law"
-          | "other",
-      });
 
-      toast.success("Member added successfully");
-      setShowAddMemberDialog(false);
-      resetForm();
+    try {
+      const args = buildMutationArgs(formState);
+
+      if (dialogMode === "add") {
+        await addFamilyMember({
+          familyUnitId: unitId as Id<"familyUnits">,
+          ...args,
+        });
+        toast.success("Member added successfully");
+      } else if (dialogMode === "edit" && editingMemberId) {
+        await updateFamilyMember({
+          memberId: editingMemberId,
+          ...args,
+        });
+        toast.success("Member updated successfully");
+      }
+
+      closeDialog();
     } catch (error) {
-      console.error("Failed to add member:", error);
-      toast.error("Failed to add member");
+      console.error(`Failed to ${dialogMode} member:`, error);
+      toast.error(`Failed to ${dialogMode} member`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleEditMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingMemberId) return;
-
-    setIsSubmitting(true);
-    try {
-      await updateFamilyMember({
-        memberId: editingMemberId,
-        firstName,
-        lastName,
-        email: email || undefined,
-        phone: phone || undefined,
-        gender: (gender as "male" | "female" | "prefer_not_to_say" | undefined) || undefined,
-        relationshipType: relationshipType as
-          | "parent"
-          | "child"
-          | "spouse"
-          | "partner"
-          | "sibling"
-          | "grandparent"
-          | "grandchild"
-          | "aunt_uncle"
-          | "niece_nephew"
-          | "cousin"
-          | "in_law"
-          | "other",
-      });
-
-      toast.success("Member updated successfully");
-      setShowEditMemberDialog(false);
-      resetForm();
-    } catch (error) {
-      console.error("Failed to update member:", error);
-      toast.error("Failed to update member");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  // Delete confirmation
   const openDeleteConfirm = (memberId: Id<"familyMembers">, memberName: string) => {
     setMemberToDelete({ id: memberId, name: memberName });
     setShowDeleteConfirmDialog(true);
@@ -179,27 +182,6 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const openEditDialog = (member: NonNullable<typeof familyMembers>[0]) => {
-    setEditingMemberId(member._id);
-    setFirstName(member.firstName);
-    setLastName(member.lastName);
-    setEmail(member.email || "");
-    setPhone(member.phone || "");
-    setRelationshipType(member.relationshipType);
-    setGender(member.gender || "");
-    setShowEditMemberDialog(true);
-  };
-
-  const resetForm = () => {
-    setEditingMemberId(null);
-    setFirstName("");
-    setLastName("");
-    setEmail("");
-    setPhone("");
-    setRelationshipType("other");
-    setGender("");
   };
 
   // Loading state
@@ -272,7 +254,7 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Family Members</CardTitle>
-                  <Button onClick={() => setShowAddMemberDialog(true)}>
+                  <Button onClick={openAddDialog}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Member
                   </Button>
@@ -329,208 +311,17 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
         </Tabs>
       </div>
 
-      {/* Add Member Dialog */}
-      <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Family Member</DialogTitle>
-            <DialogDescription>Add a new member to this family unit.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleAddMember} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">Full Name *</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  id="firstName"
-                  placeholder="First name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                />
-                <Input
-                  placeholder="Last name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="email@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="(555) 123-4567"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="relationshipType">Relationship *</Label>
-              <Select value={relationshipType} onValueChange={setRelationshipType} required>
-                <SelectTrigger id="relationshipType">
-                  <SelectValue placeholder="Select relationship" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="parent">Parent</SelectItem>
-                  <SelectItem value="child">Child</SelectItem>
-                  <SelectItem value="spouse">Spouse</SelectItem>
-                  <SelectItem value="partner">Partner</SelectItem>
-                  <SelectItem value="sibling">Sibling</SelectItem>
-                  <SelectItem value="grandparent">Grandparent</SelectItem>
-                  <SelectItem value="grandchild">Grandchild</SelectItem>
-                  <SelectItem value="aunt_uncle">Aunt/Uncle</SelectItem>
-                  <SelectItem value="niece_nephew">Niece/Nephew</SelectItem>
-                  <SelectItem value="cousin">Cousin</SelectItem>
-                  <SelectItem value="in_law">In-Law</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
-              <Select value={gender} onValueChange={setGender}>
-                <SelectTrigger id="gender">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setShowAddMemberDialog(false);
-                  resetForm();
-                }}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Member"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Member Dialog */}
-      <Dialog open={showEditMemberDialog} onOpenChange={setShowEditMemberDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Family Member</DialogTitle>
-            <DialogDescription>Update member information.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditMember} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="editFirstName">Full Name *</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  id="editFirstName"
-                  placeholder="First name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                />
-                <Input
-                  placeholder="Last name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editEmail">Email</Label>
-              <Input
-                id="editEmail"
-                type="email"
-                placeholder="email@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editPhone">Phone</Label>
-              <Input
-                id="editPhone"
-                type="tel"
-                placeholder="(555) 123-4567"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editRelationshipType">Relationship *</Label>
-              <Select value={relationshipType} onValueChange={setRelationshipType} required>
-                <SelectTrigger id="editRelationshipType">
-                  <SelectValue placeholder="Select relationship" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="parent">Parent</SelectItem>
-                  <SelectItem value="child">Child</SelectItem>
-                  <SelectItem value="spouse">Spouse</SelectItem>
-                  <SelectItem value="partner">Partner</SelectItem>
-                  <SelectItem value="sibling">Sibling</SelectItem>
-                  <SelectItem value="grandparent">Grandparent</SelectItem>
-                  <SelectItem value="grandchild">Grandchild</SelectItem>
-                  <SelectItem value="aunt_uncle">Aunt/Uncle</SelectItem>
-                  <SelectItem value="niece_nephew">Niece/Nephew</SelectItem>
-                  <SelectItem value="cousin">Cousin</SelectItem>
-                  <SelectItem value="in_law">In-Law</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editGender">Gender</Label>
-              <Select value={gender} onValueChange={setGender}>
-                <SelectTrigger id="editGender">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setShowEditMemberDialog(false);
-                  resetForm();
-                }}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Updating..." : "Update Member"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Shared Member Form Dialog - handles both add and edit */}
+      <MemberFormDialog
+        open={dialogMode !== null}
+        onOpenChange={(open) => !open && closeDialog()}
+        mode={dialogMode || "add"}
+        formState={formState}
+        onFormChange={handleFormChange}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+        onCancel={closeDialog}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>

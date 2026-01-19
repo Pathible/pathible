@@ -1,31 +1,15 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin, requireAuth } from "./auth";
-
-/**
- * Educational Articles Module
- *
- * Admin-managed content for Faith & Finances and other educational resources.
- */
-
-// Validators for reuse
-const articleCategoryValidator = v.union(
-  v.literal("estate_planning"),
-  v.literal("financial_planning"),
-  v.literal("family_legacy"),
-  v.literal("legal"),
-  v.literal("insurance"),
-  v.literal("digital_legacy"),
-  v.literal("end_of_life"),
-  v.literal("faith_stewardship"),
-  v.literal("other"),
-);
+import { articleCategoryValidator } from "./shared/categories";
 
 const articleStatusValidator = v.union(
   v.literal("draft"),
   v.literal("published"),
   v.literal("archived"),
 );
+
+const articleVisibilityValidator = v.union(v.literal("public"), v.literal("subscribers"));
 
 // ============================================================================
 // QUERIES
@@ -38,6 +22,7 @@ export const listAll = query({
   args: {
     status: v.optional(articleStatusValidator),
     category: v.optional(articleCategoryValidator),
+    visibility: v.optional(articleVisibilityValidator),
   },
   returns: v.array(
     v.object({
@@ -48,6 +33,7 @@ export const listAll = query({
       excerpt: v.string(),
       category: v.string(),
       status: v.string(),
+      visibility: v.union(v.literal("public"), v.literal("subscribers")),
       readTimeMinutes: v.number(),
       viewCount: v.number(),
       publishedAt: v.optional(v.number()),
@@ -69,6 +55,11 @@ export const listAll = query({
       articles = articles.filter((a) => a.category === args.category);
     }
 
+    // Filter by visibility if provided
+    if (args.visibility) {
+      articles = articles.filter((a) => (a.visibility ?? "subscribers") === args.visibility);
+    }
+
     return articles.map((article) => ({
       _id: article._id,
       _creationTime: article._creationTime,
@@ -77,6 +68,7 @@ export const listAll = query({
       excerpt: article.excerpt,
       category: article.category,
       status: article.status,
+      visibility: article.visibility ?? "subscribers", // Default to subscribers for existing articles
       readTimeMinutes: article.readTimeMinutes,
       viewCount: article.viewCount,
       publishedAt: article.publishedAt,
@@ -86,9 +78,67 @@ export const listAll = query({
 });
 
 /**
- * Get published articles for public display
+ * Get published articles for authenticated users (dashboard view)
+ * Includes both public and subscriber articles
  */
 export const listPublished = query({
+  args: {
+    category: v.optional(articleCategoryValidator),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("educationalArticles"),
+      title: v.string(),
+      slug: v.string(),
+      excerpt: v.string(),
+      category: v.string(),
+      visibility: v.union(v.literal("public"), v.literal("subscribers")),
+      readTimeMinutes: v.number(),
+      featuredImageUrl: v.optional(v.string()),
+      publishedAt: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // Enforce maximum limit to prevent abuse
+    const MAX_LIMIT = 50;
+    const limit = Math.min(args.limit ?? 20, MAX_LIMIT);
+
+    // Use composite index when category is provided, otherwise use simple status index
+    const category = args.category;
+    const articles = category
+      ? await ctx.db
+          .query("educationalArticles")
+          .withIndex("by_status_category", (q) =>
+            q.eq("status", "published").eq("category", category),
+          )
+          .order("desc")
+          .take(limit)
+      : await ctx.db
+          .query("educationalArticles")
+          .withIndex("by_status", (q) => q.eq("status", "published"))
+          .order("desc")
+          .take(limit);
+
+    return articles.map((article) => ({
+      _id: article._id,
+      title: article.title,
+      slug: article.slug,
+      excerpt: article.excerpt,
+      category: article.category,
+      visibility: article.visibility ?? "subscribers",
+      readTimeMinutes: article.readTimeMinutes,
+      featuredImageUrl: article.featuredImageUrl,
+      publishedAt: article.publishedAt,
+    }));
+  },
+});
+
+/**
+ * List public articles for the /learn page (no auth required)
+ * Returns only published articles with visibility="public"
+ */
+export const listPublicArticles = query({
   args: {
     category: v.optional(articleCategoryValidator),
     limit: v.optional(v.number()),
@@ -106,18 +156,27 @@ export const listPublished = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 20;
+    // Enforce maximum limit to prevent abuse (cap at 50 regardless of client input)
+    const MAX_LIMIT = 50;
+    const limit = Math.min(args.limit ?? 20, MAX_LIMIT);
 
-    let articles = await ctx.db
-      .query("educationalArticles")
-      .withIndex("by_status", (q) => q.eq("status", "published"))
-      .order("desc")
-      .take(limit);
-
-    // Filter by category if provided
-    if (args.category) {
-      articles = articles.filter((a) => a.category === args.category);
-    }
+    // Use composite index when category is provided, otherwise use status+visibility index
+    const category = args.category;
+    const articles = category
+      ? await ctx.db
+          .query("educationalArticles")
+          .withIndex("by_status_visibility_category", (q) =>
+            q.eq("status", "published").eq("visibility", "public").eq("category", category),
+          )
+          .order("desc")
+          .take(limit)
+      : await ctx.db
+          .query("educationalArticles")
+          .withIndex("by_status_and_visibility", (q) =>
+            q.eq("status", "published").eq("visibility", "public"),
+          )
+          .order("desc")
+          .take(limit);
 
     return articles.map((article) => ({
       _id: article._id,
@@ -128,6 +187,51 @@ export const listPublished = query({
       readTimeMinutes: article.readTimeMinutes,
       featuredImageUrl: article.featuredImageUrl,
       publishedAt: article.publishedAt,
+    }));
+  },
+});
+
+/**
+ * List subscriber-only article previews for the /learn page (no auth required)
+ * Returns metadata only (no content) for subscriber articles to show as teasers
+ */
+export const listSubscriberArticlePreviews = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("educationalArticles"),
+      title: v.string(),
+      slug: v.string(),
+      excerpt: v.string(),
+      category: v.string(),
+      readTimeMinutes: v.number(),
+      featuredImageUrl: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // Enforce maximum limit to prevent abuse
+    const MAX_LIMIT = 50;
+    const limit = Math.min(args.limit ?? 10, MAX_LIMIT);
+
+    // Get subscriber-only published articles
+    const articles = await ctx.db
+      .query("educationalArticles")
+      .withIndex("by_status_and_visibility", (q) =>
+        q.eq("status", "published").eq("visibility", "subscribers"),
+      )
+      .order("desc")
+      .take(limit);
+
+    return articles.map((article) => ({
+      _id: article._id,
+      title: article.title,
+      slug: article.slug,
+      excerpt: article.excerpt,
+      category: article.category,
+      readTimeMinutes: article.readTimeMinutes,
+      featuredImageUrl: article.featuredImageUrl,
     }));
   },
 });
@@ -149,6 +253,7 @@ export const get = query({
       excerpt: v.string(),
       category: v.string(),
       status: v.string(),
+      visibility: v.union(v.literal("public"), v.literal("subscribers")),
       readTimeMinutes: v.number(),
       featuredImageUrl: v.optional(v.string()),
       viewCount: v.number(),
@@ -173,6 +278,7 @@ export const get = query({
       excerpt: article.excerpt,
       category: article.category,
       status: article.status,
+      visibility: article.visibility ?? "subscribers",
       readTimeMinutes: article.readTimeMinutes,
       featuredImageUrl: article.featuredImageUrl,
       viewCount: article.viewCount,
@@ -184,7 +290,8 @@ export const get = query({
 });
 
 /**
- * Get a published article by slug (public view)
+ * Get a published article by slug (authenticated dashboard view)
+ * Returns full content for all published articles
  */
 export const getBySlug = query({
   args: {
@@ -198,6 +305,7 @@ export const getBySlug = query({
       content: v.string(),
       excerpt: v.string(),
       category: v.string(),
+      visibility: v.union(v.literal("public"), v.literal("subscribers")),
       readTimeMinutes: v.number(),
       featuredImageUrl: v.optional(v.string()),
       publishedAt: v.optional(v.number()),
@@ -219,9 +327,76 @@ export const getBySlug = query({
       content: article.content,
       excerpt: article.excerpt,
       category: article.category,
+      visibility: article.visibility ?? "subscribers",
       readTimeMinutes: article.readTimeMinutes,
       featuredImageUrl: article.featuredImageUrl,
       publishedAt: article.publishedAt,
+    };
+  },
+});
+
+/**
+ * Get article by slug for public /learn pages (no auth required)
+ * - Public articles: Returns full content
+ * - Subscriber articles: Returns first ~200 words as teaser with truncation flag
+ */
+export const getPublicBySlug = query({
+  args: {
+    slug: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("educationalArticles"),
+      title: v.string(),
+      slug: v.string(),
+      content: v.string(), // Full content for public, teaser for subscribers
+      excerpt: v.string(),
+      category: v.string(),
+      visibility: v.union(v.literal("public"), v.literal("subscribers")),
+      readTimeMinutes: v.number(),
+      featuredImageUrl: v.optional(v.string()),
+      publishedAt: v.optional(v.number()),
+      isTruncated: v.boolean(), // True if content is truncated (subscriber-only)
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const article = await ctx.db
+      .query("educationalArticles")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+
+    if (!article || article.status !== "published") return null;
+
+    const visibility = article.visibility ?? "subscribers";
+    const isPublic = visibility === "public";
+
+    // For public articles, return full content
+    // For subscriber articles, return first ~200 words as teaser
+    let content = article.content;
+    let isTruncated = false;
+
+    if (!isPublic) {
+      // Extract first ~200 words for teaser
+      const words = article.content.split(/\s+/);
+      if (words.length > 200) {
+        content = `${words.slice(0, 200).join(" ")}...`;
+        isTruncated = true;
+      }
+    }
+
+    return {
+      _id: article._id,
+      title: article.title,
+      slug: article.slug,
+      content,
+      excerpt: article.excerpt,
+      category: article.category,
+      visibility,
+      readTimeMinutes: article.readTimeMinutes,
+      featuredImageUrl: article.featuredImageUrl,
+      publishedAt: article.publishedAt,
+      isTruncated,
     };
   },
 });
@@ -243,6 +418,7 @@ export const create = mutation({
     readTimeMinutes: v.number(),
     featuredImageUrl: v.optional(v.string()),
     status: v.optional(articleStatusValidator),
+    visibility: v.optional(articleVisibilityValidator),
   },
   returns: v.id("educationalArticles"),
   handler: async (ctx, args) => {
@@ -260,6 +436,7 @@ export const create = mutation({
     }
 
     const status = args.status ?? "draft";
+    const visibility = args.visibility ?? "subscribers"; // Default to subscribers
     const now = Date.now();
 
     const articleId = await ctx.db.insert("educationalArticles", {
@@ -271,6 +448,7 @@ export const create = mutation({
       readTimeMinutes: args.readTimeMinutes,
       featuredImageUrl: args.featuredImageUrl,
       status,
+      visibility,
       viewCount: 0,
       authorId: user._id,
       publishedAt: status === "published" ? now : undefined,
@@ -295,6 +473,7 @@ export const update = mutation({
     readTimeMinutes: v.optional(v.number()),
     featuredImageUrl: v.optional(v.string()),
     status: v.optional(articleStatusValidator),
+    visibility: v.optional(articleVisibilityValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -331,6 +510,7 @@ export const update = mutation({
       ...(args.readTimeMinutes !== undefined && { readTimeMinutes: args.readTimeMinutes }),
       ...(args.featuredImageUrl !== undefined && { featuredImageUrl: args.featuredImageUrl }),
       ...(args.status !== undefined && { status: args.status }),
+      ...(args.visibility !== undefined && { visibility: args.visibility }),
       // Set publishedAt when first published
       ...(!wasPublished && willBePublished && { publishedAt: now }),
       updatedAt: now,

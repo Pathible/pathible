@@ -48,15 +48,17 @@ function ensureUserOnboarded() {
       cy.contains("button", "Complete Setup").click();
       cy.contains("Onboarding complete!", { timeout: 10000 }).should("be.visible");
 
-      // Wait for redirect
-      cy.wait(1000);
+      // Wait for redirect to complete
+      cy.url({ timeout: 10000 }).should("not.include", "/onboarding");
     }
 
     // Handle select-plan redirect
     cy.url({ timeout: 10000 }).then((newUrl) => {
       if (newUrl.includes("/select-plan")) {
         // Wait for potential auto-redirect for test users with plans
-        cy.wait(2000);
+        cy.url({ timeout: 10000 }).should("satisfy", (url: string) => {
+          return url.includes("/dashboard") || url.includes("/select-plan");
+        });
       }
     });
   });
@@ -75,6 +77,24 @@ describe("Admin Content Manager E2E Test", () => {
     cy.clearLocalStorage();
     cy.window().then((win) => {
       win.sessionStorage.clear();
+    });
+  });
+
+  after(() => {
+    // Final cleanup after all tests in this suite complete
+    // This ensures leftover articles are cleaned up even if afterEach fails
+    cy.log("**Final cleanup of test articles after all tests**");
+
+    // Sign in to clean up articles
+    setupClerkTestingToken();
+    cy.visit("/dashboard", { failOnStatusCode: false });
+    // Wait for dashboard to be ready (Convex client initialized)
+    cy.get("body", { timeout: 10000 }).should("be.visible");
+
+    cy.cleanupTestArticles().then((result) => {
+      if (result.deletedCount > 0) {
+        cy.log(`Final cleanup: removed ${result.deletedCount} test article(s)`);
+      }
     });
   });
 
@@ -100,9 +120,9 @@ describe("Admin Content Manager E2E Test", () => {
         identifier: TEST_USER_EMAIL,
       });
 
-      // Wait for Convex client to initialize
+      // Wait for Convex client to initialize by checking page is responsive
       cy.visit("/dashboard", { failOnStatusCode: false });
-      cy.wait(2000);
+      cy.url({ timeout: 10000 }).should("include", "/");
 
       // Ensure user is onboarded
       ensureUserOnboarded();
@@ -233,8 +253,8 @@ describe("Admin Content Manager E2E Test", () => {
       cy.get('button[role="combobox"]').first().click();
       cy.contains('[role="option"]', "Draft").click();
 
-      // Verify filter is applied (URL might change or table updates)
-      cy.wait(500); // Wait for filter to apply
+      // Verify filter is applied by waiting for dropdown to close
+      cy.get('[role="option"]').should("not.exist");
 
       // Reset filter
       cy.get('button[role="combobox"]').first().click();

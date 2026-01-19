@@ -11,7 +11,7 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  *    - Step 1: Profile creation (first name, last name)
  *    - Step 2: Household creation (name)
  *    - Step 3: Goals selection
- * 4. Select subscription plan (Foundations - free tier)
+ * 4. Select subscription plan (Foundations)
  * 5. Access vault and verify it works
  *
  * IMPORTANT: This test uses `cy.resetTestUser()` to ensure a clean state
@@ -146,9 +146,9 @@ describe("Complete User Journey - New User to Vault Access", () => {
         cy.log("User needs to select a plan");
 
         // Wait for plan selection page to load
-        cy.contains(/Choose Your Legacy Plan|Choose Your Plan/, { timeout: 10000 }).should(
-          "be.visible",
-        );
+        cy.contains(/Choose Your Legacy Plan|Choose Your Plan/, {
+          timeout: 10000,
+        }).should("be.visible");
 
         // For Clerk's PricingTable in test mode, the free plan might auto-activate
         // or we need to click a button. Try to find any subscription button.

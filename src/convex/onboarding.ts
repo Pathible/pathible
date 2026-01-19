@@ -10,6 +10,7 @@ import {
 } from "./_generated/server";
 import { checkFamilyMemberLimit, requireActiveSubscription, requireAuth } from "./auth";
 import { logActivity } from "./shared/activity";
+import { onboardingStatusValidator } from "./shared/commonValidators";
 import { incrementFamilyUnitCount } from "./shared/counters";
 import { EMAIL_REGEX } from "./shared/validators";
 
@@ -34,13 +35,7 @@ import { EMAIL_REGEX } from "./shared/validators";
 export const getStatus = query({
   args: {},
   returns: v.object({
-    status: v.union(
-      v.literal("not_started"),
-      v.literal("profile_complete"),
-      v.literal("household_complete"),
-      v.literal("preferences_complete"),
-      v.literal("complete"),
-    ),
+    status: onboardingStatusValidator,
     currentStep: v.number(),
     profile: v.object({
       firstName: v.string(),
@@ -201,6 +196,17 @@ export const createFirstHousehold = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
+    // Subscription tier from Clerk Billing - passed from frontend
+    // This allows the household to be created with the user's actual subscription tier
+    // rather than defaulting to "foundations"
+    subscriptionTier: v.optional(
+      v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+        v.literal("founders"),
+      ),
+    ),
   },
   returns: v.id("households"),
   handler: async (ctx, args) => {
@@ -224,13 +230,16 @@ export const createFirstHousehold = mutation({
       throw new Error("You already belong to a household");
     }
 
+    // Use the tier from Clerk Billing if provided, otherwise default to foundations
+    const tier = args.subscriptionTier || "foundations";
+
     // Create household
     const householdId = await ctx.db.insert("households", {
       name: args.name.trim(),
       description: args.description?.trim(),
       primaryContactId: profile._id,
-      subscriptionTier: "foundations", // Default tier
-      subscriptionStatus: "active", // Start with free tier active
+      subscriptionTier: tier,
+      subscriptionStatus: "active",
       storageUsedBytes: 0,
       memberCount: 0,
       familyUnitCount: 0,
@@ -273,9 +282,11 @@ export const createFirstHousehold = mutation({
       avatarUrl: profile.avatarUrl,
       dateOfBirth: profile.dateOfBirth,
       city: profile.city,
+      county: profile.county,
       state: profile.state,
       address: profile.address,
       zipCode: profile.zipCode,
+      maritalStatus: profile.maritalStatus,
       relationshipType: "parent", // Default - user can update later
       roles: ["Family Admin"],
       status: "active",

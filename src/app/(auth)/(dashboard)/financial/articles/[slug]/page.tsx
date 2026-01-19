@@ -11,19 +11,26 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
+import {
+  ARTICLE_CATEGORY_LABELS,
+  type ArticleCategory,
+  LEGACY_CATEGORY_MAPPING,
+} from "@/convex/shared/categories";
 import { FEATURES } from "@/lib/feature-access";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  estate_planning: "Estate Planning",
-  financial_planning: "Financial Planning",
-  family_legacy: "Family Legacy",
-  legal: "Legal",
-  insurance: "Insurance",
-  digital_legacy: "Digital Legacy",
-  end_of_life: "End of Life",
-  faith_stewardship: "Faith & Stewardship",
-  other: "Other",
-};
+/**
+ * Get display label for a category, handling both legacy and new category values
+ */
+function getCategoryDisplayLabel(category: string): string {
+  if (category in LEGACY_CATEGORY_MAPPING) {
+    const newCategory = LEGACY_CATEGORY_MAPPING[category];
+    return ARTICLE_CATEGORY_LABELS[newCategory];
+  }
+  if (category in ARTICLE_CATEGORY_LABELS) {
+    return ARTICLE_CATEGORY_LABELS[category as ArticleCategory];
+  }
+  return category;
+}
 
 export default function ArticlePage() {
   const params = useParams();
@@ -96,9 +103,7 @@ export default function ArticlePage() {
         <Card>
           <CardHeader className="space-y-4">
             <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {CATEGORY_LABELS[article.category] || article.category}
-              </Badge>
+              <Badge variant="secondary">{getCategoryDisplayLabel(article.category)}</Badge>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>{article.readTimeMinutes} min read</span>

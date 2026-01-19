@@ -20,20 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
-
-const CATEGORIES = [
-  { value: "faith_stewardship", label: "Faith & Stewardship" },
-  { value: "estate_planning", label: "Estate Planning" },
-  { value: "financial_planning", label: "Financial Planning" },
-  { value: "family_legacy", label: "Family Legacy" },
-  { value: "legal", label: "Legal" },
-  { value: "insurance", label: "Insurance" },
-  { value: "digital_legacy", label: "Digital Legacy" },
-  { value: "end_of_life", label: "End of Life" },
-  { value: "other", label: "Other" },
-] as const;
-
-type CategoryValue = (typeof CATEGORIES)[number]["value"];
+import { ARTICLE_CATEGORY_OPTIONS, type ArticleCategory } from "@/convex/shared/categories";
 
 interface FormData {
   title: string;
@@ -53,7 +40,7 @@ function generateSlug(title: string): string {
 
 export default function NewArticlePage() {
   const router = useRouter();
-  const [category, setCategory] = useState<CategoryValue>("faith_stewardship");
+  const [category, setCategory] = useState<ArticleCategory>("beliefs_values");
   const [status, setStatus] = useState<"draft" | "published">("draft");
 
   const createArticle = useMutation(api.articles.create);
@@ -192,12 +179,12 @@ export default function NewArticlePage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Select value={category} onValueChange={(v) => setCategory(v as CategoryValue)}>
+                  <Select value={category} onValueChange={(v) => setCategory(v as ArticleCategory)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((cat) => (
+                      {ARTICLE_CATEGORY_OPTIONS.map((cat) => (
                         <SelectItem key={cat.value} value={cat.value}>
                           {cat.label}
                         </SelectItem>

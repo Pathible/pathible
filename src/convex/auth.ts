@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { internalQuery, query } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
+import { maritalStatusValidator, onboardingStatusValidator } from "./shared/commonValidators";
 import { formatBytesAsGB, formatLimit } from "./shared/constants";
 import { getFamilyUnitCount, getMemberCountFromHousehold } from "./shared/counters";
 import {
@@ -46,8 +47,16 @@ export interface AuthenticatedContext {
     dateOfBirth?: number;
     address?: string;
     city?: string;
+    county?: string;
     state?: string;
     zipCode?: string;
+    maritalStatus?:
+      | "single"
+      | "married"
+      | "divorced"
+      | "widowed"
+      | "domestic_partnership"
+      | "separated";
     updatedAt: number;
     onboardingStatus?:
       | "not_started"
@@ -73,17 +82,11 @@ const profileReturnValidator = v.object({
   dateOfBirth: v.optional(v.number()),
   address: v.optional(v.string()),
   city: v.optional(v.string()),
+  county: v.optional(v.string()),
   state: v.optional(v.string()),
   zipCode: v.optional(v.string()),
-  onboardingStatus: v.optional(
-    v.union(
-      v.literal("not_started"),
-      v.literal("profile_complete"),
-      v.literal("household_complete"),
-      v.literal("preferences_complete"),
-      v.literal("complete"),
-    ),
-  ),
+  maritalStatus: v.optional(maritalStatusValidator),
+  onboardingStatus: v.optional(onboardingStatusValidator),
   onboardingStep: v.optional(v.number()),
   onboardingCompletedAt: v.optional(v.number()),
   updatedAt: v.number(),
@@ -248,6 +251,59 @@ export async function requireHouseholdAdmin(
   // Only owners and stewards have admin privileges
   if (membership.role !== "owner" && membership.role !== "steward") {
     throw new Error("Access denied: Admin privileges required");
+  }
+}
+
+// ============================================================================
+// PERMISSION HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Check if a household membership has admin privileges
+ *
+ * Admin roles are "owner" and "steward". These roles have elevated permissions
+ * for managing household resources, members, and settings.
+ *
+ * @example
+ * const membership = await requireHouseholdAccess(ctx, householdId);
+ * if (isHouseholdAdmin(membership)) {
+ *   // Show admin-only UI or perform admin actions
+ * }
+ */
+export function isHouseholdAdmin(membership: Doc<"householdMemberships">): boolean {
+  return membership.role === "owner" || membership.role === "steward";
+}
+
+/**
+ * Require admin privileges OR resource ownership
+ *
+ * Use this when an action should be allowed for:
+ * 1. Household admins (owners or stewards), OR
+ * 2. The original creator/owner of the specific resource
+ *
+ * Throws a descriptive error if neither condition is met.
+ *
+ * @param membership - The user's household membership
+ * @param currentUserId - The current user's profile ID
+ * @param resourceOwnerId - The profile ID of who created/owns the resource
+ * @param action - Description of the action for error message (e.g., "delete this document")
+ *
+ * @example
+ * const membership = await requireHouseholdAccess(ctx, householdId);
+ * const { profile } = await requireAuth(ctx);
+ * requireAdminOrResourceOwner(membership, profile._id, document.uploadedBy, "delete this document");
+ */
+export function requireAdminOrResourceOwner(
+  membership: Doc<"householdMemberships">,
+  currentUserId: Id<"profiles">,
+  resourceOwnerId: Id<"profiles">,
+  action: string,
+): void {
+  const isAdmin = isHouseholdAdmin(membership);
+  const isOwner = currentUserId === resourceOwnerId;
+
+  if (!isAdmin && !isOwner) {
+    throw new Error(`Only admins or the original creator can ${action}`);
   }
 }
 
@@ -667,6 +723,36 @@ export const requireAuthInternal = internalQuery({
 });
 
 /**
+ * Internal Query: Require admin role (for use in actions)
+ * Throws if not authenticated or not an admin
+ */
+export const requireAdminInternal = internalQuery({
+  args: {},
+  returns: v.object({
+    user: v.object({
+      _id: v.string(),
+      email: v.string(),
+    }),
+    profile: profileReturnValidator,
+  }),
+  handler: async (ctx) => {
+    const auth = await requireAuth(ctx);
+
+    // Check if user has admin role
+    const userRole = await ctx.db
+      .query("userRoles")
+      .withIndex("by_userId", (q) => q.eq("userId", auth.user._id))
+      .unique();
+
+    if (!userRole || userRole.role !== "admin") {
+      throw new Error("Admin access required");
+    }
+
+    return auth;
+  },
+});
+
+/**
  * Internal Query: Require household access (for use in actions)
  * Returns membership or throws if not authorized
  */
@@ -872,6 +958,121 @@ export const getOnboardingStatus = query({
       hasHousehold,
       needsOnboarding,
       onboardingStatus,
+    };
+  },
+});
+
+// ============================================================================
+// SUBSCRIPTION SYNC (for Clerk webhook integration)
+// ============================================================================
+
+/**
+ * Internal Mutation: Sync subscription tier and status from Clerk Billing
+ *
+ * Called by the Clerk webhook handler when subscription events occur.
+ * Updates the household's subscriptionTier and/or subscriptionStatus based on the Clerk user's plan.
+ *
+ * @param clerkUserId - The Clerk user ID (identity.subject)
+ * @param tier - The subscription tier from Clerk Billing (optional)
+ * @param status - The subscription status from Clerk Billing (optional)
+ */
+export const syncSubscriptionTier = internalMutation({
+  args: {
+    clerkUserId: v.string(),
+    tier: v.optional(
+      v.union(
+        v.literal("foundations"),
+        v.literal("heritage"),
+        v.literal("legacy"),
+        v.literal("founders"),
+      ),
+    ),
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("inactive"),
+        v.literal("cancelled"),
+        v.literal("past_due"),
+      ),
+    ),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    householdId: v.optional(v.id("households")),
+  }),
+  handler: async (ctx, args) => {
+    // Require at least one of tier or status
+    if (!args.tier && !args.status) {
+      console.log(`[Subscription Sync] No tier or status provided for user ${args.clerkUserId}`);
+      return {
+        success: false,
+        message: "No tier or status provided",
+        householdId: undefined,
+      };
+    }
+
+    console.log(
+      `[Subscription Sync] Syncing ${args.tier ? `tier=${args.tier}` : ""}${args.tier && args.status ? ", " : ""}${args.status ? `status=${args.status}` : ""} for Clerk user ${args.clerkUserId}`,
+    );
+
+    // Find the user's profile by Clerk user ID
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.clerkUserId))
+      .unique();
+
+    if (!profile) {
+      console.log(`[Subscription Sync] No profile found for user ${args.clerkUserId}`);
+      return {
+        success: false,
+        message: "Profile not found for user",
+        householdId: undefined,
+      };
+    }
+
+    // Find the household where user is primary contact
+    const household = await ctx.db
+      .query("households")
+      .withIndex("by_primaryContactId", (q) => q.eq("primaryContactId", profile._id))
+      .first();
+
+    if (!household) {
+      console.log(`[Subscription Sync] No household found for profile ${profile._id}`);
+      return {
+        success: false,
+        message: "Household not found for user",
+        householdId: undefined,
+      };
+    }
+
+    // Build the patch object with only the fields that are provided
+    const patch: {
+      subscriptionTier?: "foundations" | "heritage" | "legacy" | "founders";
+      subscriptionStatus?: "active" | "inactive" | "cancelled" | "past_due";
+      updatedAt: number;
+    } = { updatedAt: Date.now() };
+
+    if (args.tier) {
+      patch.subscriptionTier = args.tier;
+    }
+    if (args.status) {
+      patch.subscriptionStatus = args.status;
+    }
+
+    // Update the subscription tier and/or status
+    await ctx.db.patch(household._id, patch);
+
+    const updates: string[] = [];
+    if (args.tier) updates.push(`tier to ${args.tier}`);
+    if (args.status) updates.push(`status to ${args.status}`);
+
+    console.log(`[Subscription Sync] Updated household ${household._id}: ${updates.join(", ")}`);
+
+    return {
+      success: true,
+      message: `Updated subscription ${updates.join(", ")}`,
+      householdId: household._id,
     };
   },
 });

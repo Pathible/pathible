@@ -2,20 +2,23 @@
 
 ## Overview
 
-This document defines how Pathible communicates across all channels. Consistency in voice builds trust with our faith-based audience.
+This document defines how Pathible communicates across all channels. Consistency in voice builds trust with our audience—particularly millennials who've experienced (or dread) the chaos of sorting through a loved one's affairs.
+
+**Our Core Narrative (PEACE Framework):**
+> "Have you ever had to sort through a loved one's mess while grieving? We have. Use Pathible. Get everything in one place for your family. So they never have to."
 
 ---
 
 ## Brand Voice Pillars
 
 ### 1. Warm, Not Corporate
-- Write like you're talking to a friend over coffee
+- Write like you're talking to a friend who's been through it
 - Avoid jargon, buzzwords, and marketing speak
 - Use contractions (we're, you'll, don't)
-- Be human first, brand second
+- Be human first, brand second—"We have" not "Our company understands"
 
 **Instead of:** "Leverage our comprehensive document management solution"
-**Say:** "Keep your important documents in one place where your family can find them"
+**Say:** "Get everything in one place for your family"
 
 ### 2. Faith-Rooted, Not Preachy
 - Scripture should feel natural, not forced
@@ -27,22 +30,22 @@ This document defines how Pathible communicates across all channels. Consistency
 **Say:** "A good man leaves an inheritance to his children's children. That includes wisdom, not just wealth."
 
 ### 3. Trustworthy, Not Salesy
-- Lead with value, not urgency
-- Be honest about what we offer (and don't offer)
+- Lead with empathy, not urgency
+- Show we understand because we've been there
 - Build relationship before asking for action
-- Transparency builds trust
+- "We have" establishes trust through shared experience
 
 **Instead of:** "DON'T MISS OUT! Limited time offer!!!"
-**Say:** "Our Founders Rate is available through January 7th. We'd love to have you join us."
+**Say:** "We built this because we needed it. We'd love for you to join us."
 
 ### 4. Hopeful, Not Morbid
-- Focus on the gift you're giving, not the event triggering it
-- Legacy planning is an act of love, not a dark topic
-- Frame preparation as empowerment
-- Celebrate the life being documented
+- Focus on sparing your family, not your own mortality
+- Frame preparation as an act of love for those left behind
+- The goal: "So they never have to"
+- Center the benefit on your family, not abstract "legacy"
 
 **Instead of:** "When you die, your family will need to find your will"
-**Say:** "Someday, your family will need to find things. Make sure they can."
+**Say:** "Have you ever had to sort through a loved one's mess while grieving? Your family shouldn't have to."
 
 ---
 
@@ -106,30 +109,46 @@ This document defines how Pathible communicates across all channels. Consistency
 
 ## Key Messages
 
-### Primary Tagline
-**"Don't leave them a mess. Leave them a blessing."**
+### Primary Soundbites (PEACE Framework)
+| Element | Soundbite | Purpose |
+|---------|-----------|---------|
+| **Problem** | "Have you ever had to sort through a loved one's mess while grieving?" | Attract attention |
+| **Empathy** | "We have." | Create empathetic bond |
+| **Answer** | "Use Pathible." | Elevate product value |
+| **Change** | "Get everything in one place for your family." | Add personal value |
+| **End Result** | "So they never have to." | Cast vision that motivates action |
 
 ### Supporting Messages
 
-**On the Problem:**
-- "Someday, your family will need to find things. Don't make them guess."
-- "85% of families aren't prepared for what comes next."
-- "Your family shouldn't inherit chaos along with grief."
+**On the Problem (The Hole We Own):**
+- "Have you ever had to sort through a loved one's mess while grieving?"
+- "The chaos. The missing documents. The guesswork—while you're already heartbroken."
+- "Nobody should have to search through boxes while they're still in shock."
+
+**On Empathy (Guide Position):**
+- "We have."
+- "We built this because we've been there."
+- "We know what it's like to grieve and hunt at the same time."
 
 **On the Solution:**
-- "One secure place for your documents, your stories, and your wishes."
-- "Everything your family needs—together."
-- "Pathible brings the practical and the meaningful into one place."
+- "Get everything in one place for your family."
+- "One secure place—documents, stories, wishes—ready when they need it."
+- "Pathible keeps it all together so they don't have to piece it together."
+
+**On the End Result:**
+- "So they never have to."
+- "Spare them the mess. Give them peace."
+- "Your family grieves you—not your disorganization."
 
 **On Faith:**
 - "A good man leaves an inheritance to his children's children." - Proverbs 13:22
-- "Legacy is more than what you leave. It's what they remember."
-- "God gives us a path—not just for how we live, but for how we steward what we've been given."
+- "Legacy is more than what you leave. It's what they're spared."
+- "Stewardship means preparing for those who come after."
 
 **On Differentiation:**
-- "Unlike document vaults, we help you add meaning to what you store."
-- "Unlike story apps, we organize essential files alongside memories."
-- "We're rooted in faith, designed for generations."
+- "Unlike document vaults, we understand why this matters."
+- "Unlike apps built by people who haven't been there—we have."
+- "Built by someone who needed it. For families who will."
 
 ---
 
@@ -137,82 +156,95 @@ This document defines how Pathible communicates across all channels. Consistency
 
 ### Heritage Vault
 **What it is:** Secure document storage for wills, insurance, accounts, and important files
-**Benefit language:** "Everything your family needs—in one secure place they can actually find."
+**Benefit language:** "Everything in one place—so they're not searching through boxes while grieving."
 **Avoid:** "File storage," "cloud drive," "digital filing cabinet"
 
 ### Wisdom & Stories
 **What it is:** Space to capture life stories, letters, and Core Beliefs
-**Benefit language:** "Pass down your faith, not just your finances."
+**Benefit language:** "They'll grieve you—let them also know you."
 **Avoid:** "Journaling app," "memoir tool," "digital scrapbook"
 
 ### Legacy Planning
 **What it is:** Final wishes documentation, key contacts, and Document Access Map
-**Benefit language:** "Give your family clarity, not confusion."
+**Benefit language:** "No guesswork. No hunting. Just clarity when they need it most."
 **Avoid:** "End-of-life planning," "death preparation," "estate tool"
 
 ---
 
 ## Audience-Specific Language
 
-### For Families of Faith (40s-70s)
+### Primary: Millennials Who've Been Through It
 **Speak to:**
-- Building multigenerational legacy
-- Passing down faith and values
+- The lived experience of sorting through a loved one's chaos
+- The dread of their parents leaving the same mess
+- Not wanting to repeat the cycle with their own families
+- The emotional toll of grieving AND organizing simultaneously
+
+**Resonant phrases:**
+- "Have you ever had to sort through a loved one's mess while grieving?"
+- "We have."
+- "So they never have to."
+- "You know how hard it was. Don't pass that on."
+
+### For Those Watching Parents Age
+**Speak to:**
+- The slow realization that it's coming
+- Wanting to help parents get organized without being morbid
+- Fear of being the one who has to figure it all out
+- Proactive love disguised as practical help
+
+**Resonant phrases:**
+- "You see it coming. Get ahead of it."
+- "Help them now—or search later."
+- "The conversation is hard. The alternative is harder."
+
+### For Families of Faith
+**Speak to:**
 - Stewardship of what God has given
-- Being remembered for more than assets
+- Sparing your family as an act of love
+- Passing down faith alongside practical clarity
+- Being a blessing, not a burden
 
 **Resonant phrases:**
-- "Your grandchildren deserve to know you"
-- "What will they say about what you believed?"
-- "Stewardship extends beyond the balance sheet"
+- "A good man leaves an inheritance to his children's children."
+- "Stewardship means preparing for those who come after."
+- "Leave them a blessing, not a mess."
 
-### For Those Caring for Parents
+### For Young Families Starting Early
 **Speak to:**
-- Finding clarity in a difficult season
-- Reducing conflict among siblings
-- Honoring parents by capturing their stories
-- Getting organized while there's still time
+- Breaking the cycle before it starts
+- Simple first steps that compound over time
+- Protecting young kids from future chaos
+- Building the habit now
 
 **Resonant phrases:**
-- "Finally know where everything is"
-- "Give your siblings clarity, not conflict"
-- "Honor them by capturing their story—while you still can"
-
-### For Young Families
-**Speak to:**
-- Starting early before life gets complicated
-- Building traditions from the beginning
-- Simple first steps
-- Growing over time
-
-**Resonant phrases:**
-- "Start small. The best time was yesterday. The second best is today."
-- "Build the foundation while you're building the family"
-- "Your kids will thank you—even if they don't know it yet"
+- "Start now so it's never a crisis."
+- "Your kids will never know how hard it could have been."
+- "The best gift is one they never have to unwrap in grief."
 
 ---
 
 ## Call-to-Action Framework
 
 ### Primary CTAs
-- "Start your legacy" (Homepage, launch)
-- "Get started" (Feature pages)
-- "Join us" (Community-focused contexts)
+- "Get everything in one place" (Homepage—mirrors PEACE framework)
+- "Start now" (Feature pages)
+- "Use Pathible" (Direct from PEACE framework)
 
 ### Secondary CTAs
-- "Learn more"
 - "See how it works"
-- "Explore features"
+- "Learn more"
+- "Join us"
 
 ### Soft CTAs (for content marketing)
 - "Link in bio"
-- "Check it out if you're curious"
 - "pathible.com"
+- "We built this for families like yours"
 
-### Urgency CTAs (use sparingly)
-- "Founders Rate ends [date]"
-- "Lock in your rate"
-- "Only available through [date]"
+### Empathy-First CTAs
+- "We have. You don't have to."
+- "Spare them the search."
+- "So they never have to."
 
 ---
 
@@ -220,18 +252,18 @@ This document defines how Pathible communicates across all channels. Consistency
 
 | Use | Avoid |
 |-----|-------|
-| Legacy | Estate (unless technical) |
-| Family | Heirs, beneficiaries |
-| Documents | Files, assets |
-| Stories | Memories (too passive) |
-| Wisdom | Advice |
-| Organize | Manage |
-| Secure | Locked, protected |
+| Mess | Estate, affairs |
+| Grieving | Mourning, bereavement |
+| Sort through | Settle, administer |
+| Your family | Heirs, beneficiaries |
+| One place | Vault, repository |
+| So they never have to | Peace of mind (too abstract) |
+| We have | We understand (too corporate) |
+| Chaos | Complexity |
+| Spare them | Protect them (too vague) |
+| Searching, hunting | Managing, handling |
 | Clarity | Certainty (overcommits) |
-| Someday | When you die |
-| Blessing | Inheritance (alone) |
-| Peace of mind | Worry-free |
-| Generations | Posterity |
+| While grieving | After you're gone |
 
 ---
 
@@ -281,15 +313,31 @@ This is our theological foundation. Use it prominently but not exclusively.
 
 Before publishing any content, verify:
 
-- [ ] Does this sound like a person, not a corporation?
+- [ ] Does this sound like someone who's been through it?
+- [ ] Does it start with empathy, not a pitch?
+- [ ] Is the focus on sparing the family (not abstract "legacy")?
+- [ ] Would someone who's sorted through a loved one's mess nod along?
 - [ ] Is the faith connection natural, not forced?
-- [ ] Am I leading with value, not a pitch?
-- [ ] Is the tone hopeful rather than morbid?
-- [ ] Would I share this with my own family?
-- [ ] Is the CTA clear but not pushy?
+- [ ] Does the CTA feel like an invitation, not pressure?
 - [ ] Does this match the platform's tone?
 - [ ] Have I proofread for typos?
 
 ---
 
-*These guidelines should be referenced for all Pathible content creation. When in doubt, ask: "Would this help a family? Would they trust us after reading this?"*
+## PEACE Framework Quick Reference
+
+```
+Problem:    "Have you ever had to sort through a loved one's mess while grieving?"
+Empathy:    "We have."
+Answer:     "Use Pathible."
+Change:     "Get everything in one place for your family."
+End Result: "So they never have to."
+```
+
+**The Hole We Own:** The grief-compounded chaos of sorting through a loved one's mess because no one prepared.
+
+**Our Position:** Guide who's been there—not a corporation selling software.
+
+---
+
+*These guidelines should be referenced for all Pathible content creation. When in doubt, ask: "Would someone who's been through the chaos feel understood? Would they trust us?"*

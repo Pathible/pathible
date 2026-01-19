@@ -12,8 +12,14 @@ import {
   requireHouseholdAdmin,
 } from "./auth";
 import { logActivity } from "./shared/activity";
+import {
+  genderValidator,
+  maritalStatusValidator,
+  memberStatusValidator,
+  relationshipTypeValidator,
+} from "./shared/commonValidators";
 import { incrementFamilyUnitCount } from "./shared/counters";
-import { EMAIL_REGEX } from "./shared/validators";
+import { EMAIL_REGEX, validateStateCode, validateZipCode } from "./shared/validators";
 
 /**
  * Family Ecosystem - Family Unit & Member Management
@@ -28,33 +34,6 @@ import { EMAIL_REGEX } from "./shared/validators";
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
-
-const relationshipTypeValidator = v.union(
-  v.literal("parent"),
-  v.literal("child"),
-  v.literal("spouse"),
-  v.literal("partner"),
-  v.literal("sibling"),
-  v.literal("grandparent"),
-  v.literal("grandchild"),
-  v.literal("aunt_uncle"),
-  v.literal("niece_nephew"),
-  v.literal("cousin"),
-  v.literal("in_law"),
-  v.literal("other"),
-);
-
-const genderValidator = v.union(
-  v.literal("male"),
-  v.literal("female"),
-  v.literal("prefer_not_to_say"),
-);
-
-const memberStatusValidator = v.union(
-  v.literal("active"),
-  v.literal("pending_invite"),
-  v.literal("inactive"),
-);
 
 // Return type validators
 const familyUnitReturnValidator = v.object({
@@ -105,8 +84,12 @@ const familyMemberReturnValidator = v.object({
   avatarUrl: v.optional(v.string()),
   dateOfBirth: v.optional(v.number()),
   gender: v.optional(genderValidator),
+  address: v.optional(v.string()),
   city: v.optional(v.string()),
+  county: v.optional(v.string()),
   state: v.optional(v.string()),
+  zipCode: v.optional(v.string()),
+  maritalStatus: v.optional(maritalStatusValidator),
   relationshipType: relationshipTypeValidator,
   roles: v.array(v.string()),
   status: memberStatusValidator,
@@ -129,8 +112,12 @@ const familyMemberWithProfileReturnValidator = v.object({
   avatarUrl: v.optional(v.string()),
   dateOfBirth: v.optional(v.number()),
   gender: v.optional(genderValidator),
+  address: v.optional(v.string()),
   city: v.optional(v.string()),
+  county: v.optional(v.string()),
   state: v.optional(v.string()),
+  zipCode: v.optional(v.string()),
+  maritalStatus: v.optional(maritalStatusValidator),
   relationshipType: relationshipTypeValidator,
   roles: v.array(v.string()),
   status: memberStatusValidator,
@@ -159,8 +146,12 @@ type FamilyMemberUpdatePayload = {
   relationshipType?: Doc<"familyMembers">["relationshipType"];
   gender?: Doc<"familyMembers">["gender"];
   dateOfBirth?: number;
+  address?: string;
   city?: string;
+  county?: string;
   state?: string;
+  zipCode?: string;
+  maritalStatus?: Doc<"familyMembers">["maritalStatus"];
   roles?: string[];
   notes?: string;
 };
@@ -222,12 +213,37 @@ function validateFamilyMemberUpdates(
     updates.dateOfBirth = args.dateOfBirth;
   }
 
+  if (args.address !== undefined) {
+    if (args.address && args.address.length > 200) {
+      throw new Error("Address is too long (max 200 characters)");
+    }
+    updates.address = args.address?.trim();
+  }
+
   if (args.city !== undefined) {
+    if (args.city && args.city.length > 100) {
+      throw new Error("City is too long (max 100 characters)");
+    }
     updates.city = args.city?.trim();
   }
 
+  if (args.county !== undefined) {
+    if (args.county && args.county.length > 100) {
+      throw new Error("County is too long (max 100 characters)");
+    }
+    updates.county = args.county?.trim();
+  }
+
   if (args.state !== undefined) {
-    updates.state = args.state?.trim();
+    updates.state = validateStateCode(args.state);
+  }
+
+  if (args.zipCode !== undefined) {
+    updates.zipCode = validateZipCode(args.zipCode);
+  }
+
+  if (args.maritalStatus !== undefined) {
+    updates.maritalStatus = args.maritalStatus;
   }
 
   if (args.roles !== undefined) {
@@ -257,8 +273,12 @@ type CreateFamilyMemberOptions = {
     avatarUrl?: string;
     dateOfBirth?: number;
     gender?: Doc<"familyMembers">["gender"];
+    address?: string;
     city?: string;
+    county?: string;
     state?: string;
+    zipCode?: string;
+    maritalStatus?: Doc<"familyMembers">["maritalStatus"];
     relationshipType: Doc<"familyMembers">["relationshipType"];
     roles: string[];
     status?: Doc<"familyMembers">["status"];
@@ -272,6 +292,8 @@ async function createFamilyMemberInternal(
   ctx: { db: MutationCtx["db"] },
   options: CreateFamilyMemberOptions,
 ): Promise<Id<"familyMembers">> {
+  // Get max orderIndex from existing members
+  // Family units typically have <20 members, so collect is acceptable here
   const existingMembers = await ctx.db
     .query("familyMembers")
     .withIndex("by_familyUnit", (q) => q.eq("familyUnitId", options.familyUnitId))
@@ -293,8 +315,12 @@ async function createFamilyMemberInternal(
     avatarUrl: options.member.avatarUrl,
     dateOfBirth: options.member.dateOfBirth,
     gender: options.member.gender,
+    address: options.member.address,
     city: options.member.city,
+    county: options.member.county,
     state: options.member.state,
+    zipCode: options.member.zipCode,
+    maritalStatus: options.member.maritalStatus,
     relationshipType: options.member.relationshipType,
     roles: options.member.roles,
     status: options.member.status ?? "active",
@@ -809,8 +835,12 @@ export const addFamilyMember = mutation({
     relationshipType: relationshipTypeValidator,
     gender: v.optional(genderValidator),
     dateOfBirth: v.optional(v.number()),
+    address: v.optional(v.string()),
     city: v.optional(v.string()),
+    county: v.optional(v.string()),
     state: v.optional(v.string()),
+    zipCode: v.optional(v.string()),
+    maritalStatus: v.optional(maritalStatusValidator),
     roles: v.optional(v.array(v.string())),
   },
   returns: v.id("familyMembers"),
@@ -866,8 +896,12 @@ export const addFamilyMember = mutation({
         relationshipType: args.relationshipType,
         gender: args.gender,
         dateOfBirth: args.dateOfBirth,
+        address: args.address?.trim(),
         city: args.city?.trim(),
-        state: args.state?.trim(),
+        county: args.county?.trim(),
+        state: validateStateCode(args.state),
+        zipCode: validateZipCode(args.zipCode),
+        maritalStatus: args.maritalStatus,
         roles: args.roles || [],
       },
       activityDescription: `Added family member: ${args.firstName} ${args.lastName}`,
@@ -892,8 +926,12 @@ export const updateFamilyMember = mutation({
     relationshipType: v.optional(relationshipTypeValidator),
     gender: v.optional(genderValidator),
     dateOfBirth: v.optional(v.number()),
+    address: v.optional(v.string()),
     city: v.optional(v.string()),
+    county: v.optional(v.string()),
     state: v.optional(v.string()),
+    zipCode: v.optional(v.string()),
+    maritalStatus: v.optional(maritalStatusValidator),
     roles: v.optional(v.array(v.string())),
     notes: v.optional(v.string()),
   },

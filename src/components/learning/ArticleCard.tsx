@@ -2,20 +2,26 @@ import { CheckCircle, Clock } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ARTICLE_CATEGORY_LABELS, LEGACY_CATEGORY_MAPPING } from "@/convex/shared/categories";
 
 import type { ArticleCardProps } from "./types";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  estate_planning: "Estate Planning",
-  financial_planning: "Financial Planning",
-  family_legacy: "Family Legacy",
-  legal: "Legal",
-  insurance: "Insurance",
-  digital_legacy: "Digital Legacy",
-  end_of_life: "End of Life",
-  faith_stewardship: "Faith & Stewardship",
-  other: "Other",
-};
+/**
+ * Get display label for a category, handling both legacy and new category values
+ */
+function getCategoryDisplayLabel(category: string): string {
+  // Check if it's a legacy category that needs mapping
+  if (category in LEGACY_CATEGORY_MAPPING) {
+    const newCategory = LEGACY_CATEGORY_MAPPING[category];
+    return ARTICLE_CATEGORY_LABELS[newCategory];
+  }
+  // Check if it's a new category
+  if (category in ARTICLE_CATEGORY_LABELS) {
+    return ARTICLE_CATEGORY_LABELS[category as keyof typeof ARTICLE_CATEGORY_LABELS];
+  }
+  // Fallback to the raw category value
+  return category;
+}
 
 /**
  * Standard article card for desktop layout
@@ -43,7 +49,7 @@ export function ArticleCard({ article, isRead, accentColor = "primary" }: Articl
           {/* Category & Read Status Row */}
           <div className="flex items-center justify-between mb-2">
             <Badge variant="outline" className="text-xs font-normal border-muted-foreground/30">
-              {CATEGORY_LABELS[article.category] || article.category}
+              {getCategoryDisplayLabel(article.category)}
             </Badge>
             {isRead && (
               <div className="flex items-center gap-1 text-xs text-primary">

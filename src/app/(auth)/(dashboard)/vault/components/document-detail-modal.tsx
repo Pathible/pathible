@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { Calendar, Download, Edit2, FileText, Trash2, User, X } from "lucide-react";
+import { Calendar, Download, FileText, Pencil, Trash2, User, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -340,7 +340,7 @@ export function DocumentDetailModal({
                   Download
                 </Button>
                 <Button onClick={() => setIsEditing(true)} data-testid="document-edit-button">
-                  <Edit2 className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                   Edit
                 </Button>
               </>

@@ -1,41 +1,58 @@
 /**
  * Feature Access Control Utilities
  *
- * IMPORTANT: This file now uses Convex as the source of truth for subscription tier,
- * NOT Clerk Billing. This allows for tier overrides (promotional pricing).
- *
- * The `useEffectiveSubscription` hook queries Convex for the effective tier,
- * which considers both the actual subscription tier and any override.
+ * This file contains server-safe utilities and constants for feature access control.
+ * For client-side hooks, import from "@/lib/feature-access-hooks" instead.
  *
  * @see src/convex/shared/subscriptionTiers.ts for tier definitions
  * @see src/convex/auth.ts getEffectiveSubscription query
  */
 
-import { useAuth } from "@clerk/nextjs";
-import { useConvexAuth, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import {
   FEATURE_DISPLAY,
   FEATURE_SLUGS,
   FEATURE_TIERS,
   type FeatureSlug,
   getFeatureMetadata as getFeatureMetadataFromSource,
+  SUBSCRIPTION_TIERS,
   type SubscriptionTier,
   TIER_DISPLAY,
-  tierHasAccess,
-  tierHasFeatureAccess,
 } from "@/convex/shared/subscriptionTiers";
 
 // Re-export for backwards compatibility
-export { FEATURE_SLUGS, FEATURE_TIERS, type FeatureSlug };
+export {
+  FEATURE_SLUGS,
+  FEATURE_TIERS,
+  SUBSCRIPTION_TIERS,
+  TIER_DISPLAY,
+  type FeatureSlug,
+  type SubscriptionTier,
+};
+
+// Re-export hooks from the client-only module for backwards compatibility
+// Note: These should only be imported in client components
+export {
+  useEffectiveFeatureAccess,
+  useEffectiveMultipleFeatureAccess,
+  useEffectiveSubscription,
+  useEffectiveTierAccess,
+} from "./feature-access-hooks";
 
 /**
- * Feature slugs from Clerk Dashboard
- * @deprecated Use FEATURE_SLUGS from @/convex/shared/subscriptionTiers
- *
- * These MUST match the exact slugs configured in Clerk Billing
+ * Feature slugs alias for backwards compatibility
+ * @see FEATURE_SLUGS
  */
 export const FEATURES = FEATURE_SLUGS;
+
+/**
+ * Display labels for each plan tier
+ */
+export const PLAN_LABELS: Record<SubscriptionTier, string> = {
+  foundations: TIER_DISPLAY.foundations.label,
+  heritage: TIER_DISPLAY.heritage.label,
+  legacy: TIER_DISPLAY.legacy.label,
+  founders: TIER_DISPLAY.founders.label,
+};
 
 /**
  * Feature metadata for UI display
@@ -123,72 +140,6 @@ export function checkAnyFeatureAccess(
 }
 
 /**
- * Client-side hook for checking feature access
- *
- * @example
- * ```tsx
- * function MyComponent() {
- *   const { hasAccess, isLoaded } = useFeatureAccess(FEATURES.VAULT_TAGS_COLLECTIONS);
- *
- *   if (!isLoaded) return <Skeleton />;
- *   if (!hasAccess) return <UpgradePrompt feature={FEATURES.VAULT_TAGS_COLLECTIONS} />;
- *
- *   return <TagsCollectionsUI />;
- * }
- * ```
- */
-export function useFeatureAccess(feature: FeatureSlug) {
-  const { has, isLoaded } = useAuth();
-
-  return {
-    isLoaded,
-    hasAccess: has?.({ feature }) ?? false,
-    featureMetadata: FEATURE_METADATA[feature],
-  };
-}
-
-/**
- * Client-side hook for checking multiple features
- *
- * @example
- * ```tsx
- * function VaultSection() {
- *   const { features, isLoaded } = useMultipleFeatureAccess([
- *     FEATURES.VAULT_TAGS_COLLECTIONS,
- *     FEATURES.VAULT_VOICE_UPLOADS,
- *   ]);
- *
- *   if (!isLoaded) return <Skeleton />;
- *
- *   return (
- *     <>
- *       {features.vault_tags_collections && <TagsUI />}
- *       {features.vault_voice_uploads && <VoiceUI />}
- *     </>
- *   );
- * }
- * ```
- */
-export function useMultipleFeatureAccess(featureList: FeatureSlug[]) {
-  const { has, isLoaded } = useAuth();
-
-  const features = featureList.reduce(
-    (acc, feature) => {
-      acc[feature] = has?.({ feature }) ?? false;
-      return acc;
-    },
-    {} as Record<FeatureSlug, boolean>,
-  );
-
-  return {
-    isLoaded,
-    features,
-    hasAny: Object.values(features).some(Boolean),
-    hasAll: Object.values(features).every(Boolean),
-  };
-}
-
-/**
  * Get the required plan for upgrading to a feature
  */
 export function getRequiredPlanForFeature(feature: FeatureSlug): string {
@@ -202,167 +153,50 @@ export function getRequiredPlanForFeature(feature: FeatureSlug): string {
 export const getFeatureMetadata = getFeatureMetadataFromSource;
 
 // ============================================================================
-// CONVEX-BASED HOOKS (Source of Truth for Feature Gating)
+// CLERK PLAN CHECKING (Server-side plan validation)
 // ============================================================================
 
 /**
- * Hook to get the effective subscription tier from Convex
+ * Check if user has any active subscription plan
  *
- * This is the CLIENT-SIDE source of truth for subscription access.
- * It queries Convex for the effective tier (considering overrides).
+ * Works with both server-side `has` from auth() and client-side `has` from useAuth()
  *
- * @example
- * ```tsx
- * function MyComponent() {
- *   const { effectiveTier, isLoading } = useEffectiveSubscription();
+ * @example Server-side (middleware, layout):
+ * ```ts
+ * const { has } = await auth();
+ * const hasActivePlan = checkHasActivePlan(has);
+ * ```
  *
- *   if (isLoading) return <Skeleton />;
- *   if (!effectiveTier) return <NotAuthenticated />;
- *
- *   return <div>Your plan: {effectiveTier}</div>;
- * }
+ * @example Client-side (hooks, components):
+ * ```ts
+ * const { has } = useAuth();
+ * const hasActivePlan = checkHasActivePlan(has);
  * ```
  */
-export function useEffectiveSubscription() {
-  // useConvexAuth tells us when Convex has received AND validated the auth token
-  // This is more reliable than Clerk's isLoaded which only tracks client-side state
-  const { isLoading: isConvexAuthLoading, isAuthenticated } = useConvexAuth();
-  const subscription = useQuery(api.auth.getEffectiveSubscription);
-
-  // Consider loading if EITHER:
-  // 1. Convex auth is still syncing (JWT not yet validated by Convex)
-  // 2. Convex query is still pending
-  // This prevents the flash where we show "upgrade" before auth is fully synced
-  const isLoading = isConvexAuthLoading || subscription === undefined;
-
-  return {
-    /** True while Convex auth or subscription query is loading */
-    isLoading,
-    /** Whether the user is authenticated with Convex */
-    isAuthenticated,
-    /** The effective tier (considering overrides), or null if not authenticated */
-    effectiveTier: subscription?.effectiveTier ?? null,
-    /** The actual subscription tier (what they're paying for) */
-    subscriptionTier: subscription?.subscriptionTier ?? null,
-    /** Whether there's an active tier override */
-    hasOverride: subscription?.hasOverride ?? false,
-    /** The subscription status (active, inactive, cancelled, past_due) */
-    subscriptionStatus: subscription?.subscriptionStatus ?? null,
-    /** The household ID */
-    householdId: subscription?.householdId ?? null,
-    /** Full subscription data object */
-    subscription,
-  };
+export function checkHasActivePlan(
+  has: ((params: { plan: string }) => boolean) | undefined,
+): boolean {
+  if (!has) return false;
+  return SUBSCRIPTION_TIERS.some((plan) => has({ plan }));
 }
 
 /**
- * Hook to check if user has access to a specific tier
+ * Get the user's current plan tier
  *
- * Uses the effective tier from Convex (NOT Clerk).
- *
- * @example
- * ```tsx
- * function HeritageFeature() {
- *   const { hasAccess, isLoading } = useEffectiveTierAccess("heritage");
- *
- *   if (isLoading) return <Skeleton />;
- *   if (!hasAccess) return <UpgradePrompt requiredTier="heritage" />;
- *
- *   return <HeritageUI />;
- * }
- * ```
+ * Returns the highest tier the user has access to, or null if no plan.
+ * Founders is checked first as it's equivalent to Legacy but is a distinct plan.
  */
-export function useEffectiveTierAccess(requiredTier: SubscriptionTier) {
-  const { effectiveTier, isLoading, subscription } = useEffectiveSubscription();
+export function getCurrentPlanTier(
+  has: ((params: { plan: string }) => boolean) | undefined,
+): SubscriptionTier | null {
+  if (!has) return null;
 
-  const hasAccess = effectiveTier ? tierHasAccess(effectiveTier, requiredTier) : false;
+  // Check in descending order (highest tier first)
+  // Founders is equivalent to Legacy but shown as distinct plan
+  if (has({ plan: "founders" })) return "founders";
+  if (has({ plan: "legacy" })) return "legacy";
+  if (has({ plan: "heritage" })) return "heritage";
+  if (has({ plan: "foundations" })) return "foundations";
 
-  return {
-    isLoading,
-    hasAccess,
-    effectiveTier,
-    requiredTier,
-    subscription,
-  };
-}
-
-/**
- * Hook to check if user has access to a specific feature
- *
- * Uses the effective tier from Convex (NOT Clerk).
- * This is the RECOMMENDED way to check feature access in components.
- *
- * @example
- * ```tsx
- * function TagsSection() {
- *   const { hasAccess, isLoading, requiredTier } = useEffectiveFeatureAccess(
- *     FEATURES.VAULT_TAGS_COLLECTIONS
- *   );
- *
- *   if (isLoading) return <Skeleton />;
- *   if (!hasAccess) return <UpgradePrompt requiredTier={requiredTier} />;
- *
- *   return <TagsUI />;
- * }
- * ```
- */
-export function useEffectiveFeatureAccess(feature: FeatureSlug) {
-  const { effectiveTier, isLoading, subscription } = useEffectiveSubscription();
-
-  const requiredTier = FEATURE_TIERS[feature];
-  const hasAccess = effectiveTier ? tierHasFeatureAccess(effectiveTier, feature) : false;
-
-  return {
-    isLoading,
-    hasAccess,
-    effectiveTier,
-    requiredTier,
-    featureMetadata: FEATURE_METADATA[feature],
-    subscription,
-  };
-}
-
-/**
- * Hook to check multiple features at once
- *
- * Uses the effective tier from Convex (NOT Clerk).
- *
- * @example
- * ```tsx
- * function VaultSection() {
- *   const { features, isLoading, hasAny } = useEffectiveMultipleFeatureAccess([
- *     FEATURES.VAULT_TAGS_COLLECTIONS,
- *     FEATURES.VAULT_VOICE_UPLOADS,
- *   ]);
- *
- *   if (isLoading) return <Skeleton />;
- *
- *   return (
- *     <>
- *       {features.vault_tags_collections && <TagsUI />}
- *       {features.vault_voice_uploads && <VoiceUI />}
- *     </>
- *   );
- * }
- * ```
- */
-export function useEffectiveMultipleFeatureAccess(featureList: FeatureSlug[]) {
-  const { effectiveTier, isLoading, subscription } = useEffectiveSubscription();
-
-  const features = featureList.reduce(
-    (acc, feature) => {
-      acc[feature] = effectiveTier ? tierHasFeatureAccess(effectiveTier, feature) : false;
-      return acc;
-    },
-    {} as Record<FeatureSlug, boolean>,
-  );
-
-  return {
-    isLoading,
-    features,
-    hasAny: Object.values(features).some(Boolean),
-    hasAll: Object.values(features).every(Boolean),
-    effectiveTier,
-    subscription,
-  };
+  return null;
 }

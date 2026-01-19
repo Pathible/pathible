@@ -1,13 +1,15 @@
 "use client";
 
 import { useAction, useMutation, useQuery } from "convex/react";
-import { ArrowLeft, Loader2, Send } from "lucide-react";
+import { ArrowLeft, Clock, Loader2, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,12 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { extractVariables, markdownToEmailHtml, TEMPLATE_CATEGORIES } from "@/lib/email-utils";
 import { EmailPreview } from "./email-preview";
 import { MarkdownEditor } from "./markdown-editor";
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 interface TemplateEditorProps {
   templateId?: Id<"emailTemplates">;
@@ -32,34 +37,71 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
   const router = useRouter();
   const isEditing = !!templateId;
 
-  const existingTemplate = useQuery(
-    api.adminEmail.getTemplate,
-    templateId ? { templateId } : "skip",
-  );
+  // Single unified query for any template
+  const template = useQuery(api.adminEmail.getTemplate, templateId ? { templateId } : "skip");
 
   const createTemplate = useMutation(api.adminEmail.createTemplate);
   const updateTemplate = useMutation(api.adminEmail.updateTemplate);
   const sendTestEmail = useAction(api.adminEmail.sendTestEmail);
 
+  // Basic template fields
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>("other");
+
+  // Automation toggle
+  const [isAutomated, setIsAutomated] = useState(false);
+
+  // Automation fields
+  const [enabled, setEnabled] = useState(true);
+  const [frequency, setFrequency] = useState<"weekly" | "daily">("weekly");
+  const [dayOfWeek, setDayOfWeek] = useState(0);
+  const [hourUtc, setHourUtc] = useState(18);
+  const [onboardingStatus, setOnboardingStatus] = useState("");
+  const [minDaysSinceOnboarding, setMinDaysSinceOnboarding] = useState<number | undefined>(
+    undefined,
+  );
+  const [vaultEmpty, setVaultEmpty] = useState<boolean | undefined>(undefined);
+  const [requireEmailNotifications, setRequireEmailNotifications] = useState<boolean | undefined>(
+    undefined,
+  );
+
+  // UI state
   const [isSaving, setIsSaving] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testEmail, setTestEmail] = useState("");
 
   // Load existing template data
   useEffect(() => {
-    if (existingTemplate) {
-      setName(existingTemplate.name);
-      setSubject(existingTemplate.subject);
-      setContent(existingTemplate.content);
-      setDescription(existingTemplate.description || "");
-      setCategory(existingTemplate.category || "other");
+    if (template) {
+      setName(template.name);
+      setSubject(template.subject);
+      setContent(template.content);
+      setDescription(template.description || "");
+      setCategory(template.category || "other");
+
+      // Check if template has automation configured
+      const hasAutomation = !!(template.schedule && template.triggerConditions);
+      setIsAutomated(hasAutomation);
+
+      if (hasAutomation) {
+        setEnabled(template.enabled ?? true);
+        if (template.schedule) {
+          setFrequency(template.schedule.frequency);
+          setDayOfWeek(template.schedule.dayOfWeek ?? 0);
+          setHourUtc(template.schedule.hourUtc);
+        }
+        if (template.triggerConditions) {
+          setOnboardingStatus(template.triggerConditions.onboardingStatus || "");
+          setMinDaysSinceOnboarding(template.triggerConditions.minDaysSinceOnboarding);
+          setVaultEmpty(template.triggerConditions.vaultEmpty);
+          setRequireEmailNotifications(template.triggerConditions.requireEmailNotifications);
+        }
+      }
     }
-  }, [existingTemplate]);
+  }, [template]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -80,6 +122,7 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
       const variables = extractVariables(content + subject);
 
       if (isEditing && templateId) {
+        // Update existing template
         await updateTemplate({
           templateId,
           name,
@@ -89,14 +132,34 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
           variables,
           category: category as
             | "onboarding"
+            | "retargeting"
+            | "announcements"
             | "legacy"
             | "invitations"
             | "digest"
             | "system"
             | "other",
+          // Automation fields - pass null to clear if automation is disabled
+          enabled: isAutomated ? enabled : undefined,
+          schedule: isAutomated
+            ? {
+                frequency,
+                dayOfWeek: frequency === "weekly" ? dayOfWeek : undefined,
+                hourUtc,
+              }
+            : null,
+          triggerConditions: isAutomated
+            ? {
+                onboardingStatus: onboardingStatus || undefined,
+                minDaysSinceOnboarding,
+                vaultEmpty,
+                requireEmailNotifications,
+              }
+            : null,
         });
         toast.success("Template updated successfully");
       } else {
+        // Create new template
         await createTemplate({
           name,
           subject,
@@ -105,6 +168,8 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
           variables,
           category: category as
             | "onboarding"
+            | "retargeting"
+            | "announcements"
             | "legacy"
             | "invitations"
             | "digest"
@@ -152,7 +217,8 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
     }
   };
 
-  if (isEditing && existingTemplate === undefined) {
+  // Loading state
+  if (isEditing && template === undefined) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -160,7 +226,8 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
     );
   }
 
-  if (isEditing && existingTemplate === null) {
+  // Not found state
+  if (isEditing && template === null) {
     return (
       <div className="space-y-6">
         <Link
@@ -191,9 +258,16 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Email System
           </Link>
-          <h1 className="mt-2 font-crimson text-3xl font-semibold">
-            {isEditing ? `Edit Template: ${existingTemplate?.name}` : "New Template"}
-          </h1>
+          <div className="mt-2 flex items-center gap-2">
+            <h1 className="font-crimson text-3xl font-semibold">
+              {isEditing ? name || "Edit Template" : "New Template"}
+            </h1>
+            {isAutomated && (
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-700">
+                Automated
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
@@ -206,10 +280,10 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
         </div>
       </div>
 
-      {/* Two Column Layout */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Editor Column */}
-        <div className="space-y-6">
+      {/* Three Column Layout */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Editor Column - spans 2 cols */}
+        <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle className="font-crimson text-xl">Template Details</CardTitle>
@@ -297,6 +371,22 @@ The Pathible Team"
             </CardContent>
           </Card>
 
+          {/* Preview - sticky at bottom of left column */}
+          <div className="lg:sticky lg:top-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-crimson text-xl">Preview</CardTitle>
+                <CardDescription>Live preview with example variable values</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EmailPreview subject={subject} content={content} />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Right Sidebar */}
+        <div className="space-y-6">
           {/* Test Email */}
           <Card>
             <CardHeader>
@@ -329,19 +419,189 @@ The Pathible Team"
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Preview Column */}
-        <div className="lg:sticky lg:top-6 lg:self-start">
+          {/* Automation Toggle */}
           <Card>
             <CardHeader>
-              <CardTitle className="font-crimson text-xl">Preview</CardTitle>
-              <CardDescription>Live preview with example variable values</CardDescription>
+              <CardTitle className="text-lg">Automation</CardTitle>
+              <CardDescription>
+                Enable to send this template automatically on a schedule
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <EmailPreview subject={subject} content={content} />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="isAutomated">Enable Automation</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Configure schedule and trigger conditions
+                  </p>
+                </div>
+                <Switch id="isAutomated" checked={isAutomated} onCheckedChange={setIsAutomated} />
+              </div>
             </CardContent>
           </Card>
+
+          {/* Automation Settings - only shown when automation is enabled */}
+          {isAutomated && (
+            <>
+              {/* Status Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="enabled">Enabled</Label>
+                      <p className="text-xs text-muted-foreground">
+                        When disabled, this email won&apos;t be sent
+                      </p>
+                    </div>
+                    <Switch id="enabled" checked={enabled} onCheckedChange={setEnabled} />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Schedule Card */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-lg">Schedule</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="frequency">Frequency</Label>
+                    <Select
+                      value={frequency}
+                      onValueChange={(v) => setFrequency(v as "weekly" | "daily")}
+                    >
+                      <SelectTrigger id="frequency">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {frequency === "weekly" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="dayOfWeek">Day of Week</Label>
+                      <Select
+                        value={dayOfWeek.toString()}
+                        onValueChange={(v) => setDayOfWeek(parseInt(v, 10))}
+                      >
+                        <SelectTrigger id="dayOfWeek">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DAY_NAMES.map((day, index) => (
+                            <SelectItem key={day} value={index.toString()}>
+                              {day}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="hourUtc">Hour (UTC)</Label>
+                    <Select
+                      value={hourUtc.toString()}
+                      onValueChange={(v) => setHourUtc(parseInt(v, 10))}
+                    >
+                      <SelectTrigger id="hourUtc">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[...Array(24).keys()].map((hour) => (
+                          <SelectItem key={`utc-hour-${hour}`} value={hour.toString()}>
+                            {hour.toString().padStart(2, "0")}:00 UTC
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Trigger Conditions Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Trigger Conditions</CardTitle>
+                  <CardDescription>Define which users receive this email</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="onboardingStatus">Onboarding Status</Label>
+                    <Select
+                      value={onboardingStatus || "any"}
+                      onValueChange={(v) => setOnboardingStatus(v === "any" ? "" : v)}
+                    >
+                      <SelectTrigger id="onboardingStatus">
+                        <SelectValue placeholder="Any status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Any status</SelectItem>
+                        <SelectItem value="complete">Complete</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="minDays">Min Days Since Onboarding</Label>
+                    <Input
+                      id="minDays"
+                      type="number"
+                      min={0}
+                      value={minDaysSinceOnboarding ?? ""}
+                      onChange={(e) =>
+                        setMinDaysSinceOnboarding(
+                          e.target.value ? parseInt(e.target.value, 10) : undefined,
+                        )
+                      }
+                      placeholder="No minimum"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="vaultEmpty"
+                      checked={vaultEmpty === true}
+                      onCheckedChange={(checked) =>
+                        setVaultEmpty(
+                          checked === "indeterminate" ? undefined : checked ? true : undefined,
+                        )
+                      }
+                    />
+                    <Label htmlFor="vaultEmpty" className="text-sm">
+                      Vault must be empty
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="emailNotifications"
+                      checked={requireEmailNotifications === true}
+                      onCheckedChange={(checked) =>
+                        setRequireEmailNotifications(
+                          checked === "indeterminate" ? undefined : checked ? true : undefined,
+                        )
+                      }
+                    />
+                    <Label htmlFor="emailNotifications" className="text-sm">
+                      Require email opt-in
+                    </Label>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
       </div>
     </div>

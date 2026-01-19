@@ -501,6 +501,85 @@ export function TreatmentRow({
   );
 }
 
+// Reusable document header component
+export function DocumentHeader({
+  title,
+  subtitle,
+  state,
+}: {
+  title: string;
+  subtitle?: string;
+  state: string;
+}) {
+  const stateName = STATE_NAMES[state as USState] || state;
+  return (
+    <View style={styles.header}>
+      <Text style={styles.title}>{title}</Text>
+      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      <Text style={styles.stateInfo}>State of {stateName}</Text>
+    </View>
+  );
+}
+
+// Reusable document footer component
+export function DocumentFooter({
+  documentName,
+  principalName,
+  pageNumber,
+  generatedDate,
+}: {
+  documentName: string;
+  principalName: string;
+  pageNumber?: number;
+  generatedDate?: Date;
+}) {
+  const footer = pageNumber
+    ? `${documentName} of ${principalName} | Page ${pageNumber}`
+    : generatedDate
+      ? `${documentName} of ${principalName} | Generated ${generatedDate.toLocaleDateString()}`
+      : `${documentName} of ${principalName}`;
+
+  return (
+    <View style={styles.footer}>
+      <Text>{footer}</Text>
+    </View>
+  );
+}
+
+// Reusable principal signature section (for declarant/testator/grantor)
+export function PrincipalSignatureSection({
+  title,
+  introText,
+  principalName,
+  labelText,
+}: {
+  title: string;
+  introText: string;
+  principalName: string;
+  labelText?: string;
+}) {
+  return (
+    <View style={styles.signatureSection}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.legalClause}>{introText}</Text>
+      <View style={[styles.signatureBlock, { marginTop: 12 }]}>
+        <View style={styles.signatureRow}>
+          <View style={styles.signatureColumn}>
+            <View style={styles.signatureLine} />
+            <Text style={styles.signatureLabel}>Signature</Text>
+          </View>
+          <View style={styles.signatureColumn}>
+            <View style={styles.signatureLine} />
+            <Text style={styles.signatureLabel}>Date</Text>
+          </View>
+        </View>
+        <View style={[styles.signatureLine, { width: "45%", marginTop: 8 }]} />
+        <Text style={styles.signatureLabel}>{labelText || `Printed Name: ${principalName}`}</Text>
+      </View>
+    </View>
+  );
+}
+
 // Healthcare-specific witness attestation
 export function HealthcareWitnessAttestation({
   count,

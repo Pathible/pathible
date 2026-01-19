@@ -86,6 +86,7 @@ const emptyDeleted = {
  * Note: B2 files are NOT deleted here - they need separate cleanup
  *
  * SECURITY: Only works for test user emails (containing +clerk_test, etc.)
+ * SECURITY: Disabled in production environments
  */
 export const resetTestUser = mutation({
   args: {},
@@ -95,6 +96,17 @@ export const resetTestUser = mutation({
     deleted: deletedSchema,
   }),
   handler: async (ctx) => {
+    // Environment check - disable in production
+    const convexUrl = process.env.CONVEX_CLOUD_URL || "";
+    if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
+      console.warn("[Testing] resetTestUser blocked in production environment");
+      return {
+        success: false,
+        message: "Test functions are disabled in production",
+        deleted: { ...emptyDeleted },
+      };
+    }
+
     // Get current user identity
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -433,6 +445,7 @@ export const resetTestUser = mutation({
 /**
  * Grant admin role to current test user
  * Only works for test user emails (containing +clerk_test, etc.)
+ * SECURITY: Disabled in production environments
  */
 export const grantAdminRole = mutation({
   args: {},
@@ -441,6 +454,16 @@ export const grantAdminRole = mutation({
     message: v.string(),
   }),
   handler: async (ctx) => {
+    // Environment check - disable in production
+    const convexUrl = process.env.CONVEX_CLOUD_URL || "";
+    if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
+      console.warn("[Testing] grantAdminRole blocked in production environment");
+      return {
+        success: false,
+        message: "Test functions are disabled in production",
+      };
+    }
+
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return {
@@ -508,6 +531,7 @@ export const grantAdminRole = mutation({
  * Clean up test articles created during E2E tests
  * Deletes all articles with slugs starting with "e2e-test-"
  * Only works for authenticated test users
+ * SECURITY: Disabled in production environments
  */
 export const cleanupTestArticles = mutation({
   args: {},
@@ -517,6 +541,17 @@ export const cleanupTestArticles = mutation({
     deletedCount: v.number(),
   }),
   handler: async (ctx) => {
+    // Environment check - disable in production
+    const convexUrl = process.env.CONVEX_CLOUD_URL || "";
+    if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
+      console.warn("[Testing] cleanupTestArticles blocked in production environment");
+      return {
+        success: false,
+        message: "Test functions are disabled in production",
+        deletedCount: 0,
+      };
+    }
+
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return {
@@ -544,11 +579,15 @@ export const cleanupTestArticles = mutation({
 
     console.log(`[Testing] Cleaning up test articles for: ${email}`);
 
-    // Find all articles with e2e-test- prefix in slug
+    // Find all articles with test patterns in slug or title
     const allArticles = await ctx.db.query("educationalArticles").collect();
     const testArticles = allArticles.filter(
       (article) =>
-        article.slug.startsWith("e2e-test-") || article.title.includes("E2E Test Article"),
+        article.slug.startsWith("e2e-") ||
+        article.title.includes("E2E Test") ||
+        article.title.includes("E2E Public Learn Test") ||
+        article.title.includes("Test article for E2E") ||
+        article.slug.includes("test-article"),
     );
 
     let deletedCount = 0;
@@ -572,6 +611,172 @@ export const cleanupTestArticles = mutation({
       success: true,
       message: `Cleaned up ${deletedCount} test articles`,
       deletedCount,
+    };
+  },
+});
+
+/**
+ * Admin cleanup function to remove ALL test articles
+ * This does NOT require authentication - use only for manual cleanup
+ *
+ * Run manually with:
+ *   npx convex run testing:adminCleanupTestArticles
+ *
+ * WARNING: This will delete all articles matching test patterns
+ * SECURITY: Disabled in production environments
+ */
+export const adminCleanupTestArticles = mutation({
+  args: {},
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    deletedCount: v.number(),
+  }),
+  handler: async (ctx) => {
+    // Environment check - disable in production
+    const convexUrl = process.env.CONVEX_CLOUD_URL || "";
+    if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
+      console.warn("[Testing] adminCleanupTestArticles blocked in production environment");
+      return {
+        success: false,
+        message: "Test functions are disabled in production",
+        deletedCount: 0,
+      };
+    }
+
+    console.log("[Testing] Admin cleanup: removing all test articles");
+
+    // Find all articles with test patterns in slug or title
+    const allArticles = await ctx.db.query("educationalArticles").collect();
+    const testArticles = allArticles.filter(
+      (article) =>
+        article.slug.startsWith("e2e-") ||
+        article.title.includes("E2E Test") ||
+        article.title.includes("E2E Public Learn Test") ||
+        article.title.includes("Test article for E2E") ||
+        article.slug.includes("test-article"),
+    );
+
+    let deletedCount = 0;
+    for (const article of testArticles) {
+      // Also clean up any read records for this article
+      const readRecords = await ctx.db
+        .query("userArticleReads")
+        .withIndex("by_article", (q) => q.eq("articleId", article._id))
+        .collect();
+
+      for (const record of readRecords) {
+        await ctx.db.delete(record._id);
+      }
+
+      await ctx.db.delete(article._id);
+      deletedCount++;
+      console.log(`[Testing] Admin deleted test article: ${article.slug} - "${article.title}"`);
+    }
+
+    return {
+      success: true,
+      message: `Admin cleanup: removed ${deletedCount} test articles`,
+      deletedCount,
+    };
+  },
+});
+
+/**
+ * Set subscription tier override for test user's household
+ * This allows E2E tests to test features that require higher tier subscriptions
+ *
+ * SECURITY: Only works for test user emails (containing +clerk_test, etc.)
+ * SECURITY: Disabled in production environments
+ */
+export const setTestSubscriptionTier = mutation({
+  args: {
+    tier: v.union(
+      v.literal("foundations"),
+      v.literal("heritage"),
+      v.literal("legacy"),
+      v.literal("founders"),
+    ),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Environment check - disable in production
+    const convexUrl = process.env.CONVEX_CLOUD_URL || "";
+    if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
+      console.warn("[Testing] setTestSubscriptionTier blocked in production environment");
+      return {
+        success: false,
+        message: "Test functions are disabled in production",
+      };
+    }
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return {
+        success: false,
+        message: "Not authenticated",
+      };
+    }
+
+    const email = identity.email || "";
+    const userId = identity.subject;
+
+    // Security check - only allow test users
+    const isTestUser = TEST_EMAIL_PATTERNS.some((pattern) =>
+      email.toLowerCase().includes(pattern.toLowerCase()),
+    );
+
+    if (!isTestUser) {
+      console.warn(`[Testing] Blocked tier override for non-test user: ${email}`);
+      return {
+        success: false,
+        message: `Security: Only test users can have tier overrides. Email must contain one of: ${TEST_EMAIL_PATTERNS.join(", ")}`,
+      };
+    }
+
+    // Find user's profile
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (!profile) {
+      return {
+        success: false,
+        message: "User profile not found. Complete onboarding first.",
+      };
+    }
+
+    // Find user's household (as primary contact)
+    const household = await ctx.db
+      .query("households")
+      .withIndex("by_primaryContactId", (q) => q.eq("primaryContactId", profile._id))
+      .first();
+
+    if (!household) {
+      return {
+        success: false,
+        message: "No household found. Complete onboarding first.",
+      };
+    }
+
+    // Set the tier override
+    await ctx.db.patch(household._id, {
+      tierOverride: args.tier,
+      tierOverrideReason: "E2E Testing",
+      tierOverrideExpiresAt: Date.now() + 24 * 60 * 60 * 1000, // Expires in 24 hours
+    });
+
+    console.log(
+      `[Testing] Set tier override to ${args.tier} for household ${household._id} (user: ${email})`,
+    );
+
+    return {
+      success: true,
+      message: `Subscription tier override set to ${args.tier}`,
     };
   },
 });

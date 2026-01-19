@@ -123,6 +123,12 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
               </p>
               <div className="flex items-center gap-6">
                 <Link
+                  href="/learn"
+                  className="text-sm text-muted-foreground hover:text-pathible-forest transition-colors"
+                >
+                  Learn
+                </Link>
+                <Link
                   href="/help"
                   className="text-sm text-muted-foreground hover:text-pathible-forest transition-colors"
                 >

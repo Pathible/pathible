@@ -7,6 +7,8 @@ import {
   type USState,
 } from "@/lib/state-legal-requirements";
 import {
+  DocumentFooter,
+  DocumentHeader,
   type LegalDocumentPDFData,
   NotaryAcknowledgment,
   SelfProvingAffidavit,
@@ -36,11 +38,11 @@ export function WillPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
     <Document>
       {/* Page 1 */}
       <Page size="LETTER" style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Last Will and Testament</Text>
-          <Text style={styles.subtitle}>of {r.fullName || "[YOUR FULL LEGAL NAME]"}</Text>
-          <Text style={styles.stateInfo}>State of {stateName}</Text>
-        </View>
+        <DocumentHeader
+          title="Last Will and Testament"
+          subtitle={`of ${r.fullName || "[YOUR FULL LEGAL NAME]"}`}
+          state={data.state}
+        />
 
         {/* Preamble and Declaration */}
         <View style={styles.section}>
@@ -158,12 +160,11 @@ export function WillPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
           )}
         </View>
 
-        <View style={styles.footer}>
-          <Text>
-            Last Will and Testament of {r.fullName || "[YOUR NAME]"} | Generated{" "}
-            {data.generatedDate.toLocaleDateString()}
-          </Text>
-        </View>
+        <DocumentFooter
+          documentName="Last Will and Testament"
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          generatedDate={data.generatedDate}
+        />
       </Page>
 
       {/* Page 2 */}
@@ -332,9 +333,11 @@ export function WillPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
           </View>
         )}
 
-        <View style={styles.footer}>
-          <Text>Last Will and Testament of {r.fullName || "[YOUR NAME]"} | Page 2</Text>
-        </View>
+        <DocumentFooter
+          documentName="Last Will and Testament"
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={2}
+        />
       </Page>
 
       {/* Page 3 - Final Wishes, Definitions, Signature, and Attestation */}
@@ -450,9 +453,11 @@ export function WillPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
           testatorName={(r.fullName as string) || "[TESTATOR NAME]"}
         />
 
-        <View style={styles.footer}>
-          <Text>Last Will and Testament of {r.fullName || "[YOUR NAME]"} | Page 3</Text>
-        </View>
+        <DocumentFooter
+          documentName="Last Will and Testament"
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={3}
+        />
       </Page>
 
       {/* Page 4 - Notary and Self-Proving Affidavit */}
@@ -473,9 +478,11 @@ export function WillPDFGenerator({ data }: { data: LegalDocumentPDFData }) {
             />
           )}
 
-          <View style={styles.footer}>
-            <Text>Last Will and Testament of {r.fullName || "[YOUR NAME]"} | Page 4</Text>
-          </View>
+          <DocumentFooter
+            documentName="Last Will and Testament"
+            principalName={(r.fullName as string) || "[YOUR NAME]"}
+            pageNumber={4}
+          />
         </Page>
       )}
     </Document>

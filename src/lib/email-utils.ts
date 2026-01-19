@@ -505,3 +505,163 @@ export function getCategoryLabel(category: string | undefined): string {
   const found = TEMPLATE_CATEGORIES.find((c) => c.value === category);
   return found?.label ?? "Other";
 }
+
+// ============================================================================
+// EMAIL QUEUE UTILITIES
+// ============================================================================
+
+export const RATE_LIMIT_DELAY_MS = 500; // 500ms between emails = 2 emails/second
+export const DEFAULT_MAX_ATTEMPTS = 3;
+export const RETRY_DELAYS_MS = [60_000, 300_000, 900_000]; // 1min, 5min, 15min
+
+/**
+ * Calculate scheduled send times for a batch of emails
+ * Each email is scheduled 500ms after the previous one to respect rate limits
+ */
+export function calculateBatchScheduleTimes(
+  emailCount: number,
+  startTime: number = Date.now(),
+): number[] {
+  const scheduleTimes: number[] = [];
+  for (let i = 0; i < emailCount; i++) {
+    scheduleTimes.push(startTime + i * RATE_LIMIT_DELAY_MS);
+  }
+  return scheduleTimes;
+}
+
+/**
+ * Calculate the next retry delay based on attempt number
+ * Uses exponential backoff: 1min, 5min, 15min
+ */
+export function calculateRetryDelay(attemptNumber: number): number {
+  const index = Math.min(attemptNumber - 1, RETRY_DELAYS_MS.length - 1);
+  return RETRY_DELAYS_MS[Math.max(0, index)];
+}
+
+/**
+ * Determine if an email should be retried based on attempts
+ */
+export function shouldRetryEmail(attempts: number, maxAttempts: number): boolean {
+  return attempts < maxAttempts;
+}
+
+// ============================================================================
+// VAULT EMPTY EMAIL TEMPLATE
+// ============================================================================
+
+/**
+ * Generate the inner content for the vault empty engagement email.
+ * This returns ONLY the content portion - use wrapInEmailTemplate() to create the full email.
+ */
+export function generateVaultEmptyEmailContent(firstName: string, householdName?: string): string {
+  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+  const householdMention = householdName
+    ? `You've set up the ${householdName} household`
+    : "You've set up your household";
+
+  // Brand colors
+  const forestGreen = "#4B7F52";
+  const textColor = "#515856";
+  const headingColor = "#000000";
+
+  return `
+              <h1 style="font-family: 'Inter', sans-serif; color: ${headingColor}; font-size: 24px; line-height: 125%; font-weight: bold; margin-bottom: 16px; margin-top: 0;">Your Heritage Vault is ready</h1>
+
+              <p style="font-family: 'Inter', sans-serif; color: ${textColor}; font-size: 16px; line-height: 165%; margin-top: 0; margin-bottom: 16px;">
+                ${greeting}
+              </p>
+
+              <p style="font-family: 'Inter', sans-serif; color: ${textColor}; font-size: 16px; line-height: 165%; margin-top: 0; margin-bottom: 16px;">
+                ${householdMention} and we're excited to help you build your family's legacy. Your Heritage Vault is ready and waiting for its first document.
+              </p>
+
+              <p style="font-family: 'Inter', sans-serif; color: ${textColor}; font-size: 16px; line-height: 165%; margin-top: 0; margin-bottom: 24px;">
+                Start with something simple—a family photo, an important document, or a cherished recipe. Every journey begins with a single step.
+              </p>
+
+              <!-- CTA Button -->
+              <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 0 auto 24px;">
+                <tr>
+                  <td align="center" style="background-color: ${forestGreen}; border-radius: 6px;">
+                    <a href="https://pathible.com/dashboard/vault" target="_blank" style="display: inline-block; padding: 14px 25px; font-family: 'Inter', sans-serif; color: #ffffff; font-size: 14px; font-weight: bold; text-decoration: none; line-height: 16px;">
+                      Upload Your First Document
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Benefits Section -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="background-color: #EAECED; border-radius: 6px; padding: 20px;">
+                    <p style="font-family: 'Inter', sans-serif; color: ${headingColor}; font-size: 14px; font-weight: 600; margin: 0 0 12px;">
+                      Why start today?
+                    </p>
+                    <ul style="font-family: 'Inter', sans-serif; color: ${textColor}; font-size: 14px; line-height: 165%; margin: 0; padding-left: 20px;">
+                      <li style="margin-bottom: 8px;"><strong>Peace of mind</strong> — Know your important documents are safe and accessible</li>
+                      <li style="margin-bottom: 8px;"><strong>Easy access</strong> — Find what you need, when you need it</li>
+                      <li style="margin-bottom: 0;"><strong>Lasting legacy</strong> — Preserve memories for future generations</li>
+                    </ul>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="font-family: 'Inter', sans-serif; color: ${textColor}; font-size: 14px; line-height: 165%; margin: 0;">
+                Questions? We're here to help. Just reply to this email or visit our <a href="https://pathible.com/help" style="color: ${forestGreen}; text-decoration: underline;">Help Center</a>.
+              </p>
+`;
+}
+
+/**
+ * Generate the full HTML email for vault empty engagement.
+ * Uses the shared branded email template wrapper.
+ */
+export function generateVaultEmptyEmailHtml(firstName: string, householdName?: string): string {
+  const content = generateVaultEmptyEmailContent(firstName, householdName);
+  return wrapInEmailTemplate(content, "Your Heritage Vault Awaits");
+}
+
+// ============================================================================
+// RECIPIENT ELIGIBILITY
+// ============================================================================
+
+export interface VaultEmptyRecipientCriteria {
+  onboardingStatus: string;
+  onboardingCompletedAt: number | undefined;
+  email: string | undefined;
+  deletedAt: number | undefined;
+  emailNotificationsEnabled: boolean;
+  vaultDocumentCount: number;
+}
+
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * Check if a user is eligible for the vault empty engagement email
+ */
+export function isEligibleForVaultEmptyEmail(
+  criteria: VaultEmptyRecipientCriteria,
+  currentTime: number = Date.now(),
+): boolean {
+  // Must have completed onboarding
+  if (criteria.onboardingStatus !== "complete") return false;
+
+  // Must have completed onboarding at least 3 days ago
+  if (!criteria.onboardingCompletedAt) return false;
+  const threeDaysAgo = currentTime - THREE_DAYS_MS;
+  if (criteria.onboardingCompletedAt > threeDaysAgo) return false;
+
+  // Must have an email
+  if (!criteria.email) return false;
+
+  // Must not be deleted
+  if (criteria.deletedAt) return false;
+
+  // Must have email notifications enabled
+  if (!criteria.emailNotificationsEnabled) return false;
+
+  // Must have empty vault
+  if (criteria.vaultDocumentCount > 0) return false;
+
+  return true;
+}

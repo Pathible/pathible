@@ -7,6 +7,8 @@ import {
   type USState,
 } from "@/lib/state-legal-requirements";
 import {
+  DocumentFooter,
+  DocumentHeader,
   type LegalDocumentPDFData,
   NotaryAcknowledgment,
   SelfProvingAffidavit,
@@ -30,11 +32,11 @@ export function PourOverWillPDFGenerator({ data }: { data: LegalDocumentPDFData 
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Pour-Over Last Will and Testament</Text>
-          <Text style={styles.subtitle}>of {r.fullName || "[YOUR FULL LEGAL NAME]"}</Text>
-          <Text style={styles.stateInfo}>State of {stateName}</Text>
-        </View>
+        <DocumentHeader
+          title="Pour-Over Last Will and Testament"
+          subtitle={`of ${r.fullName || "[YOUR FULL LEGAL NAME]"}`}
+          state={data.state}
+        />
 
         {/* Declaration */}
         <View style={styles.section}>
@@ -196,11 +198,11 @@ export function PourOverWillPDFGenerator({ data }: { data: LegalDocumentPDFData 
           testatorName={(r.fullName as string) || "[TESTATOR NAME]"}
         />
 
-        <View style={styles.footer}>
-          <Text>
-            DRAFT - FOR ATTORNEY REVIEW | Pour-Over Will of {r.fullName || "[YOUR NAME]"} | Page 1
-          </Text>
-        </View>
+        <DocumentFooter
+          documentName="Pour-Over Will"
+          principalName={(r.fullName as string) || "[YOUR NAME]"}
+          pageNumber={1}
+        />
       </Page>
 
       {/* Page 2 - Notary and Self-Proving */}
@@ -221,11 +223,11 @@ export function PourOverWillPDFGenerator({ data }: { data: LegalDocumentPDFData 
             />
           )}
 
-          <View style={styles.footer}>
-            <Text>
-              DRAFT - FOR ATTORNEY REVIEW | Pour-Over Will of {r.fullName || "[YOUR NAME]"} | Page 2
-            </Text>
-          </View>
+          <DocumentFooter
+            documentName="Pour-Over Will"
+            principalName={(r.fullName as string) || "[YOUR NAME]"}
+            pageNumber={2}
+          />
         </Page>
       )}
     </Document>
