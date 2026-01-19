@@ -116,7 +116,9 @@ describe("Family Preferences - E2E Test Suite", () => {
     });
 
     it("should show household name in family information", () => {
-      cy.contains("Family Information").closest("div").parent().should("contain.text", "Household");
+      // The household name appears in the Family Name input field
+      cy.contains("Family Name").should("be.visible");
+      cy.get('input[value*="Household"], input[value*="household"]').should("exist");
     });
 
     it("should show edit button for family information", () => {

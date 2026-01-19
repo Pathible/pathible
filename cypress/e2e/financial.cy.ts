@@ -172,9 +172,11 @@ describe("Financial Module - E2E Test Suite", () => {
         .find('button[title="Delete account"]')
         .click();
 
-      // Confirm deletion
+      // Confirm deletion - wait for dialog animation to complete
       cy.get('[role="alertdialog"]').should("be.visible");
-      cy.contains("button", "Delete").click();
+      cy.get('[role="alertdialog"]').within(() => {
+        cy.contains("button", "Delete").should("be.visible").click();
+      });
 
       // Verify success toast
       cy.contains("Account deleted successfully", { timeout: 10000 }).should("be.visible");
@@ -244,9 +246,11 @@ describe("Financial Module - E2E Test Suite", () => {
         .find('button[title="Delete property"]')
         .click();
 
-      // Confirm deletion
+      // Confirm deletion - wait for dialog animation to complete
       cy.get('[role="alertdialog"]').should("be.visible");
-      cy.contains("button", "Delete").click();
+      cy.get('[role="alertdialog"]').within(() => {
+        cy.contains("button", "Delete").should("be.visible").click();
+      });
 
       // Verify success toast
       cy.contains("Property deleted successfully", { timeout: 10000 }).should("be.visible");
@@ -301,9 +305,11 @@ describe("Financial Module - E2E Test Suite", () => {
         .find('button[title="Delete policy"]')
         .click();
 
-      // Confirm deletion
+      // Confirm deletion - wait for dialog animation to complete
       cy.get('[role="alertdialog"]').should("be.visible");
-      cy.contains("button", "Delete").click();
+      cy.get('[role="alertdialog"]').within(() => {
+        cy.contains("button", "Delete").should("be.visible").click();
+      });
 
       // Verify success toast
       cy.contains("Policy deleted successfully", { timeout: 10000 }).should("be.visible");

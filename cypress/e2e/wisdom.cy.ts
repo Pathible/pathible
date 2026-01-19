@@ -310,10 +310,12 @@ describe("Wisdom Hub - E2E Test Suite", () => {
         .filter(":has(svg.text-destructive)")
         .click();
 
-      // Confirm deletion
+      // Confirm deletion - wait for dialog animation to complete
       cy.get('[role="alertdialog"]').should("be.visible");
-      cy.contains("Remove this wisdom entry?").should("be.visible");
-      cy.contains("button", "Delete").click();
+      cy.get('[role="alertdialog"]').within(() => {
+        cy.contains("Remove this wisdom entry?").should("be.visible");
+        cy.contains("button", "Delete").should("be.visible").click();
+      });
 
       // Verify entry is removed
       cy.contains(entryTitle).should("not.exist");

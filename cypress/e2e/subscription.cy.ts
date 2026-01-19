@@ -227,7 +227,7 @@ describe("Subscription & Billing - E2E Test Suite", () => {
       cy.visit("/pricing");
       cy.url({ timeout: 10000 }).should("include", "/pricing");
       // Pricing page should have plan information
-      cy.contains("Pricing", { timeout: 10000 }).should("exist");
+      cy.contains("Choose Your Legacy Plan", { timeout: 10000 }).should("exist");
     });
   });
 });
