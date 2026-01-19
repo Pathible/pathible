@@ -13,6 +13,7 @@ import {
   requireHouseholdAdmin,
 } from "./auth";
 import { logActivity } from "./shared/activity";
+import { trackAnalytics } from "./shared/analyticsHelpers";
 import { accessLevelValidator } from "./shared/commonValidators";
 import { formatBytesAsGB } from "./shared/constants";
 import {
@@ -531,6 +532,15 @@ export const create = mutation({
       entityType: "document",
       entityId: documentId,
       description: `Uploaded document: ${args.name}`,
+    });
+
+    // Analytics: Track document upload
+    await trackAnalytics(ctx, profile.userId, "document_uploaded", {
+      household_id: args.householdId,
+      file_type: args.fileType,
+      file_size_bytes: args.fileSize,
+      category_count: args.categories.length,
+      access_level: args.accessLevel,
     });
 
     return documentId;

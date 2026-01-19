@@ -8,6 +8,7 @@ import {
   requireHouseholdAccess,
 } from "./auth";
 import { logActivity } from "./shared/activity";
+import { trackAnalytics } from "./shared/analyticsHelpers";
 
 /**
  * Wisdom & Education - Wisdom Entries Module
@@ -260,6 +261,14 @@ export const create = mutation({
       entityType: "wisdom_entry",
       entityId: entryId,
       description: `Created wisdom entry: ${args.title}`,
+    });
+
+    // Analytics: Track wisdom entry creation
+    await trackAnalytics(ctx, profile.userId, "wisdom_entry_created", {
+      household_id: args.householdId,
+      category: args.category,
+      is_published: args.isPublished ?? false,
+      content_length: args.content.trim().length,
     });
 
     return entryId;

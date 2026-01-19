@@ -10,6 +10,11 @@ import {
 } from "./_generated/server";
 import { checkFamilyMemberLimit, requireActiveSubscription, requireAuth } from "./auth";
 import { logActivity } from "./shared/activity";
+import {
+  identifyGroupAnalytics,
+  identifyUserAnalytics,
+  trackAnalytics,
+} from "./shared/analyticsHelpers";
 import { onboardingStatusValidator } from "./shared/commonValidators";
 import { incrementFamilyUnitCount } from "./shared/counters";
 import { EMAIL_REGEX } from "./shared/validators";
@@ -177,7 +182,22 @@ export const updateProfile = mutation({
       });
 
       console.log(`[Onboarding] Created profile for user ${userId}`);
+
+      // Analytics: Identify new user in PostHog
+      await identifyUserAnalytics(ctx, userId, {
+        first_name: args.firstName.trim(),
+        last_name: args.lastName.trim(),
+        has_phone: !!args.phone,
+        has_dob: !!args.dateOfBirth,
+      });
     }
+
+    // Analytics: Track profile step completion
+    await trackAnalytics(ctx, userId, "onboarding_step_completed", {
+      step: 1,
+      step_name: "profile",
+      is_new_user: !existingProfile,
+    });
 
     return null;
   },
@@ -312,6 +332,19 @@ export const createFirstHousehold = mutation({
       description: `Created household "${args.name.trim()}"`,
     });
 
+    // Analytics: Track household creation and associate with group
+    await trackAnalytics(ctx, user._id, "onboarding_step_completed", {
+      step: 2,
+      step_name: "household",
+      subscription_tier: tier,
+    });
+
+    // Analytics: Associate user with household group
+    await identifyGroupAnalytics(ctx, user._id, "household", householdId, {
+      name: args.name.trim(),
+      subscription_tier: tier,
+    });
+
     return householdId;
   },
 });
@@ -379,11 +412,28 @@ export const setPreferences = mutation({
 
     // Update profile onboarding status - mark as complete
     // Step 3 is now the final step, subscription selection comes next
+    const completedAt = Date.now();
     await ctx.db.patch(profile._id, {
       onboardingStatus: "complete",
       onboardingStep: 3,
-      onboardingCompletedAt: Date.now(),
-      updatedAt: Date.now(),
+      onboardingCompletedAt: completedAt,
+      updatedAt: completedAt,
+    });
+
+    // Analytics: Track final step and onboarding completion
+    await trackAnalytics(ctx, profile.userId, "onboarding_step_completed", {
+      step: 3,
+      step_name: "preferences",
+      goals: args.goals,
+      email_opted_in: args.emailNotifications,
+      interested_features: args.interestedFeatures,
+    });
+
+    await trackAnalytics(ctx, profile.userId, "onboarding_completed", {
+      goals: args.goals,
+      goal_count: args.goals.length,
+      email_opted_in: args.emailNotifications,
+      time_to_complete_ms: completedAt - profile._creationTime,
     });
 
     return null;
