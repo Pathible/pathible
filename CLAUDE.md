@@ -10,8 +10,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. Write the test or verification step first.
 3. Then implement the code or changes.
 4. Run verification and iterate until it passes.
-5. **All E2E tests must pass** (`pnpm test:e2e`) before considering a feature complete.
-6. **New features require E2E tests** - Add appropriate E2E tests for user-facing features.
+
+### Testing Requirements (MANDATORY)
+
+**After EVERY code change, you MUST run and ensure these pass:**
+
+```bash
+# Unit tests - MUST pass
+pnpm test
+
+# E2E tests - MUST pass (requires dev server running)
+pnpm test:e2e
+```
+
+- **Never consider a feature complete** until both `pnpm test` AND `pnpm test:e2e` pass
+- **New user-facing features require E2E tests** - add tests in `cypress/e2e/`
+- **Tests must clean up after themselves** - use `cy.cleanupTestArticles()` and similar helpers
+- **Zero regressions allowed** - if a test fails, fix it before moving on
 
 ---
 
