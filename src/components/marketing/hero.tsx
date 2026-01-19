@@ -21,7 +21,12 @@ export function HeroSection() {
           <h1 className="font-crimson text-5xl sm:text-6xl lg:text-7xl leading-[1.1] tracking-tight text-foreground animate-fade-in-up animation-delay-100">
             Have you ever had to{" "}
             <span className="relative inline-block">
-              <span className="relative z-10">sort through a loved one's mess</span>
+              <span className="relative z-10">sort through</span>
+              <span className="absolute -bottom-2 left-0 right-0 h-3 bg-destructive/20 -rotate-1 rounded-sm" />
+            </span>{" "}
+            a loved one&apos;s{" "}
+            <span className="relative inline-block">
+              <span className="relative z-10">mess</span>
               <span className="absolute -bottom-2 left-0 right-0 h-3 bg-destructive/20 -rotate-1 rounded-sm" />
             </span>{" "}
             <span className="relative inline-block">

@@ -13,13 +13,22 @@ export function PublicLearningHero() {
           <BookOpen className="w-8 h-8 text-pathible-forest" />
         </div>
         <h1 className="font-crimson text-4xl sm:text-5xl lg:text-6xl mb-6 leading-tight">
-          Faith & Finances
+          Clarity for your{" "}
+          <span className="relative inline-block">
+            <span className="relative z-10">family</span>
+            <span className="absolute -bottom-2 left-0 right-0 h-3 bg-destructive/20 -rotate-1 rounded-sm" />
+          </span>
+          .
+          <br /> Before{" "}
+          <span className="relative inline-block">
+            <span className="relative z-10">they</span>
+            <span className="absolute -bottom-2 left-0 right-0 h-3 bg-pathible-gold/40 rotate-1 rounded-sm" />
+          </span>{" "}
+          need it.
         </h1>
         <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-4">
-          Biblical wisdom for building a legacy that honors God and blesses your family.
-        </p>
-        <p className="text-base text-muted-foreground/80 max-w-xl mx-auto">
-          Take your time with these resources. They're here whenever you're ready to explore.
+          If you have ever sorted through a loved one’s mess while grieving, you know how brutal the
+          search can be. Learn simple steps to give your family clarity instead of chaos.
         </p>
       </div>
     </section>

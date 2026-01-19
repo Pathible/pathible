@@ -41,18 +41,19 @@ crons.interval("retry failed emails", { minutes: 5 }, internal.emailQueue.retryF
 // ============================================================================
 
 /**
- * Weekly vault empty engagement email - Sunday at 6 PM UTC (11 AM PST / 2 PM EST)
+ * Weekly automated emails - Sunday at 6 PM UTC
  *
- * Sends a friendly reminder to users who:
- * - Have completed onboarding
- * - Have an empty vault (no documents uploaded)
- * - Have email notifications enabled
- * - Completed onboarding at least 3 days ago
+ * Triggers scheduled email templates configured for weekly delivery.
+ * Currently used for: Heritage Vault Empty engagement emails
+ *
+ * To add more schedules, add additional cron entries:
+ * - Daily 9 AM: crons.cron("daily automated emails", "0 9 * * *", ...)
+ * - Weekdays 10 AM: crons.cron("weekday emails", "0 10 * * 1-5", ...)
  */
 crons.cron(
-  "weekly vault empty engagement",
+  "weekly automated emails",
   "0 18 * * 0", // Sunday at 6 PM UTC
-  internal.automatedEmails.sendWeeklyVaultEmptyEmails,
+  internal.automatedEmails.checkAndRunScheduledEmails,
   {},
 );
 

@@ -32,7 +32,7 @@ export function LearningHero({ featuredArticle, totalArticles, readCount }: Lear
         <Card
           className={`
             relative overflow-hidden
-            bg-gradient-to-br from-primary/5 via-transparent to-accent/5
+            bg-linear-to-br from-primary/5 via-transparent to-accent/5
             border-primary/20
             hover:border-primary/40 hover:shadow-lg
             transition-all duration-300

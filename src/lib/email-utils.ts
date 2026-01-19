@@ -550,56 +550,40 @@ export function shouldRetryEmail(attempts: number, maxAttempts: number): boolean
 // ============================================================================
 
 /**
- * Generate HTML content for the vault empty engagement email
+ * Generate the inner content for the vault empty engagement email.
+ * This returns ONLY the content portion - use wrapInEmailTemplate() to create the full email.
  */
-export function generateVaultEmptyEmailHtml(firstName: string, householdName?: string): string {
+export function generateVaultEmptyEmailContent(firstName: string, householdName?: string): string {
   const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
   const householdMention = householdName
     ? `You've set up the ${householdName} household`
     : "You've set up your household";
 
+  // Brand colors
+  const forestGreen = "#4B7F52";
+  const textColor = "#515856";
+  const headingColor = "#000000";
+
   return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Heritage Vault Awaits</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; background-color: #f5f5f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5;">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 40px 40px 20px; text-align: center;">
-              <img src="https://pathible.com/pathible-logo.png" alt="Pathible" width="140" style="max-width: 140px;">
-            </td>
-          </tr>
+              <h1 style="font-family: 'Inter', sans-serif; color: ${headingColor}; font-size: 24px; line-height: 125%; font-weight: bold; margin-bottom: 16px; margin-top: 0;">Your Heritage Vault is ready</h1>
 
-          <!-- Main Content -->
-          <tr>
-            <td style="padding: 20px 40px;">
-              <h1 style="color: #1a1a1a; font-size: 24px; font-weight: 600; margin: 0 0 20px;">Your Heritage Vault is ready</h1>
-
-              <p style="color: #4a4a4a; font-size: 16px; margin: 0 0 16px;">
+              <p style="font-family: 'Inter', sans-serif; color: ${textColor}; font-size: 16px; line-height: 165%; margin-top: 0; margin-bottom: 16px;">
                 ${greeting}
               </p>
 
-              <p style="color: #4a4a4a; font-size: 16px; margin: 0 0 16px;">
+              <p style="font-family: 'Inter', sans-serif; color: ${textColor}; font-size: 16px; line-height: 165%; margin-top: 0; margin-bottom: 16px;">
                 ${householdMention} and we're excited to help you build your family's legacy. Your Heritage Vault is ready and waiting for its first document.
               </p>
 
-              <p style="color: #4a4a4a; font-size: 16px; margin: 0 0 24px;">
+              <p style="font-family: 'Inter', sans-serif; color: ${textColor}; font-size: 16px; line-height: 165%; margin-top: 0; margin-bottom: 24px;">
                 Start with something simple—a family photo, an important document, or a cherished recipe. Every journey begins with a single step.
               </p>
 
               <!-- CTA Button -->
-              <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 24px;">
+              <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 0 auto 24px;">
                 <tr>
-                  <td style="background-color: #2563eb; border-radius: 6px;">
-                    <a href="https://pathible.com/dashboard/vault" style="display: inline-block; padding: 14px 32px; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none;">
+                  <td align="center" style="background-color: ${forestGreen}; border-radius: 6px;">
+                    <a href="https://pathible.com/dashboard/vault" target="_blank" style="display: inline-block; padding: 14px 25px; font-family: 'Inter', sans-serif; color: #ffffff; font-size: 14px; font-weight: bold; text-decoration: none; line-height: 16px;">
                       Upload Your First Document
                     </a>
                   </td>
@@ -607,42 +591,34 @@ export function generateVaultEmptyEmailHtml(firstName: string, householdName?: s
               </table>
 
               <!-- Benefits Section -->
-              <div style="background-color: #f8fafc; border-radius: 6px; padding: 20px; margin-bottom: 24px;">
-                <p style="color: #1a1a1a; font-size: 14px; font-weight: 600; margin: 0 0 12px;">
-                  Why start today?
-                </p>
-                <ul style="color: #4a4a4a; font-size: 14px; margin: 0; padding-left: 20px;">
-                  <li style="margin-bottom: 8px;"><strong>Peace of mind</strong> — Know your important documents are safe and accessible</li>
-                  <li style="margin-bottom: 8px;"><strong>Easy access</strong> — Find what you need, when you need it</li>
-                  <li style="margin-bottom: 8px;"><strong>Lasting legacy</strong> — Preserve memories for future generations</li>
-                </ul>
-              </div>
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="background-color: #EAECED; border-radius: 6px; padding: 20px;">
+                    <p style="font-family: 'Inter', sans-serif; color: ${headingColor}; font-size: 14px; font-weight: 600; margin: 0 0 12px;">
+                      Why start today?
+                    </p>
+                    <ul style="font-family: 'Inter', sans-serif; color: ${textColor}; font-size: 14px; line-height: 165%; margin: 0; padding-left: 20px;">
+                      <li style="margin-bottom: 8px;"><strong>Peace of mind</strong> — Know your important documents are safe and accessible</li>
+                      <li style="margin-bottom: 8px;"><strong>Easy access</strong> — Find what you need, when you need it</li>
+                      <li style="margin-bottom: 0;"><strong>Lasting legacy</strong> — Preserve memories for future generations</li>
+                    </ul>
+                  </td>
+                </tr>
+              </table>
 
-              <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                Questions? We're here to help. Just reply to this email or visit our <a href="https://pathible.com/help" style="color: #2563eb; text-decoration: none;">Help Center</a>.
+              <p style="font-family: 'Inter', sans-serif; color: ${textColor}; font-size: 14px; line-height: 165%; margin: 0;">
+                Questions? We're here to help. Just reply to this email or visit our <a href="https://pathible.com/help" style="color: ${forestGreen}; text-decoration: underline;">Help Center</a>.
               </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 30px 40px; border-top: 1px solid #e5e7eb;">
-              <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px; text-align: center;">
-                You're receiving this email because you signed up for Pathible and enabled email notifications.
-              </p>
-              <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">
-                <a href="https://pathible.com/dashboard/settings" style="color: #9ca3af; text-decoration: underline;">Manage email preferences</a> ·
-                <a href="https://pathible.com" style="color: #9ca3af; text-decoration: underline;">pathible.com</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
 `;
+}
+
+/**
+ * Generate the full HTML email for vault empty engagement.
+ * Uses the shared branded email template wrapper.
+ */
+export function generateVaultEmptyEmailHtml(firstName: string, householdName?: string): string {
+  const content = generateVaultEmptyEmailContent(firstName, householdName);
+  return wrapInEmailTemplate(content, "Your Heritage Vault Awaits");
 }
 
 // ============================================================================

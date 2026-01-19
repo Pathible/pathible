@@ -778,9 +778,13 @@ export default defineSchema({
     .index("by_household_and_status", ["householdId", "status"]),
 
   /**
-   * Email templates - transactional email templates
+   * Email templates - transactional and system email templates
+   *
+   * Supports both manual templates (created by admins) and system templates
+   * (automated emails triggered by cron jobs with configurable schedules).
    */
   emailTemplates: defineTable({
+    // Core template fields
     name: v.string(), // Unique template identifier
     subject: v.string(),
     content: v.string(), // Markdown template with variable placeholders
@@ -799,7 +803,44 @@ export default defineSchema({
       ),
     ),
     updatedAt: v.number(),
-  }).index("by_name", ["name"]),
+
+    // System template fields (for automated emails)
+    isSystemTemplate: v.optional(v.boolean()), // True for automated system templates
+    systemTemplateKey: v.optional(v.string()), // Unique key e.g., "vault_empty"
+    enabled: v.optional(v.boolean()), // Allow disabling without deleting
+
+    // Schedule configuration for automated emails
+    schedule: v.optional(
+      v.object({
+        frequency: v.union(v.literal("weekly"), v.literal("daily")),
+        dayOfWeek: v.optional(v.number()), // 0-6, Sunday=0 (for weekly)
+        hourUtc: v.number(), // 0-23
+      }),
+    ),
+
+    // Trigger conditions - criteria for selecting recipients
+    triggerConditions: v.optional(
+      v.object({
+        onboardingStatus: v.optional(v.string()), // e.g., "complete"
+        minDaysSinceOnboarding: v.optional(v.number()), // e.g., 3
+        vaultEmpty: v.optional(v.boolean()), // true = vault has no documents
+        requireEmailNotifications: v.optional(v.boolean()), // true = user opted in
+      }),
+    ),
+
+    // Campaign type for tracking and reporting
+    campaignType: v.optional(
+      v.union(
+        v.literal("weekly_vault_empty"),
+        v.literal("weekly_digest"),
+        v.literal("admin_broadcast"),
+        v.literal("other"),
+      ),
+    ),
+  })
+    .index("by_name", ["name"])
+    .index("by_systemTemplateKey", ["systemTemplateKey"])
+    .index("by_isSystemTemplate", ["isSystemTemplate"]),
 
   /**
    * Sent emails - log of all emails sent through the admin system

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { Eye, Loader2, Mail, Pencil, Trash2 } from "lucide-react";
+import { Clock, Eye, Loader2, Mail, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -108,10 +108,11 @@ export function EmailTemplatesList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[250px]">Template Name</TableHead>
+                <TableHead className="w-[200px]">Template Name</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead className="w-[120px]">Category</TableHead>
-                <TableHead className="w-[120px]">Last Modified</TableHead>
+                <TableHead className="w-[180px]">Automation</TableHead>
+                <TableHead className="w-[100px]">Last Modified</TableHead>
                 <TableHead className="w-[120px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -126,7 +127,7 @@ export function EmailTemplatesList() {
                       {template.name}
                     </Link>
                   </TableCell>
-                  <TableCell className="max-w-[300px] truncate text-muted-foreground">
+                  <TableCell className="max-w-[250px] truncate text-muted-foreground">
                     {template.subject}
                   </TableCell>
                   <TableCell>
@@ -134,7 +135,31 @@ export function EmailTemplatesList() {
                       {getCategoryLabel(template.category)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell>
+                    {template.isAutomated ? (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {template.scheduleDescription}
+                          </span>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={
+                            template.enabled
+                              ? "bg-green-500/10 text-green-700 text-xs w-fit"
+                              : "text-muted-foreground text-xs w-fit"
+                          }
+                        >
+                          {template.enabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
                     {formatDate(template.updatedAt)}
                   </TableCell>
                   <TableCell className="text-right">

@@ -6,10 +6,10 @@ export function ArticleUpgradeCTA() {
   return (
     <div className="relative mt-8">
       {/* Fade overlay effect */}
-      <div className="absolute -top-24 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+      <div className="absolute -top-24 left-0 right-0 h-24 bg-linear-to-t from-background to-transparent pointer-events-none" />
 
       {/* CTA Card */}
-      <div className="relative bg-gradient-to-br from-pathible-sand via-background to-pathible-gold/5 border border-pathible-sage/20 rounded-2xl p-8 text-center">
+      <div className="relative bg-linear-to-br from-pathible-sand via-background to-pathible-gold/5 border border-pathible-sage/20 rounded-2xl p-8 text-center">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-pathible-gold/10 mb-4">
           <Sparkles className="w-6 h-6 text-pathible-gold" />
         </div>

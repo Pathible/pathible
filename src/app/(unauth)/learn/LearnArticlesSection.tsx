@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 
 export function LearnArticlesSection() {
-  const publicArticles = useQuery(api.articles.listPublicArticles, { limit: 20 });
+  const publicArticles = useQuery(api.articles.listPublicArticles, {
+    limit: 20,
+  });
   const subscriberPreviews = useQuery(api.articles.listSubscriberArticlePreviews, { limit: 6 });
 
   const isLoading = publicArticles === undefined || subscriberPreviews === undefined;
@@ -29,12 +31,12 @@ export function LearnArticlesSection() {
   return (
     <>
       {/* Public Articles Section */}
-      <section className="py-16 sm:py-24">
+      <section>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12">
-            <h2 className="font-crimson text-3xl sm:text-4xl mb-4">Free Resources</h2>
+            <h2 className="font-crimson text-3xl sm:text-4xl mb-4">Learn</h2>
             <p className="text-muted-foreground text-lg max-w-2xl">
-              Start your journey with these foundational articles on faith-based legacy planning.
+              Simple guidance to give your family clarity instead of chaos.
             </p>
           </div>
 
@@ -96,10 +98,9 @@ export function LearnArticlesSection() {
       {/* CTA Section */}
       <section className="py-16 sm:py-24">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="font-crimson text-3xl sm:text-4xl mb-4">Ready to Build Your Legacy?</h2>
+          <h2 className="font-crimson text-3xl sm:text-4xl mb-4">Start Somewhere Today</h2>
           <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
-            Pathible helps you organize important documents, plan for the future, and pass on what
-            matters most to your family.
+            Start small. One document. One note. One conversation.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
@@ -107,7 +108,7 @@ export function LearnArticlesSection() {
               size="lg"
               className="bg-pathible-forest hover:bg-pathible-green-hover text-white rounded-xl px-8"
             >
-              <Link href="/signup">Get Started Free</Link>
+              <Link href="/signup">Get Started</Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="rounded-xl">
               <Link href="/pricing">View Plans</Link>

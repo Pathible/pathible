@@ -445,7 +445,7 @@ export function TermsOfServiceContent() {
           <BulletList
             items={[
               "You retain full access to paid features until the end of your current billing period",
-              "After cancellation takes effect, your account will be downgraded to free tier (if available) or deactivated",
+              "After cancellation takes effect, your account will be downgraded to the lowest tier or deactivated",
               "You will lose access to premium features",
               "Your data will be retained according to our Privacy Policy (you may request deletion)",
               "You may resubscribe at any time at the then-current rates",

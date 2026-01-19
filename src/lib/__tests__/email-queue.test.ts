@@ -159,11 +159,11 @@ describe("Vault Empty Email Template", () => {
       expect(html).toContain("Lasting legacy");
     });
 
-    it("includes footer with preferences link", () => {
+    it("includes footer with unsubscribe link", () => {
       const html = generateVaultEmptyEmailHtml("Test");
 
-      expect(html).toContain("Manage email preferences");
-      expect(html).toContain("https://pathible.com/dashboard/settings");
+      expect(html).toContain("Unsubscribe");
+      expect(html).toContain("https://pathible.com/unsubscribe");
     });
 
     it("is responsive-ready with viewport meta", () => {
@@ -174,7 +174,6 @@ describe("Vault Empty Email Template", () => {
     });
   });
 });
-
 describe("Vault Empty Recipient Eligibility", () => {
   const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
   const NOW = Date.now();

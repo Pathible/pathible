@@ -2,186 +2,219 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalQuery } from "./_generated/server";
+import {
+  markdownToEmailHtml,
+  shouldRunScheduledEmail,
+  substituteVariables,
+} from "./shared/emailUtils";
 
 /**
  * Automated Email System
  *
- * Handles scheduled engagement emails for user retention.
- * All emails are sent through the rate-limited email queue.
+ * Database-driven automated email system that:
+ * - Fetches templates from the emailTemplates table (system templates)
+ * - Dynamically filters recipients based on trigger conditions
+ * - Schedules emails via the rate-limited queue
+ * - Runs on an hourly cron to check schedules
  */
 
 // ============================================================================
-// CONSTANTS
+// VALIDATORS
 // ============================================================================
 
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const scheduleValidator = v.object({
+  frequency: v.union(v.literal("weekly"), v.literal("daily")),
+  dayOfWeek: v.optional(v.number()),
+  hourUtc: v.number(),
+});
+
+const triggerConditionsValidator = v.object({
+  onboardingStatus: v.optional(v.string()),
+  minDaysSinceOnboarding: v.optional(v.number()),
+  vaultEmpty: v.optional(v.boolean()),
+  requireEmailNotifications: v.optional(v.boolean()),
+});
+
+const systemTemplateValidator = v.object({
+  _id: v.id("emailTemplates"),
+  name: v.string(),
+  systemTemplateKey: v.string(),
+  subject: v.string(),
+  content: v.string(),
+  description: v.optional(v.string()),
+  variables: v.array(v.string()),
+  enabled: v.boolean(),
+  schedule: scheduleValidator,
+  triggerConditions: triggerConditionsValidator,
+  campaignType: v.union(
+    v.literal("weekly_vault_empty"),
+    v.literal("weekly_digest"),
+    v.literal("admin_broadcast"),
+    v.literal("other"),
+  ),
+});
+
+const recipientValidator = v.object({
+  profileId: v.id("profiles"),
+  email: v.string(),
+  firstName: v.string(),
+  lastName: v.string(),
+  householdName: v.optional(v.string()),
+});
 
 // ============================================================================
-// EMAIL TEMPLATES
+// SYSTEM TEMPLATE QUERIES
 // ============================================================================
 
 /**
- * Generate HTML content for the vault empty engagement email
+ * Get a system template by its unique key
  */
-function generateVaultEmptyEmailHtml(firstName: string, householdName?: string): string {
-  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
-  const householdMention = householdName
-    ? `You've set up the ${householdName} household`
-    : "You've set up your household";
+export const getSystemTemplate = internalQuery({
+  args: { systemTemplateKey: v.string() },
+  returns: v.union(systemTemplateValidator, v.null()),
+  handler: async (ctx, args) => {
+    const template = await ctx.db
+      .query("emailTemplates")
+      .withIndex("by_systemTemplateKey", (q) => q.eq("systemTemplateKey", args.systemTemplateKey))
+      .unique();
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Heritage Vault Awaits</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; background-color: #f5f5f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5;">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 40px 40px 20px; text-align: center;">
-              <img src="https://pathible.com/pathible-logo.png" alt="Pathible" width="140" style="max-width: 140px;">
-            </td>
-          </tr>
+    if (!template) {
+      return null;
+    }
 
-          <!-- Main Content -->
-          <tr>
-            <td style="padding: 20px 40px;">
-              <h1 style="color: #1a1a1a; font-size: 24px; font-weight: 600; margin: 0 0 20px;">Your Heritage Vault is ready</h1>
+    // Ensure this is a system template with required fields
+    if (!template.isSystemTemplate || !template.schedule || !template.triggerConditions) {
+      return null;
+    }
 
-              <p style="color: #4a4a4a; font-size: 16px; margin: 0 0 16px;">
-                ${greeting}
-              </p>
+    return {
+      _id: template._id,
+      name: template.name,
+      systemTemplateKey: template.systemTemplateKey as string,
+      subject: template.subject,
+      content: template.content,
+      description: template.description,
+      variables: template.variables,
+      enabled: template.enabled ?? true,
+      schedule: template.schedule,
+      triggerConditions: template.triggerConditions,
+      campaignType: template.campaignType ?? "other",
+    };
+  },
+});
 
-              <p style="color: #4a4a4a; font-size: 16px; margin: 0 0 16px;">
-                ${householdMention} and we're excited to help you build your family's legacy. Your Heritage Vault is ready and waiting for its first document.
-              </p>
+/**
+ * Get all active (enabled) system templates
+ */
+export const getActiveSystemTemplates = internalQuery({
+  args: {},
+  returns: v.array(systemTemplateValidator),
+  handler: async (ctx) => {
+    const templates = await ctx.db
+      .query("emailTemplates")
+      .withIndex("by_isSystemTemplate", (q) => q.eq("isSystemTemplate", true))
+      .collect();
 
-              <p style="color: #4a4a4a; font-size: 16px; margin: 0 0 24px;">
-                Start with something simple—a family photo, an important document, or a cherished recipe. Every journey begins with a single step.
-              </p>
+    // Filter and map with proper type narrowing
+    const validTemplates: Array<{
+      _id: (typeof templates)[0]["_id"];
+      name: string;
+      systemTemplateKey: string;
+      subject: string;
+      content: string;
+      description: string | undefined;
+      variables: string[];
+      enabled: boolean;
+      schedule: { frequency: "weekly" | "daily"; dayOfWeek?: number; hourUtc: number };
+      triggerConditions: {
+        onboardingStatus?: string;
+        minDaysSinceOnboarding?: number;
+        vaultEmpty?: boolean;
+        requireEmailNotifications?: boolean;
+      };
+      campaignType: "weekly_vault_empty" | "weekly_digest" | "admin_broadcast" | "other";
+    }> = [];
 
-              <!-- CTA Button -->
-              <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 24px;">
-                <tr>
-                  <td style="background-color: #2563eb; border-radius: 6px;">
-                    <a href="https://pathible.com/dashboard/vault" style="display: inline-block; padding: 14px 32px; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none;">
-                      Upload Your First Document
-                    </a>
-                  </td>
-                </tr>
-              </table>
+    for (const t of templates) {
+      if (t.enabled !== false && t.schedule && t.triggerConditions) {
+        validTemplates.push({
+          _id: t._id,
+          name: t.name,
+          systemTemplateKey: t.systemTemplateKey as string,
+          subject: t.subject,
+          content: t.content,
+          description: t.description,
+          variables: t.variables,
+          enabled: t.enabled ?? true,
+          schedule: t.schedule,
+          triggerConditions: t.triggerConditions,
+          campaignType: t.campaignType ?? "other",
+        });
+      }
+    }
 
-              <!-- Benefits Section -->
-              <div style="background-color: #f8fafc; border-radius: 6px; padding: 20px; margin-bottom: 24px;">
-                <p style="color: #1a1a1a; font-size: 14px; font-weight: 600; margin: 0 0 12px;">
-                  Why start today?
-                </p>
-                <ul style="color: #4a4a4a; font-size: 14px; margin: 0; padding-left: 20px;">
-                  <li style="margin-bottom: 8px;"><strong>Peace of mind</strong> — Know your important documents are safe and accessible</li>
-                  <li style="margin-bottom: 8px;"><strong>Easy access</strong> — Find what you need, when you need it</li>
-                  <li style="margin-bottom: 8px;"><strong>Lasting legacy</strong> — Preserve memories for future generations</li>
-                </ul>
-              </div>
-
-              <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                Questions? We're here to help. Just reply to this email or visit our <a href="https://pathible.com/help" style="color: #2563eb; text-decoration: none;">Help Center</a>.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 30px 40px; border-top: 1px solid #e5e7eb;">
-              <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px; text-align: center;">
-                You're receiving this email because you signed up for Pathible and enabled email notifications.
-              </p>
-              <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">
-                <a href="https://pathible.com/dashboard/settings" style="color: #9ca3af; text-decoration: underline;">Manage email preferences</a> ·
-                <a href="https://pathible.com" style="color: #9ca3af; text-decoration: underline;">pathible.com</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`;
-}
+    return validTemplates;
+  },
+});
 
 // ============================================================================
 // RECIPIENT QUERIES
 // ============================================================================
 
 /**
- * Get users eligible for the weekly vault empty engagement email
- *
- * Criteria:
- * - Onboarding status is "complete"
- * - Household has vaultDocumentCount === 0 (or undefined for legacy data)
- * - User preferences have emailNotifications === true
- * - Onboarding completed at least 3 days ago
+ * Get recipients based on dynamic trigger conditions from a system template
  */
-export const getVaultEmptyRecipients = internalQuery({
-  args: {},
-  returns: v.array(
-    v.object({
-      profileId: v.id("profiles"),
-      email: v.string(),
-      firstName: v.string(),
-      lastName: v.string(),
-      householdName: v.optional(v.string()),
-    }),
-  ),
-  handler: async (ctx) => {
+export const getAutomatedEmailRecipients = internalQuery({
+  args: {
+    triggerConditions: triggerConditionsValidator,
+  },
+  returns: v.array(recipientValidator),
+  handler: async (ctx, args) => {
+    const { triggerConditions } = args;
     const now = Date.now();
-    const threeDaysAgo = now - THREE_DAYS_MS;
 
-    // Get all profiles with complete onboarding
+    // Get all profiles
     const profiles = await ctx.db.query("profiles").collect();
 
-    const eligibleProfiles = profiles.filter((p) => {
-      // Must have completed onboarding
-      if (p.onboardingStatus !== "complete") return false;
-
-      // Must have completed onboarding at least 3 days ago
-      if (!p.onboardingCompletedAt || p.onboardingCompletedAt > threeDaysAgo) return false;
-
-      // Must have an email
-      if (!p.email) return false;
-
-      // Must not be deleted
-      if (p.deletedAt) return false;
-
-      return true;
-    });
-
     const recipients: Array<{
-      profileId: (typeof profiles)[0]["_id"];
+      profileId: Id<"profiles">;
       email: string;
       firstName: string;
       lastName: string;
       householdName?: string;
     }> = [];
 
-    for (const profile of eligibleProfiles) {
-      // Check email notifications preference
-      const preferences = await ctx.db
-        .query("userPreferences")
-        .withIndex("by_profile", (q) => q.eq("profileId", profile._id))
-        .unique();
+    for (const profile of profiles) {
+      // Skip deleted profiles
+      if (profile.deletedAt) continue;
 
-      // Skip if notifications disabled
-      if (!preferences?.emailNotifications) continue;
+      // Must have email
+      if (!profile.email) continue;
 
-      // Get household membership
+      // Check onboarding status condition
+      if (triggerConditions.onboardingStatus) {
+        if (profile.onboardingStatus !== triggerConditions.onboardingStatus) continue;
+      }
+
+      // Check minimum days since onboarding
+      if (triggerConditions.minDaysSinceOnboarding !== undefined) {
+        if (!profile.onboardingCompletedAt) continue;
+        const minMs = triggerConditions.minDaysSinceOnboarding * 24 * 60 * 60 * 1000;
+        const cutoffTime = now - minMs;
+        if (profile.onboardingCompletedAt > cutoffTime) continue;
+      }
+
+      // Check email notifications preference if required
+      if (triggerConditions.requireEmailNotifications) {
+        const preferences = await ctx.db
+          .query("userPreferences")
+          .withIndex("by_profile", (q) => q.eq("profileId", profile._id))
+          .unique();
+
+        if (!preferences?.emailNotifications) continue;
+      }
+
+      // Get household membership for vault check and household name
       const membership = await ctx.db
         .query("householdMemberships")
         .withIndex("by_user", (q) => q.eq("userId", profile._id))
@@ -189,19 +222,103 @@ export const getVaultEmptyRecipients = internalQuery({
 
       if (!membership) continue;
 
-      // Get household and check vault document count
       const household = await ctx.db.get(membership.householdId);
-
       if (!household) continue;
 
-      // Skip if vault has documents (vaultDocumentCount > 0)
-      // Note: undefined means legacy data that hasn't been backfilled, treat as 0
+      // Check vault empty condition
+      if (triggerConditions.vaultEmpty !== undefined) {
+        const vaultCount = household.vaultDocumentCount ?? 0;
+        if (triggerConditions.vaultEmpty && vaultCount > 0) continue;
+        if (!triggerConditions.vaultEmpty && vaultCount === 0) continue;
+      }
+
+      recipients.push({
+        profileId: profile._id,
+        email: profile.email,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        householdName: household.name,
+      });
+    }
+
+    return recipients;
+  },
+});
+
+/**
+ * Legacy query for backward compatibility
+ * Returns recipients for the vault_empty email (same logic as getAutomatedEmailRecipients)
+ */
+export const getVaultEmptyRecipients = internalQuery({
+  args: {},
+  returns: v.array(recipientValidator),
+  handler: async (
+    ctx,
+  ): Promise<
+    Array<{
+      profileId: Id<"profiles">;
+      email: string;
+      firstName: string;
+      lastName: string;
+      householdName?: string;
+    }>
+  > => {
+    const now = Date.now();
+    const minDaysSinceOnboarding = 3;
+
+    // Get all profiles
+    const profiles = await ctx.db.query("profiles").collect();
+
+    const recipients: Array<{
+      profileId: Id<"profiles">;
+      email: string;
+      firstName: string;
+      lastName: string;
+      householdName?: string;
+    }> = [];
+
+    for (const profile of profiles) {
+      // Skip deleted profiles
+      if (profile.deletedAt) continue;
+
+      // Must have email
+      if (!profile.email) continue;
+
+      // Check onboarding status
+      if (profile.onboardingStatus !== "complete") continue;
+
+      // Check minimum days since onboarding
+      if (!profile.onboardingCompletedAt) continue;
+      const minMs = minDaysSinceOnboarding * 24 * 60 * 60 * 1000;
+      const cutoffTime = now - minMs;
+      if (profile.onboardingCompletedAt > cutoffTime) continue;
+
+      // Check email notifications preference
+      const preferences = await ctx.db
+        .query("userPreferences")
+        .withIndex("by_profile", (q) => q.eq("profileId", profile._id))
+        .unique();
+
+      if (!preferences?.emailNotifications) continue;
+
+      // Get household membership for vault check and household name
+      const membership = await ctx.db
+        .query("householdMemberships")
+        .withIndex("by_user", (q) => q.eq("userId", profile._id))
+        .first();
+
+      if (!membership) continue;
+
+      const household = await ctx.db.get(membership.householdId);
+      if (!household) continue;
+
+      // Check vault empty condition
       const vaultCount = household.vaultDocumentCount ?? 0;
       if (vaultCount > 0) continue;
 
       recipients.push({
         profileId: profile._id,
-        email: profile.email as string,
+        email: profile.email,
         firstName: profile.firstName,
         lastName: profile.lastName,
         householdName: household.name,
@@ -213,34 +330,70 @@ export const getVaultEmptyRecipients = internalQuery({
 });
 
 // ============================================================================
-// AUTOMATED EMAIL ACTIONS (CRON HANDLERS)
+// EMAIL SENDING ACTIONS
 // ============================================================================
 
 /**
- * Send weekly vault empty engagement emails
- * Called by cron job every Sunday at 6 PM UTC
+ * Send a system template email to eligible recipients
+ * This is the generic action for sending any system template
  */
-export const sendWeeklyVaultEmptyEmails = internalAction({
-  args: {},
+export const sendSystemEmail = internalAction({
+  args: {
+    systemTemplateKey: v.string(),
+  },
   returns: v.object({
     recipientCount: v.number(),
     campaignId: v.string(),
     skipped: v.boolean(),
+    error: v.optional(v.string()),
   }),
   handler: async (
     ctx,
-  ): Promise<{ recipientCount: number; campaignId: string; skipped: boolean }> => {
-    // Get eligible recipients
+    args,
+  ): Promise<{
+    recipientCount: number;
+    campaignId: string;
+    skipped: boolean;
+    error?: string;
+  }> => {
+    // Fetch the system template from the database
+    const template = await ctx.runQuery(internal.automatedEmails.getSystemTemplate, {
+      systemTemplateKey: args.systemTemplateKey,
+    });
+
+    if (!template) {
+      console.log(`[Automated Emails] System template not found: ${args.systemTemplateKey}`);
+      return {
+        recipientCount: 0,
+        campaignId: "",
+        skipped: true,
+        error: `Template not found: ${args.systemTemplateKey}`,
+      };
+    }
+
+    if (!template.enabled) {
+      console.log(`[Automated Emails] System template disabled: ${args.systemTemplateKey}`);
+      return {
+        recipientCount: 0,
+        campaignId: "",
+        skipped: true,
+        error: "Template is disabled",
+      };
+    }
+
+    // Get eligible recipients based on trigger conditions
     const recipients: Array<{
       profileId: Id<"profiles">;
       email: string;
       firstName: string;
       lastName: string;
       householdName?: string;
-    }> = await ctx.runQuery(internal.automatedEmails.getVaultEmptyRecipients, {});
+    }> = await ctx.runQuery(internal.automatedEmails.getAutomatedEmailRecipients, {
+      triggerConditions: template.triggerConditions,
+    });
 
     if (recipients.length === 0) {
-      console.log("[Automated Emails] No vault empty recipients found");
+      console.log(`[Automated Emails] No recipients for ${args.systemTemplateKey}`);
       return {
         recipientCount: 0,
         campaignId: "",
@@ -250,12 +403,12 @@ export const sendWeeklyVaultEmptyEmails = internalAction({
 
     // Create campaign ID with date
     const dateStr = new Date().toISOString().split("T")[0];
-    const campaignId = `weekly_vault_empty_${dateStr}`;
+    const campaignId = `${template.campaignType}_${dateStr}`;
 
     // Create campaign record
     await ctx.runMutation(internal.emailQueue.createCampaign, {
       campaignId,
-      type: "weekly_vault_empty",
+      type: template.campaignType,
       totalRecipients: recipients.length,
     });
 
@@ -277,12 +430,23 @@ export const sendWeeklyVaultEmptyEmails = internalAction({
         householdName?: string;
       };
     }> = recipients.map((recipient) => {
-      const subject = `${recipient.firstName}, your Heritage Vault is ready for its first document`;
-      const htmlContent = generateVaultEmptyEmailHtml(recipient.firstName, recipient.householdName);
+      // Substitute variables in subject
+      const personalizedSubject = substituteVariables(template.subject, {
+        firstName: recipient.firstName,
+        lastName: recipient.lastName,
+        householdName: recipient.householdName,
+      });
+
+      // Generate HTML from markdown content with variable substitution
+      const htmlContent = markdownToEmailHtml(template.content, personalizedSubject, {
+        firstName: recipient.firstName,
+        lastName: recipient.lastName,
+        householdName: recipient.householdName,
+      });
 
       return {
         to: recipient.email,
-        subject,
+        subject: personalizedSubject,
         htmlContent,
         recipientContext: {
           profileId: recipient.profileId,
@@ -298,18 +462,139 @@ export const sendWeeklyVaultEmptyEmails = internalAction({
       internal.emailQueue.enqueueEmailBatch,
       {
         emails,
+        templateId: template._id,
         campaignId,
       },
     );
 
     console.log(
-      `[Automated Emails] Enqueued ${result.queuedCount} vault empty engagement emails for campaign ${campaignId}`,
+      `[Automated Emails] Enqueued ${result.queuedCount} emails for campaign ${campaignId}`,
     );
 
     return {
       recipientCount: result.queuedCount,
       campaignId,
       skipped: false,
+    };
+  },
+});
+
+/**
+ * Legacy action for backward compatibility - sends vault empty email
+ */
+export const sendWeeklyVaultEmptyEmails = internalAction({
+  args: {},
+  returns: v.object({
+    recipientCount: v.number(),
+    campaignId: v.string(),
+    skipped: v.boolean(),
+  }),
+  handler: async (
+    ctx,
+  ): Promise<{ recipientCount: number; campaignId: string; skipped: boolean }> => {
+    const result = await ctx.runAction(internal.automatedEmails.sendSystemEmail, {
+      systemTemplateKey: "vault_empty",
+    });
+
+    return {
+      recipientCount: result.recipientCount,
+      campaignId: result.campaignId,
+      skipped: result.skipped,
+    };
+  },
+});
+
+// ============================================================================
+// SCHEDULER ACTION (CRON HANDLER)
+// ============================================================================
+
+/**
+ * Check and run scheduled emails
+ * Called hourly by cron to evaluate which templates should run
+ */
+export const checkAndRunScheduledEmails = internalAction({
+  args: {},
+  returns: v.object({
+    checkedCount: v.number(),
+    triggeredCount: v.number(),
+    results: v.array(
+      v.object({
+        templateKey: v.string(),
+        triggered: v.boolean(),
+        recipientCount: v.number(),
+        campaignId: v.string(),
+        error: v.optional(v.string()),
+      }),
+    ),
+  }),
+  handler: async (
+    ctx,
+  ): Promise<{
+    checkedCount: number;
+    triggeredCount: number;
+    results: Array<{
+      templateKey: string;
+      triggered: boolean;
+      recipientCount: number;
+      campaignId: string;
+      error?: string;
+    }>;
+  }> => {
+    const currentTime = new Date();
+
+    // Get all active system templates
+    const templates = await ctx.runQuery(internal.automatedEmails.getActiveSystemTemplates, {});
+
+    const results: Array<{
+      templateKey: string;
+      triggered: boolean;
+      recipientCount: number;
+      campaignId: string;
+      error?: string;
+    }> = [];
+
+    let triggeredCount = 0;
+
+    for (const template of templates) {
+      // Check if this template should run at the current time
+      if (!shouldRunScheduledEmail(template.schedule, currentTime)) {
+        results.push({
+          templateKey: template.systemTemplateKey,
+          triggered: false,
+          recipientCount: 0,
+          campaignId: "",
+        });
+        continue;
+      }
+
+      console.log(`[Automated Emails] Triggering scheduled email: ${template.systemTemplateKey}`);
+
+      // Run the email send action
+      const sendResult = await ctx.runAction(internal.automatedEmails.sendSystemEmail, {
+        systemTemplateKey: template.systemTemplateKey,
+      });
+
+      results.push({
+        templateKey: template.systemTemplateKey,
+        triggered: !sendResult.skipped,
+        recipientCount: sendResult.recipientCount,
+        campaignId: sendResult.campaignId,
+        error: sendResult.error,
+      });
+
+      if (!sendResult.skipped) {
+        triggeredCount++;
+      }
+    }
+
+    console.log(
+      `[Automated Emails] Schedule check complete: ${templates.length} templates checked, ${triggeredCount} triggered`,
+    );
+
+    return {
+      checkedCount: templates.length,
+      triggeredCount,
+      results,
     };
   },
 });
