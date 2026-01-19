@@ -1,9 +1,11 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { ArrowLeft, BookOpen, Clock, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import posthog from "posthog-js";
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { ArticleUpgradeCTA } from "@/components/learning/public";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +37,35 @@ interface ArticleContentProps {
 
 export function ArticleContent({ slug }: ArticleContentProps) {
   const article = useQuery(api.articles.getPublicBySlug, { slug });
+  const incrementPublicViewCount = useMutation(api.articles.incrementPublicViewCount);
+  const hasTrackedView = useRef(false);
+
+  // Track article view once when article loads
+  useEffect(() => {
+    if (article && !hasTrackedView.current) {
+      hasTrackedView.current = true;
+
+      // Increment view count in Convex (for internal analytics)
+      // Fire-and-forget with error suppression - analytics shouldn't break the app
+      incrementPublicViewCount({ slug }).catch(() => {
+        // Silently ignore - view tracking is non-critical
+      });
+
+      // Track in PostHog (for detailed analytics)
+      try {
+        posthog.capture("article_viewed", {
+          article_slug: slug,
+          article_title: article.title,
+          article_category: article.category,
+          is_public: article.visibility === "public",
+          is_truncated: article.isTruncated,
+          read_time_minutes: article.readTimeMinutes,
+        });
+      } catch {
+        // Silently ignore - analytics shouldn't break the app
+      }
+    }
+  }, [article, slug, incrementPublicViewCount]);
 
   if (article === undefined) {
     return (

@@ -543,7 +543,7 @@ export const remove = mutation({
 });
 
 /**
- * Increment view count (called when article is viewed)
+ * Increment view count (called when article is viewed by authenticated users)
  *
  * SECURITY: Requires authentication to prevent view count manipulation.
  * Each authenticated user can increment the count once per article view.
@@ -561,6 +561,42 @@ export const incrementViewCount = mutation({
     if (!article) return null;
 
     await ctx.db.patch(args.id, {
+      viewCount: article.viewCount + 1,
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Increment view count for public articles (no auth required)
+ *
+ * This mutation is used by the public /learn pages where users are not authenticated.
+ * Only works for published articles with visibility="public".
+ *
+ * SECURITY CONSIDERATIONS:
+ * - Only increments views for public, published articles
+ * - Rate limiting should be handled at the application layer (PostHog/analytics)
+ * - View counts are used for analytics, not critical business logic
+ */
+export const incrementPublicViewCount = mutation({
+  args: {
+    slug: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Find the article by slug
+    const article = await ctx.db
+      .query("educationalArticles")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+
+    // Only increment for published public articles
+    if (!article) return null;
+    if (article.status !== "published") return null;
+    if (article.visibility !== "public") return null;
+
+    await ctx.db.patch(article._id, {
       viewCount: article.viewCount + 1,
     });
 
