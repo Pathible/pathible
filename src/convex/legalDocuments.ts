@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAuth, requireHouseholdAccess, requireSubscriptionTier } from "./auth";
 import { logActivity } from "./shared/activity";
+import { trackAnalytics } from "./shared/analyticsHelpers";
 
 /**
  * Legal Documents functions
@@ -347,6 +348,13 @@ export const create = mutation({
       entityType: "legal_document",
       entityId: documentId,
       description: `Started ${DOCUMENT_TYPES[args.documentType].name}`,
+    });
+
+    // Analytics: Track legal document creation
+    await trackAnalytics(ctx, profile.userId, "legal_document_created", {
+      household_id: args.householdId,
+      document_type: args.documentType,
+      state: args.state,
     });
 
     return documentId;

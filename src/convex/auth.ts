@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalMutation, internalQuery, query } from "./_generated/server";
+import { trackAnalytics } from "./shared/analyticsHelpers";
 import { maritalStatusValidator, onboardingStatusValidator } from "./shared/commonValidators";
 import { formatBytesAsGB, formatLimit } from "./shared/constants";
 import { getFamilyUnitCount, getMemberCountFromHousehold } from "./shared/counters";
@@ -1060,6 +1061,10 @@ export const syncSubscriptionTier = internalMutation({
       patch.subscriptionStatus = args.status;
     }
 
+    // Capture previous values for analytics
+    const previousTier = household.subscriptionTier;
+    const previousStatus = household.subscriptionStatus;
+
     // Update the subscription tier and/or status
     await ctx.db.patch(household._id, patch);
 
@@ -1068,6 +1073,24 @@ export const syncSubscriptionTier = internalMutation({
     if (args.status) updates.push(`status to ${args.status}`);
 
     console.log(`[Subscription Sync] Updated household ${household._id}: ${updates.join(", ")}`);
+
+    // Analytics: Track subscription changes
+    if (args.tier && args.tier !== previousTier) {
+      await trackAnalytics(ctx, args.clerkUserId, "subscription_tier_changed", {
+        household_id: household._id,
+        previous_tier: previousTier,
+        new_tier: args.tier,
+        is_upgrade: TIER_LEVELS[args.tier] > TIER_LEVELS[previousTier],
+      });
+    }
+
+    if (args.status && args.status !== previousStatus) {
+      await trackAnalytics(ctx, args.clerkUserId, "subscription_status_changed", {
+        household_id: household._id,
+        previous_status: previousStatus,
+        new_status: args.status,
+      });
+    }
 
     return {
       success: true,
