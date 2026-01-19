@@ -217,12 +217,13 @@ When adding a new feature:
 
 ## Required GitHub Secrets for CI
 
-For E2E tests to run in CI, these secrets must be configured:
+For CI to run, these secrets must be configured in **GitHub → Settings → Secrets → Actions**:
 
-| Secret | Description |
-|--------|-------------|
-| `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk public key |
-| `CLERK_SECRET_KEY` | Clerk secret key |
-| `CONVEX_DEPLOYMENT` | Convex deployment name |
-| `CYPRESS_TEST_USER_EMAIL` | Test user email for E2E |
+| Secret | Description | Where to Get |
+|--------|-------------|--------------|
+| `CONVEX_DEPLOY_KEY` | Convex API key for codegen | Convex Dashboard → Settings → Deploy Keys |
+| `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL | Convex Dashboard → Settings |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk public key | Clerk Dashboard → API Keys |
+| `CLERK_SECRET_KEY` | Clerk secret key | Clerk Dashboard → API Keys |
+| `CONVEX_DEPLOYMENT` | Convex deployment name (for E2E) | Format: `dev:project-name` |
+| `CYPRESS_TEST_USER_EMAIL` | Test user email for E2E | Your Clerk test user email |
