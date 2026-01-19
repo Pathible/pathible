@@ -388,7 +388,6 @@ export const sendSystemEmail = internalAction({
     });
 
     if (!template) {
-      console.log(`[Automated Emails] System template not found: ${args.systemTemplateKey}`);
       return {
         recipientCount: 0,
         campaignId: "",
@@ -398,7 +397,6 @@ export const sendSystemEmail = internalAction({
     }
 
     if (!template.enabled) {
-      console.log(`[Automated Emails] System template disabled: ${args.systemTemplateKey}`);
       return {
         recipientCount: 0,
         campaignId: "",
@@ -419,7 +417,6 @@ export const sendSystemEmail = internalAction({
     });
 
     if (recipients.length === 0) {
-      console.log(`[Automated Emails] No recipients for ${args.systemTemplateKey}`);
       return {
         recipientCount: 0,
         campaignId: "",
@@ -491,10 +488,6 @@ export const sendSystemEmail = internalAction({
         templateId: template._id,
         campaignId,
       },
-    );
-
-    console.log(
-      `[Automated Emails] Enqueued ${result.queuedCount} emails for campaign ${campaignId}`,
     );
 
     return {
@@ -593,8 +586,6 @@ export const checkAndRunScheduledEmails = internalAction({
         continue;
       }
 
-      console.log(`[Automated Emails] Triggering scheduled email: ${template.systemTemplateKey}`);
-
       // Run the email send action
       const sendResult = await ctx.runAction(internal.automatedEmails.sendSystemEmail, {
         systemTemplateKey: template.systemTemplateKey,
@@ -612,10 +603,6 @@ export const checkAndRunScheduledEmails = internalAction({
         triggeredCount++;
       }
     }
-
-    console.log(
-      `[Automated Emails] Schedule check complete: ${templates.length} templates checked, ${triggeredCount} triggered`,
-    );
 
     return {
       checkedCount: templates.length,

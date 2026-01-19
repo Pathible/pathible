@@ -53,23 +53,14 @@ export const migrateCategories = internalMutation({
             category: newCategory,
           });
           migrated++;
-          console.log(`Migrated article "${article.title}": ${currentCategory} → ${newCategory}`);
         } catch (error) {
           const errorMessage = `Failed to migrate article "${article.title}": ${error}`;
           errors.push(errorMessage);
-          console.error(errorMessage);
         }
       } else {
         alreadyMigrated++;
-        console.log(`Article "${article.title}" already uses new category: ${currentCategory}`);
       }
     }
-
-    console.log(`\nMigration complete:`);
-    console.log(`  Total articles: ${articles.length}`);
-    console.log(`  Migrated: ${migrated}`);
-    console.log(`  Already migrated: ${alreadyMigrated}`);
-    console.log(`  Errors: ${errors.length}`);
 
     return {
       total: articles.length,
@@ -116,18 +107,6 @@ export const previewMigration = internalMutation({
         });
       } else {
         alreadyMigrated++;
-      }
-    }
-
-    console.log(`\nMigration preview:`);
-    console.log(`  Total articles: ${articles.length}`);
-    console.log(`  Needs migration: ${changes.length}`);
-    console.log(`  Already migrated: ${alreadyMigrated}`);
-
-    if (changes.length > 0) {
-      console.log(`\nChanges to be made:`);
-      for (const change of changes) {
-        console.log(`  - "${change.title}": ${change.currentCategory} → ${change.newCategory}`);
       }
     }
 

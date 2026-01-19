@@ -181,8 +181,6 @@ export const updateProfile = mutation({
         updatedAt: Date.now(),
       });
 
-      console.log(`[Onboarding] Created profile for user ${userId}`);
-
       // Analytics: Identify new user in PostHog
       await identifyUserAnalytics(ctx, userId, {
         first_name: args.firstName.trim(),
@@ -708,13 +706,9 @@ export const sendInvitationEmail = internalAction({
           `,
         });
 
-        console.log(`[Onboarding] Invitation email sent to ${invitation.email}`);
+        // Email sent successfully
       } else {
-        console.log(`[Onboarding] [DEV MODE] Invitation email for ${invitation.email}:`);
-        console.log(`  Household: ${invitation.householdName}`);
-        console.log(`  Inviter: ${invitation.inviterName}`);
-        console.log(`  Token: ${invitation.token}`);
-        console.log(`  URL: ${process.env.SITE_URL}/invite/${invitation.token}`);
+        // DEV MODE: No Resend API key configured, email not sent
       }
     } catch (error) {
       console.error(`[Onboarding] Failed to send invitation email:`, error);

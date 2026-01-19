@@ -55,15 +55,6 @@ export function getS3Config(): BackblazeS3Config {
   const secretAccessKey = process.env.B2_S3_SECRET_ACCESS_KEY;
   const bucketName = process.env.B2_S3_BUCKET_NAME;
 
-  // Log available env vars for debugging (boolean flags only - no credentials or infrastructure details)
-  console.log("[B2 S3 Config] Environment variables check:", {
-    endpointConfigured: !!endpoint,
-    regionConfigured: !!region,
-    accessKeyIdConfigured: !!accessKeyId,
-    secretAccessKeyConfigured: !!secretAccessKey,
-    bucketNameConfigured: !!bucketName,
-  });
-
   if (!endpoint) {
     throw new Error(
       "B2_S3_ENDPOINT environment variable is not set. Please add it to .env.local (e.g., https://s3.us-west-004.backblazeb2.com)",
@@ -114,14 +105,6 @@ export function getBackblazeConfig(): BackblazeConfig {
   const applicationKey = process.env.BACKBLAZE_APPLICATION_KEY;
   const bucketId = process.env.BACKBLAZE_BUCKET_ID;
   const bucketName = process.env.BACKBLAZE_BUCKET_NAME;
-
-  // Log available env vars for debugging (boolean flags only - no credentials or infrastructure details)
-  console.log("[B2 Config] Environment variables check:", {
-    keyIdConfigured: !!keyId,
-    applicationKeyConfigured: !!applicationKey,
-    bucketIdConfigured: !!bucketId,
-    bucketNameConfigured: !!bucketName,
-  });
 
   if (!keyId) {
     throw new Error(

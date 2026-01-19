@@ -121,10 +121,6 @@ export const enqueueEmailBatch = internalMutation({
       emailIds.push(emailId);
     }
 
-    console.log(
-      `[Email Queue] Enqueued ${emailIds.length} emails${args.campaignId ? ` for campaign ${args.campaignId}` : ""}`,
-    );
-
     return {
       queuedCount: emailIds.length,
       emailIds,
@@ -467,10 +463,6 @@ export const checkCampaignCompletion = internalMutation({
         completedAt: Date.now(),
       });
 
-      console.log(
-        `[Email Queue] Campaign ${args.campaignId} completed: ${campaign.sentCount} sent, ${campaign.failedCount} failed`,
-      );
-
       return true;
     }
 
@@ -573,8 +565,6 @@ export const processEmailQueue = internalAction({
       }
     }
 
-    console.log(`[Email Queue] Processed ${emails.length} emails: ${sent} sent, ${failed} failed`);
-
     return {
       processed: emails.length,
       sent,
@@ -601,9 +591,6 @@ export const retryFailedEmails = internalAction({
     }
 
     // The markFailed mutation already schedules retries with exponential backoff
-    // This action just logs the status
-    console.log(`[Email Queue] ${retryable.length} emails pending retry`);
-
     return { retriedCount: retryable.length };
   },
 });

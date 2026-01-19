@@ -1005,17 +1005,12 @@ export const syncSubscriptionTier = internalMutation({
   handler: async (ctx, args) => {
     // Require at least one of tier or status
     if (!args.tier && !args.status) {
-      console.log(`[Subscription Sync] No tier or status provided for user ${args.clerkUserId}`);
       return {
         success: false,
         message: "No tier or status provided",
         householdId: undefined,
       };
     }
-
-    console.log(
-      `[Subscription Sync] Syncing ${args.tier ? `tier=${args.tier}` : ""}${args.tier && args.status ? ", " : ""}${args.status ? `status=${args.status}` : ""} for Clerk user ${args.clerkUserId}`,
-    );
 
     // Find the user's profile by Clerk user ID
     const profile = await ctx.db
@@ -1024,7 +1019,6 @@ export const syncSubscriptionTier = internalMutation({
       .unique();
 
     if (!profile) {
-      console.log(`[Subscription Sync] No profile found for user ${args.clerkUserId}`);
       return {
         success: false,
         message: "Profile not found for user",
@@ -1039,7 +1033,6 @@ export const syncSubscriptionTier = internalMutation({
       .first();
 
     if (!household) {
-      console.log(`[Subscription Sync] No household found for profile ${profile._id}`);
       return {
         success: false,
         message: "Household not found for user",
@@ -1068,12 +1061,6 @@ export const syncSubscriptionTier = internalMutation({
     // Update the subscription tier and/or status
     await ctx.db.patch(household._id, patch);
 
-    const updates: string[] = [];
-    if (args.tier) updates.push(`tier to ${args.tier}`);
-    if (args.status) updates.push(`status to ${args.status}`);
-
-    console.log(`[Subscription Sync] Updated household ${household._id}: ${updates.join(", ")}`);
-
     // Analytics: Track subscription changes
     if (args.tier && args.tier !== previousTier) {
       await trackAnalytics(ctx, args.clerkUserId, "subscription_tier_changed", {
@@ -1094,7 +1081,7 @@ export const syncSubscriptionTier = internalMutation({
 
     return {
       success: true,
-      message: `Updated subscription ${updates.join(", ")}`,
+      message: "Subscription updated successfully",
       householdId: household._id,
     };
   },

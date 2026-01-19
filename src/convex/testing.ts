@@ -99,7 +99,6 @@ export const resetTestUser = mutation({
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
-      console.warn("[Testing] resetTestUser blocked in production environment");
       return {
         success: false,
         message: "Test functions are disabled in production",
@@ -126,15 +125,12 @@ export const resetTestUser = mutation({
     );
 
     if (!isTestUser) {
-      console.warn(`[Testing] Blocked reset attempt for non-test user: ${email}`);
       return {
         success: false,
         message: `Security: Only test users can be reset. Email must contain one of: ${TEST_EMAIL_PATTERNS.join(", ")}`,
         deleted: { ...emptyDeleted },
       };
     }
-
-    console.log(`[Testing] Resetting test user: ${email} (${userId})`);
 
     const deleted = { ...emptyDeleted };
 
@@ -145,7 +141,6 @@ export const resetTestUser = mutation({
       .unique();
 
     if (!profile) {
-      console.log(`[Testing] No profile found for user ${userId} - already clean`);
       return {
         success: true,
         message: "User already in clean state (no profile)",
@@ -428,8 +423,6 @@ export const resetTestUser = mutation({
     await ctx.db.delete(profile._id);
     deleted.profile = true;
 
-    console.log(`[Testing] Reset complete for ${email}:`, deleted);
-
     return {
       success: true,
       message: `Successfully reset test user ${email}`,
@@ -457,7 +450,6 @@ export const grantAdminRole = mutation({
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
-      console.warn("[Testing] grantAdminRole blocked in production environment");
       return {
         success: false,
         message: "Test functions are disabled in production",
@@ -483,7 +475,6 @@ export const grantAdminRole = mutation({
     // Security check - only allow test users
     const isTestUser = TEST_EMAIL_PATTERNS.some((pattern) => email.includes(pattern));
     if (!isTestUser) {
-      console.warn(`[Testing] Blocked admin role grant for non-test user: ${email}`);
       return {
         success: false,
         message: "Admin role grant only allowed for test users",
@@ -519,7 +510,6 @@ export const grantAdminRole = mutation({
       role: "admin",
     });
 
-    console.log(`[Testing] Granted admin role to test user: ${email}`);
     return {
       success: true,
       message: `Granted admin role to ${email}`,
@@ -544,7 +534,6 @@ export const cleanupTestArticles = mutation({
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
-      console.warn("[Testing] cleanupTestArticles blocked in production environment");
       return {
         success: false,
         message: "Test functions are disabled in production",
@@ -569,15 +558,12 @@ export const cleanupTestArticles = mutation({
     );
 
     if (!isTestUser) {
-      console.warn(`[Testing] Blocked article cleanup for non-test user: ${email}`);
       return {
         success: false,
         message: "Article cleanup only allowed for test users",
         deletedCount: 0,
       };
     }
-
-    console.log(`[Testing] Cleaning up test articles for: ${email}`);
 
     // Find all articles with test patterns in slug or title
     const allArticles = await ctx.db.query("educationalArticles").collect();
@@ -604,7 +590,6 @@ export const cleanupTestArticles = mutation({
 
       await ctx.db.delete(article._id);
       deletedCount++;
-      console.log(`[Testing] Deleted test article: ${article.slug}`);
     }
 
     return {
@@ -636,15 +621,12 @@ export const adminCleanupTestArticles = mutation({
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
-      console.warn("[Testing] adminCleanupTestArticles blocked in production environment");
       return {
         success: false,
         message: "Test functions are disabled in production",
         deletedCount: 0,
       };
     }
-
-    console.log("[Testing] Admin cleanup: removing all test articles");
 
     // Find all articles with test patterns in slug or title
     const allArticles = await ctx.db.query("educationalArticles").collect();
@@ -671,7 +653,6 @@ export const adminCleanupTestArticles = mutation({
 
       await ctx.db.delete(article._id);
       deletedCount++;
-      console.log(`[Testing] Admin deleted test article: ${article.slug} - "${article.title}"`);
     }
 
     return {
@@ -706,7 +687,6 @@ export const setTestSubscriptionTier = mutation({
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
-      console.warn("[Testing] setTestSubscriptionTier blocked in production environment");
       return {
         success: false,
         message: "Test functions are disabled in production",
@@ -730,7 +710,6 @@ export const setTestSubscriptionTier = mutation({
     );
 
     if (!isTestUser) {
-      console.warn(`[Testing] Blocked tier override for non-test user: ${email}`);
       return {
         success: false,
         message: `Security: Only test users can have tier overrides. Email must contain one of: ${TEST_EMAIL_PATTERNS.join(", ")}`,
@@ -769,10 +748,6 @@ export const setTestSubscriptionTier = mutation({
       tierOverrideReason: "E2E Testing",
       tierOverrideExpiresAt: Date.now() + 24 * 60 * 60 * 1000, // Expires in 24 hours
     });
-
-    console.log(
-      `[Testing] Set tier override to ${args.tier} for household ${household._id} (user: ${email})`,
-    );
 
     return {
       success: true,

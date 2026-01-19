@@ -68,7 +68,6 @@ http.route({
     // Parse the verified payload
     const payload = JSON.parse(body);
     const eventType = payload.type as string;
-    console.log(`[Clerk Webhook] Processing event: ${eventType}`);
 
     // Handle subscription events - sync tier and status to Convex household
     if (
@@ -78,7 +77,6 @@ http.route({
     ) {
       const data = payload.data as Record<string, unknown>;
       const userId = data.id as string | undefined;
-      console.log(`[Clerk Webhook] Subscription event for user: ${userId}`);
 
       // Extract subscription/plan info from the webhook payload
       // Clerk Billing sends plan info in different formats depending on the event
@@ -133,20 +131,14 @@ http.route({
       // If we have a userId and either tier or status, sync to Convex
       if (userId && (tier || status)) {
         try {
-          const result = await ctx.runMutation(internal.auth.syncSubscriptionTier, {
+          await ctx.runMutation(internal.auth.syncSubscriptionTier, {
             clerkUserId: userId,
             tier: tier ?? undefined,
             status: status ?? undefined,
           });
-          console.log(`[Clerk Webhook] Sync result: ${result.message}`);
-        } catch (error) {
-          console.error(`[Clerk Webhook] Failed to sync subscription:`, error);
-          // Don't fail the webhook - log and continue
+        } catch {
+          // Don't fail the webhook - continue processing
         }
-      } else if (userId && !tier && !status) {
-        console.log(
-          `[Clerk Webhook] No tier or status found in payload for user ${userId}, skipping sync`,
-        );
       }
     }
 
