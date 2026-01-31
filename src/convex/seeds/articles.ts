@@ -89,7 +89,7 @@ And someday, when your children's children look back at what you left them, may 
 *Ready to put stewardship into practice? Start by getting your important documents in one place where your family can find them.*`,
     category: "beliefs_values",
     status: "published",
-    visibility: "subscribers",
+    visibility: "public",
     authorName: "Pathible Team",
     readTimeMinutes: 5,
     viewCount: 0,
@@ -180,7 +180,7 @@ Lord, help us teach our children well. Give us wisdom to model faithful stewards
 *Looking for ways to organize your family's financial information so your children know where to find things someday? That's part of the legacy too.*`,
     category: "beliefs_values",
     status: "published",
-    visibility: "subscribers",
+    visibility: "public",
     authorName: "Pathible Team",
     readTimeMinutes: 6,
     viewCount: 0,
@@ -276,7 +276,7 @@ That's a gift that lasts.
 *Need a place to document all of this? Pathible helps you organize your documents and capture your wishes, so your family has everything in one secure place.*`,
     category: "family_legacy",
     status: "published",
-    visibility: "subscribers",
+    visibility: "public",
     authorName: "Pathible Team",
     readTimeMinutes: 6,
     viewCount: 0,
@@ -386,7 +386,7 @@ The best time to create a legacy plan was years ago. The second best time is now
 *Ready to start? Pathible gives you one secure place for your documents, your stories, and your wishes. Everything your family needs - together.*`,
     category: "family_planning",
     status: "published",
-    visibility: "subscribers",
+    visibility: "public",
     authorName: "Pathible Team",
     readTimeMinutes: 5,
     viewCount: 0,
@@ -502,7 +502,7 @@ And your family will have the gift of clarity - which is more valuable than you 
 *Looking for a secure place to store all of this? Pathible's Heritage Vault keeps your important documents organized and accessible to the people who need them.*`,
     category: "financial_clarity",
     status: "published",
-    visibility: "subscribers",
+    visibility: "public",
     authorName: "Pathible Team",
     readTimeMinutes: 6,
     viewCount: 0,
@@ -640,7 +640,7 @@ Employer benefits often have time limits and specific procedures. Knowing these 
 *Ready to organize your insurance information? Store your policies and create a summary in Pathible's Heritage Vault, where your family can access them when needed.*`,
     category: "insurance_essentials",
     status: "published",
-    visibility: "subscribers",
+    visibility: "public",
     authorName: "Pathible Team",
     readTimeMinutes: 7,
     viewCount: 0,
@@ -802,7 +802,7 @@ Small steps, steady progress. That's how it gets done.
 *Need a secure place to store and organize all of this? Pathible's Heritage Vault is designed exactly for this purpose - keeping your family's essential documents safe and accessible.*`,
     category: "legal_basics",
     status: "published",
-    visibility: "subscribers",
+    visibility: "public",
     authorName: "Pathible Team",
     readTimeMinutes: 7,
     viewCount: 0,
@@ -984,7 +984,7 @@ That peace is worth the effort.
 *Pathible makes creating and maintaining your Document Access Map simple. Keep everything organized in one secure place, with controlled access for the people who need it.*`,
     category: "digital_access",
     status: "published",
-    visibility: "subscribers",
+    visibility: "public",
     authorName: "Pathible Team",
     readTimeMinutes: 7,
     viewCount: 0,
@@ -1490,6 +1490,422 @@ Don't leave them a mess. Leave them a blessing.
     visibility: "public",
     authorName: "Pathible Team",
     readTimeMinutes: 7,
+    viewCount: 0,
+  },
+
+  // ============================================================================
+  // ESTATE PLANNING COMPREHENSIVE GUIDE (SEO-optimized)
+  // ============================================================================
+  {
+    title: "Estate Planning Checklist: 25 Essential Documents Your Family Needs",
+    slug: "estate-planning-checklist-25-essential-documents",
+    excerpt:
+      "A comprehensive estate planning checklist covering the 25 essential documents your family needs. Organized by category with actionable steps to protect your loved ones from chaos during difficult times.",
+    content: `# Estate Planning Checklist: 25 Essential Documents Your Family Needs
+
+<!--
+Meta Description: Complete estate planning checklist with 25 essential documents organized by category. Protect your family from chaos with this actionable guide to getting your affairs in order.
+-->
+
+Have you ever spent weeks searching through boxes, drawers, and filing cabinets while your heart was breaking? We have. The hunting. The guessing. The arguments with siblings about what Mom or Dad actually wanted.
+
+It's a pain no one should have to experience. And yet, millions of families go through this every year because the people they loved never took time to organize their essential documents.
+
+This estate planning checklist exists so your family never has to become detectives while they're grieving.
+
+---
+
+## Why This Estate Planning Checklist Matters
+
+Here's what we've learned from families who've walked through loss: the ones who struggled most weren't dealing with complicated estates or unusual situations. They were dealing with disorganization.
+
+Missing documents. Unknown accounts. Passwords no one could find. Wishes that were never written down.
+
+The chaos wasn't about complexity. It was about preparation.
+
+A complete estate planning checklist does three things for your family:
+
+1. **Prevents the hunt** - They know exactly where to find what they need
+2. **Eliminates guesswork** - Your wishes are clear, not assumed
+3. **Reduces conflict** - When everyone knows the plan, there's nothing to argue about
+
+As Proverbs 13:22 reminds us, "A good man leaves an inheritance to his children's children." That inheritance isn't just financial. It's the gift of clarity. It's sparing them the mess.
+
+---
+
+## The 25 Essential Documents for Estate Planning
+
+We've organized this estate planning documents list into five categories. You don't need to gather everything at once. Start where you are, and work through one category at a time.
+
+---
+
+## Legal Documents (6 Essential Items)
+
+These are the foundation of any estate planning checklist. Without them, your family faces delays, court involvement, and decisions made by strangers.
+
+### 1. Last Will and Testament
+
+Your will specifies how your assets should be distributed and, critically, names guardians for minor children. Without one, state law decides everything, and it rarely matches what you would have wanted.
+
+**What your family needs to know:**
+- Where the original is stored (not just a copy)
+- Who the executor is and how to contact them
+- When it was last updated
+
+### 2. Revocable Living Trust (If Applicable)
+
+A trust can help your family avoid probate and gives you more control over how and when assets are distributed. Not everyone needs one, but if you have one, your family needs to know.
+
+**What your family needs to know:**
+- Location of the complete trust document
+- Who the successor trustee is
+- What assets are titled in the trust's name
+
+### 3. Financial Power of Attorney
+
+This document names someone to handle your financial matters if you become incapacitated. It's not about death. It's about the time between when you can no longer manage things yourself and when your will takes effect.
+
+**What your family needs to know:**
+- Who holds this authority
+- Whether it's "durable" (remains valid if you're incapacitated)
+- Any limitations on what they can do
+
+### 4. Healthcare Power of Attorney (Healthcare Proxy)
+
+Different from a financial POA, this names someone to make medical decisions on your behalf when you can't speak for yourself.
+
+**What your family needs to know:**
+- Who is designated
+- Whether they've agreed to serve
+- Any specific instructions you've given them
+
+### 5. Living Will (Advance Healthcare Directive)
+
+This document specifies your wishes for medical treatment in specific situations, such as whether you want life-sustaining treatment if you're terminally ill or permanently unconscious.
+
+**What your family needs to know:**
+- Your specific wishes for different scenarios
+- Where the document is located
+- That your healthcare providers have a copy
+
+### 6. HIPAA Authorization
+
+This allows your designated family members to access your medical information. Without it, healthcare providers may refuse to share information even with your spouse.
+
+**What your family needs to know:**
+- Who is authorized
+- That copies have been given to your healthcare providers
+
+---
+
+## Financial Documents (6 Essential Items)
+
+Your family shouldn't have to become forensic accountants to understand your financial life. These documents provide the roadmap.
+
+### 7. Bank Account Information
+
+For every account you have, document the institution name, account type, account number, and approximate balance.
+
+**What your family needs to know:**
+- Which banks you use
+- Account numbers (or where to find them)
+- Whether accounts are joint or individual
+- Location of checkbooks and debit cards
+
+### 8. Investment and Brokerage Account Statements
+
+Include retirement accounts (401k, IRA, pension), brokerage accounts, and any other investment holdings.
+
+**What your family needs to know:**
+- Institution names and account numbers
+- Beneficiary designations (these override your will)
+- Contact information for your financial advisor
+
+### 9. Retirement Account Documents
+
+These accounts often have specific rules about distributions and beneficiaries. Your family needs clear information about each one.
+
+**What your family needs to know:**
+- All retirement accounts you hold
+- Current beneficiary designations
+- Any required minimum distributions
+- Contact information for plan administrators
+
+### 10. Tax Returns (Last 3-5 Years)
+
+Recent tax returns provide a comprehensive picture of your financial life and are often needed for estate settlement.
+
+**What your family needs to know:**
+- Where returns are stored
+- Who prepared them (accountant contact information)
+- Any ongoing tax situations they should know about
+
+### 11. Debt Documentation
+
+List all debts including mortgages, car loans, student loans, credit cards, and personal loans.
+
+**What your family needs to know:**
+- Who you owe money to
+- Account numbers and balances
+- Monthly payment amounts
+- Whether any debts have life insurance that pays them off
+
+### 12. Social Security Information
+
+Your Social Security number and any benefits you're receiving or entitled to.
+
+**What your family needs to know:**
+- Your Social Security number
+- Current benefits status
+- Survivor benefits your spouse or children may be entitled to
+
+---
+
+## Insurance Documents (5 Essential Items)
+
+Insurance is only helpful if your family knows it exists and how to claim it. Many policies go unclaimed simply because beneficiaries didn't know about them.
+
+### 13. Life Insurance Policies
+
+This is perhaps the most critical insurance document. Life insurance benefits aren't automatic. Your family must file a claim.
+
+**What your family needs to know:**
+- Every life insurance policy you have (including employer policies)
+- Company names and policy numbers
+- Death benefit amounts
+- Beneficiary designations
+- How to file a claim
+
+### 14. Health Insurance Information
+
+Your family may need to understand your coverage for final medical expenses and know how to continue coverage for themselves.
+
+**What your family needs to know:**
+- Current coverage details
+- Member ID numbers
+- How to continue coverage (COBRA, etc.)
+- Any Medicare or Medicaid information
+
+### 15. Homeowners or Renters Insurance
+
+Important for protecting property during the estate settlement period.
+
+**What your family needs to know:**
+- Current policy details
+- What's covered and excluded
+- How to file claims
+- Agent contact information
+
+### 16. Auto Insurance
+
+Coverage information for each vehicle.
+
+**What your family needs to know:**
+- Policies for each vehicle
+- Coverage levels
+- How to transfer or cancel policies
+
+### 17. Long-Term Care or Disability Insurance
+
+If you have these policies, your family needs to know how to access benefits if needed.
+
+**What your family needs to know:**
+- Policy details and numbers
+- What triggers benefits
+- How to file claims
+- Current claim status (if applicable)
+
+---
+
+## Property and Asset Documents (4 Essential Items)
+
+Your family needs to know what you own and where to find the proof of ownership.
+
+### 18. Property Deeds
+
+For any real estate you own, including your home, vacation properties, or land.
+
+**What your family needs to know:**
+- What properties you own
+- Where deeds are stored
+- Current mortgage information
+- Property tax details
+
+### 19. Vehicle Titles
+
+For cars, motorcycles, boats, RVs, and any other titled vehicles.
+
+**What your family needs to know:**
+- What vehicles you own
+- Where titles are stored
+- Outstanding loan information
+
+### 20. Business Ownership Documents
+
+If you own a business or have partnership interests, your family needs documentation.
+
+**What your family needs to know:**
+- Business structure and ownership percentage
+- Operating agreements or partnership documents
+- Succession plans
+- Key contacts (attorney, accountant, partners)
+
+### 21. Valuable Personal Property Inventory
+
+A list of valuable items including jewelry, art, collectibles, antiques, and electronics.
+
+**What your family needs to know:**
+- What valuable items you own
+- Where they're located
+- Appraisals or valuations
+- Any specific wishes for distribution
+
+---
+
+## Personal and Digital Documents (4 Essential Items)
+
+These are often the most overlooked items on an estate planning checklist, but they're increasingly critical in our digital age.
+
+### 22. Digital Account Access Information
+
+Your online life needs a plan too. This includes email, social media, financial accounts, and subscriptions.
+
+**What your family needs to know:**
+- Email account access (often needed to recover other accounts)
+- Password manager access
+- Important online accounts
+- Social media account wishes (memorialize, delete, etc.)
+- Cryptocurrency wallet information (if applicable)
+
+### 23. Vital Records
+
+Birth certificates, marriage certificates, divorce decrees, military discharge papers (DD-214), and passports.
+
+**What your family needs to know:**
+- Where original documents are stored
+- How to obtain copies if needed
+
+### 24. Contact List of Key People
+
+A list of everyone your family should contact or who can help.
+
+**What your family needs to know:**
+- Attorney, financial advisor, accountant
+- Insurance agents
+- Employer HR department
+- Close friends who should be notified
+- Religious leaders
+- Professional organizations or unions
+
+### 25. Letter of Instruction (Final Wishes)
+
+This isn't a legal document, but it may be the most meaningful one. It includes your wishes for your funeral or memorial, personal messages to loved ones, and any instructions not covered elsewhere.
+
+**What your family needs to know:**
+- Funeral and burial preferences
+- Specific bequests of personal items
+- Charitable giving wishes
+- Personal messages you want shared
+- Any other guidance you want to leave behind
+
+---
+
+## How to Organize and Store These Documents
+
+Having the documents isn't enough. Your family needs to find them quickly when they're needed most.
+
+### Create a System That Works
+
+**Physical Documents:**
+- Keep originals of legal documents (wills, deeds, titles) in a fireproof safe or safe deposit box
+- Create a binder or folder system organized by category
+- Include a master index that lists what you have and where it's located
+
+**Digital Documents:**
+- Scan important documents and store them securely
+- Use a dedicated platform designed for this purpose (like Pathible's Heritage Vault)
+- Keep digital backups in at least two locations
+- Document how to access password managers
+
+### The Master Reference Document
+
+Create a single document that serves as your family's roadmap. It should answer:
+- What documents exist?
+- Where is each one located?
+- How can it be accessed?
+- Who should be contacted for help?
+
+Update this reference annually or whenever something significant changes.
+
+---
+
+## Who Should Have Access?
+
+Organizing everything is only half the task. Someone needs to know where to find it.
+
+### Immediate Access
+
+At minimum, one trusted person should have:
+- Knowledge that your documents are organized
+- Location of your master reference document
+- Access to your safe or safe deposit box
+- Emergency contact information
+
+### Consider These People
+
+- **Spouse or partner** - Usually full access to everything
+- **Adult children** - Access to what they'll need when the time comes
+- **Executor of your will** - Access to legal and financial documents
+- **Healthcare proxy** - Access to medical documents and healthcare directives
+- **Trusted friend or family member** - Backup access if primary contacts aren't available
+- **Attorney** - May hold original documents or sealed letters
+
+### Having the Conversation
+
+Don't just give people access. Walk them through what you've created. A 30-minute conversation now saves hours of confusion later.
+
+Tell them:
+- Where to find the master reference
+- Who to call first
+- What to do immediately versus what can wait
+- Any special circumstances they should know about
+
+---
+
+## Your Next Step
+
+This family estate planning checklist might feel overwhelming. Twenty-five documents. Five categories. Countless details.
+
+But you don't have to do everything today.
+
+**Start with these three steps:**
+
+1. **Locate your will and life insurance policies** - These are the most critical documents your family will need
+2. **Write down where you bank** - Even a simple list is better than nothing
+3. **Tell one person where this information is** - Access matters as much as organization
+
+Small steps, taken consistently, create clarity.
+
+---
+
+## Get Everything in One Place
+
+We built Pathible because we've been where you are. We know what it's like to search through boxes while grieving. We know the questions that don't have answers because no one wrote them down.
+
+Pathible's Heritage Vault gives you one secure place to store all 25 of these essential documents, organized and accessible to the people who need them.
+
+Your family shouldn't have to become detectives during the hardest season of their lives. Give them the gift of clarity.
+
+Get everything in one place. So they never have to search.
+
+---
+
+**Download our free printable estate planning checklist** to track your progress and ensure you don't miss any essential documents. Check off each item as you gather and organize it, and rest easier knowing your family is protected.`,
+    category: "family_planning",
+    status: "published",
+    visibility: "public",
+    authorName: "Pathible Team",
+    readTimeMinutes: 12,
     viewCount: 0,
   },
 ];
