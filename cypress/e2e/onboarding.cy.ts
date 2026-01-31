@@ -12,7 +12,7 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  * Critical for: User activation, first-time experience, data integrity
  *
  * Uses Clerk testing tokens for automated authentication.
- * Tests clean up by resetting the test user after each test.
+ * Uses cy.signInFreshUser() to reset user state for onboarding tests.
  *
  * Run with: pnpm test:e2e
  */
@@ -24,11 +24,6 @@ const TEST_PHONE = "+1 555-123-4567";
 const TEST_HOUSEHOLD_NAME = `E2E Household ${Date.now()}`;
 
 describe("Onboarding Flow - E2E Test Suite", () => {
-  beforeEach(() => {
-    cy.clearCookies();
-    cy.clearLocalStorage();
-  });
-
   describe("Unauthenticated Access", () => {
     it("should redirect to login when accessing onboarding without auth", () => {
       setupClerkTestingToken();
@@ -42,24 +37,8 @@ describe("Onboarding Flow - E2E Test Suite", () => {
 
   describe("Complete Onboarding Flow", () => {
     beforeEach(() => {
-      setupClerkTestingToken();
-      cy.visit("/");
-      cy.clerkLoaded();
-      cy.clerkSignIn({
-        strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
-      });
-      // Reset user to clean state to force onboarding
-      cy.visit("/dashboard", { timeout: 30000 });
-      cy.window({ timeout: 30000 }).then((win) => {
-        const testHelpers = (
-          win as unknown as { __CONVEX_TEST_HELPERS__?: { resetTestUser: () => Promise<unknown> } }
-        ).__CONVEX_TEST_HELPERS__;
-        if (testHelpers) {
-          return cy.wrap(testHelpers.resetTestUser(), { timeout: 30000 });
-        }
-      });
-      // Now visit onboarding
+      // Use fresh user session that resets test user for onboarding
+      cy.signInFreshUser();
       cy.visit("/onboarding", { timeout: 30000 });
     });
 
@@ -216,22 +195,8 @@ describe("Onboarding Flow - E2E Test Suite", () => {
 
   describe("Goal Selection", () => {
     beforeEach(() => {
-      setupClerkTestingToken();
-      cy.visit("/");
-      cy.clerkLoaded();
-      cy.clerkSignIn({
-        strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
-      });
-      cy.visit("/dashboard", { timeout: 30000 });
-      cy.window({ timeout: 30000 }).then((win) => {
-        const testHelpers = (
-          win as unknown as { __CONVEX_TEST_HELPERS__?: { resetTestUser: () => Promise<unknown> } }
-        ).__CONVEX_TEST_HELPERS__;
-        if (testHelpers) {
-          return cy.wrap(testHelpers.resetTestUser(), { timeout: 30000 });
-        }
-      });
+      // Use fresh user session that resets test user
+      cy.signInFreshUser();
       cy.visit("/onboarding", { timeout: 30000 });
       cy.get('[data-testid="onboarding-page"]', { timeout: 15000 }).should("be.visible");
 

@@ -164,11 +164,17 @@ describe("Public Article Detail Page - Visibility Tests", () => {
     // Check if there are any articles to click on
     cy.get("body").then(($body) => {
       // Look for article cards/links - they should be anchor tags within the articles section
-      const articleLinks = $body.find('a[href^="/learn/"]');
+      // Exclude category links and back links
+      const articleLinks = $body.find(
+        'a[href^="/learn/"]:not([href*="/category/"]):not([href="/learn"])',
+      );
 
       if (articleLinks.length > 0) {
-        // Click the first article
-        cy.get('a[href^="/learn/"]').first().click();
+        // Scroll to the article to avoid sticky header overlap, then click
+        cy.get('a[href^="/learn/"]:not([href*="/category/"]):not([href="/learn"])')
+          .first()
+          .scrollIntoView()
+          .click({ force: true });
 
         // Should be on an article page
         cy.url({ timeout: 10000 }).should("match", /\/learn\/.+/);

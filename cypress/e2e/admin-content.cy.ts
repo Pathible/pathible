@@ -14,6 +14,7 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  *
  * IMPORTANT: This test uses cy.grantAdminRole() to grant admin access.
  * Only works for test user emails (+clerk_test, etc.)
+ * Uses cy.session() for faster test execution via auth caching.
  *
  * Run with: pnpm test:e2e --spec cypress/e2e/admin-content.cy.ts
  */
@@ -22,62 +23,11 @@ const TEST_USER_EMAIL = Cypress.env("TEST_USER_EMAIL");
 const TEST_ARTICLE_TITLE = `E2E Test Article ${Date.now()}`;
 const TEST_ARTICLE_SLUG = `e2e-test-article-${Date.now()}`;
 
-/**
- * Helper to ensure user is onboarded before testing
- */
-function ensureUserOnboarded() {
-  cy.url({ timeout: 15000 }).then((url) => {
-    if (url.includes("/onboarding")) {
-      cy.log("User needs onboarding - completing now");
-      // Complete profile step
-      cy.contains("Complete Your Profile", { timeout: 10000 }).should("be.visible");
-      cy.get("input#firstName").clear().type("E2E");
-      cy.get("input#lastName").clear().type("Admin");
-      cy.contains("button", "Next").click();
-      cy.contains("Profile updated!", { timeout: 10000 }).should("be.visible");
-
-      // Complete household step
-      cy.contains("Create Your First Household", { timeout: 10000 }).should("be.visible");
-      cy.get("input#householdName").clear().type(`Admin Test Household ${Date.now()}`);
-      cy.contains("button", "Next").click();
-      cy.contains("Household created!", { timeout: 10000 }).should("be.visible");
-
-      // Complete goals step
-      cy.contains("What brings you to Pathible?", { timeout: 10000 }).should("be.visible");
-      cy.get('button[role="checkbox"]').first().click();
-      cy.contains("button", "Complete Setup").click();
-      cy.contains("Onboarding complete!", { timeout: 10000 }).should("be.visible");
-
-      // Wait for redirect to complete
-      cy.url({ timeout: 10000 }).should("not.include", "/onboarding");
-    }
-
-    // Handle select-plan redirect
-    cy.url({ timeout: 10000 }).then((newUrl) => {
-      if (newUrl.includes("/select-plan")) {
-        // Wait for potential auto-redirect for test users with plans
-        cy.url({ timeout: 10000 }).should("satisfy", (url: string) => {
-          return url.includes("/dashboard") || url.includes("/select-plan");
-        });
-      }
-    });
-  });
-}
-
 describe("Admin Content Manager E2E Test", () => {
   before(() => {
     // Verify test user email is configured
     expect(TEST_USER_EMAIL, "TEST_USER_EMAIL must be set").to.exist;
     expect(TEST_USER_EMAIL, "TEST_USER_EMAIL must contain +clerk_test").to.include("+clerk_test");
-  });
-
-  beforeEach(() => {
-    // Clear browser state
-    cy.clearCookies();
-    cy.clearLocalStorage();
-    cy.window().then((win) => {
-      win.sessionStorage.clear();
-    });
   });
 
   after(() => {
@@ -111,21 +61,15 @@ describe("Admin Content Manager E2E Test", () => {
 
   describe("Content Manager CRUD Operations", () => {
     beforeEach(() => {
-      // Sign in
-      setupClerkTestingToken();
-      cy.visit("/");
-      cy.clerkLoaded();
-      cy.clerkSignIn({
-        strategy: "email_code",
-        identifier: TEST_USER_EMAIL,
-      });
+      // Use session caching for fast auth
+      cy.signInWithSession("heritage");
 
-      // Wait for Convex client to initialize by checking page is responsive
+      // Navigate to dashboard first to ensure Convex is initialized
       cy.visit("/dashboard", { failOnStatusCode: false });
       cy.url({ timeout: 10000 }).should("include", "/");
 
       // Ensure user is onboarded
-      ensureUserOnboarded();
+      cy.ensureOnboarded("/dashboard");
 
       // Grant admin role
       cy.grantAdminRole().should((result) => {

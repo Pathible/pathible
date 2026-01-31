@@ -33,15 +33,9 @@ before(() => {
 
 // Global beforeEach hook - runs before each test
 beforeEach(() => {
-  // Clear cookies and local storage before each test
-  cy.clearCookies();
-  cy.clearLocalStorage();
-  cy.window().then((win) => {
-    win.sessionStorage.clear();
-  });
-
-  // Preserve baseUrl for all tests
-  cy.log(`Base URL: ${Cypress.config("baseUrl")}`);
+  // NOTE: We intentionally do NOT clear cookies/localStorage/sessionStorage here
+  // to allow cy.session() to cache auth state across tests for faster execution.
+  // Individual tests that need a fresh state should call cy.cleanupTestState() explicitly.
 
   // Set viewport
   cy.viewport(1280, 720);
