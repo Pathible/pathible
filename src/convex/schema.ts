@@ -59,9 +59,7 @@ export default defineSchema({
     updatedAt: v.number(), // Unix timestamp
     // Soft-delete support
     deletedAt: v.optional(v.number()), // Unix timestamp when profile was soft-deleted
-  })
-    .index("by_userId", ["userId"])
-    .index("by_deletedAt", ["deletedAt"]),
+  }).index("by_userId", ["userId"]),
 
   /**
    * User roles - for admin access control
@@ -165,7 +163,6 @@ export default defineSchema({
     invitedBy: v.optional(v.id("profiles")), // Profile that invited this member
     joinedAt: v.optional(v.number()), // Unix timestamp when member joined
   })
-    .index("by_household", ["householdId"])
     .index("by_user", ["userId"])
     .index("by_household_and_user", ["householdId", "userId"])
     .index("by_household_and_status", ["householdId", "status"]),
@@ -189,10 +186,7 @@ export default defineSchema({
     ),
     expiresAt: v.number(), // Unix timestamp
   })
-    .index("by_household", ["householdId"])
     .index("by_token", ["token"])
-    .index("by_email", ["email"])
-    .index("by_household_and_status", ["householdId", "status"])
     .index("by_household_email_status", ["householdId", "email", "status"]),
 
   // ============================================================================
@@ -212,7 +206,6 @@ export default defineSchema({
     createdBy: v.id("profiles"),
     updatedAt: v.number(),
   })
-    .index("by_household", ["householdId"])
     .index("by_household_and_orderIndex", ["householdId", "orderIndex"])
     .index("by_household_and_isPrimary", ["householdId", "isPrimary"]),
 
@@ -269,10 +262,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_familyUnit", ["familyUnitId"])
-    .index("by_household", ["householdId"])
     .index("by_household_and_status", ["householdId", "status"])
-    .index("by_household_and_email", ["householdId", "email"])
-    .index("by_profileId", ["profileId"])
     .index("by_familyUnit_and_status", ["familyUnitId", "status"])
     .index("by_familyUnit_and_profileId", ["familyUnitId", "profileId"]),
 
@@ -308,9 +298,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_household", ["householdId"])
-    .index("by_uploadedBy", ["uploadedBy"])
-    .index("by_household_and_accessLevel", ["householdId", "accessLevel"])
-    .index("by_b2FileId", ["b2FileId"]), // For cleanup operations
+    .index("by_b2FileId", ["b2FileId"]),
 
   /**
    * Vault categories - custom categorization for documents
@@ -355,9 +343,7 @@ export default defineSchema({
     mediaStorageIds: v.array(v.id("_storage")), // Attached images/videos
     updatedAt: v.number(),
   })
-    .index("by_household", ["householdId"])
     .index("by_author", ["authorId"])
-    .index("by_household_and_published", ["householdId", "isPublished"])
     .index("by_household_and_category", ["householdId", "category"]),
 
   /**
@@ -384,11 +370,7 @@ export default defineSchema({
     isDelivered: v.boolean(),
     deliveredAt: v.optional(v.number()), // Unix timestamp
     updatedAt: v.number(),
-  })
-    .index("by_household", ["householdId"])
-    .index("by_author", ["authorId"])
-    .index("by_household_and_delivered", ["householdId", "isDelivered"])
-    .index("by_deliveryDate", ["deliveryDate"]),
+  }).index("by_household", ["householdId"]),
 
   /**
    * Core beliefs - documented family values and principles
@@ -408,9 +390,7 @@ export default defineSchema({
     ),
     orderIndex: v.number(), // For manual ordering
     updatedAt: v.number(),
-  })
-    .index("by_household", ["householdId"])
-    .index("by_household_and_orderIndex", ["householdId", "orderIndex"]),
+  }).index("by_household_and_orderIndex", ["householdId", "orderIndex"]),
 
   // ============================================================================
   // LEGACY PLANNING
@@ -430,10 +410,7 @@ export default defineSchema({
     isComplete: v.boolean(),
     completionPercentage: v.number(), // 0-100
     updatedAt: v.number(),
-  })
-    .index("by_household", ["householdId"])
-    .index("by_user", ["userId"])
-    .index("by_household_and_user", ["householdId", "userId"]),
+  }).index("by_household_and_user", ["householdId", "userId"]),
 
   /**
    * Key contacts - important contacts for legacy planning
@@ -510,8 +487,6 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-    .index("by_household", ["householdId"])
-    .index("by_profile", ["profileId"])
     .index("by_household_and_profile", ["householdId", "profileId"])
     .index("by_household_and_type", ["householdId", "documentType"]),
 
@@ -559,7 +534,6 @@ export default defineSchema({
     isPrimary: v.optional(v.boolean()), // Primary vs alternate
     notes: v.optional(v.string()),
   })
-    .index("by_household", ["householdId"])
     .index("by_document", ["legalDocumentId"])
     .index("by_document_and_role", ["legalDocumentId", "role"]),
 
@@ -658,10 +632,7 @@ export default defineSchema({
     displayDate: v.number(), // Unix timestamp - when to display
     createdBy: v.string(), // Better Auth user ID (admin)
     updatedAt: v.number(),
-  })
-    .index("by_displayDate", ["displayDate"])
-    .index("by_isActive", ["isActive"])
-    .index("by_isActive_and_displayDate", ["isActive", "displayDate"]),
+  }).index("by_isActive_and_displayDate", ["isActive", "displayDate"]),
 
   /**
    * Educational articles - admin-authored educational content
@@ -684,10 +655,6 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_slug", ["slug"])
-    .index("by_status", ["status"])
-    .index("by_category", ["category"])
-    .index("by_status_and_publishedAt", ["status", "publishedAt"])
-    .index("by_visibility", ["visibility"])
     .index("by_status_and_visibility", ["status", "visibility"])
     .index("by_status_category", ["status", "category"])
     .index("by_status_visibility_category", ["status", "visibility", "category"]),
@@ -701,7 +668,6 @@ export default defineSchema({
     readAt: v.number(), // Unix timestamp when marked as read
   })
     .index("by_user", ["userId"])
-    .index("by_article", ["articleId"])
     .index("by_user_and_article", ["userId", "articleId"]),
 
   /**
@@ -749,10 +715,7 @@ export default defineSchema({
     isActive: v.boolean(),
     createdBy: v.string(), // Better Auth user ID (admin)
     updatedAt: v.number(),
-  })
-    .index("by_isActive", ["isActive"])
-    .index("by_category", ["category"])
-    .index("by_isActive_and_category", ["isActive", "category"]),
+  }).index("by_isActive_and_category", ["isActive", "category"]),
 
   /**
    * User suggestions - tracking of suggestions shown to users
@@ -765,8 +728,6 @@ export default defineSchema({
     dismissedAt: v.optional(v.number()), // Unix timestamp
     completedAt: v.optional(v.number()), // Unix timestamp
   })
-    .index("by_user", ["userId"])
-    .index("by_household", ["householdId"])
     .index("by_user_and_status", ["userId", "status"])
     .index("by_household_and_status", ["householdId", "status"]),
 
@@ -866,11 +827,7 @@ export default defineSchema({
     errorMessage: v.optional(v.string()),
     resendBatchId: v.optional(v.string()), // For tracking with Resend
     campaignId: v.optional(v.string()), // Link to email campaign
-  })
-    .index("by_sentBy", ["sentBy"])
-    .index("by_status", ["status"])
-    .index("by_templateId", ["templateId"])
-    .index("by_campaignId", ["campaignId"]),
+  }).index("by_campaignId", ["campaignId"]),
 
   /**
    * Email queue - rate-limited email processing queue
@@ -905,7 +862,6 @@ export default defineSchema({
     sentAt: v.optional(v.number()), // Unix timestamp when successfully sent
     resendId: v.optional(v.string()), // Resend message ID for tracking
   })
-    .index("by_status", ["status"])
     .index("by_status_scheduledFor", ["status", "scheduledFor"])
     .index("by_campaignId", ["campaignId"]),
 
@@ -958,7 +914,6 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_key", ["key"])
-    .index("by_status", ["status"])
     .index("by_status_and_priority", ["status", "priority"]),
 
   /**
@@ -994,10 +949,7 @@ export default defineSchema({
     completedStepKeys: v.array(v.string()), // Steps the user has completed
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-    .index("by_user", ["userId"])
-    .index("by_tour", ["tourId"])
-    .index("by_user_and_tour", ["userId", "tourId"]),
+  }).index("by_user_and_tour", ["userId", "tourId"]),
 
   // ============================================================================
   // ACTIVITY & NOTIFICATIONS
@@ -1105,7 +1057,6 @@ export default defineSchema({
     description: v.string(),
   })
     .index("by_household", ["householdId"])
-    .index("by_user", ["userId"])
     .index("by_household_and_module", ["householdId", "module"]),
 
   /**

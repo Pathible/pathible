@@ -74,7 +74,7 @@ export async function getFamilyUnitCount(
 
   const units = await ctx.db
     .query("familyUnits")
-    .withIndex("by_household", (q) => q.eq("householdId", household._id))
+    .withIndex("by_household_and_orderIndex", (q) => q.eq("householdId", household._id))
     .collect();
 
   return units.length;

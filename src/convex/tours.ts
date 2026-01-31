@@ -627,7 +627,7 @@ export const getUserTourStates = query({
 
     const states = await ctx.db
       .query("userTourState")
-      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .withIndex("by_user_and_tour", (q) => q.eq("userId", profile._id))
       .collect();
 
     return states;

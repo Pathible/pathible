@@ -181,12 +181,9 @@ export const getUser = query({
       }),
     );
 
-    // Get recent activity
-    const recentActivity = await ctx.db
-      .query("activityLog")
-      .withIndex("by_user", (q) => q.eq("userId", profile._id))
-      .order("desc")
-      .take(10);
+    // Get recent activity (query all activity and filter by user since by_user index was removed)
+    const allRecentActivity = await ctx.db.query("activityLog").order("desc").take(100);
+    const recentActivity = allRecentActivity.filter((a) => a.userId === profile._id).slice(0, 10);
 
     const activityList = recentActivity.map((a) => ({
       _id: a._id,
@@ -405,7 +402,7 @@ export const getHousehold = query({
     // Get all members
     const memberships = await ctx.db
       .query("householdMemberships")
-      .withIndex("by_household", (q) => q.eq("householdId", household._id))
+      .withIndex("by_household_and_status", (q) => q.eq("householdId", household._id))
       .collect();
 
     const enrichedMembers = await Promise.all(

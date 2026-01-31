@@ -362,7 +362,9 @@ export const deleteProfile = mutation({
           // Count other owners
           const otherOwners = await ctx.db
             .query("householdMemberships")
-            .withIndex("by_household", (q) => q.eq("householdId", membership.householdId))
+            .withIndex("by_household_and_status", (q) =>
+              q.eq("householdId", membership.householdId),
+            )
             .collect();
 
           const hasOtherOwner = otherOwners.some(
