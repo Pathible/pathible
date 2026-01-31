@@ -1,5 +1,4 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
 
 /**
  * Dashboard E2E Tests
@@ -9,10 +8,10 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  * - Next step CTA
  * - Daily reflection section
  *
+ * Uses cy.session() for faster test execution via auth caching.
+ *
  * Run with: pnpm test:e2e --spec cypress/e2e/dashboard.cy.ts
  */
-
-const TEST_USER_EMAIL = Cypress.env("TEST_USER_EMAIL");
 
 /**
  * Helper to ensure user is on dashboard, handling onboarding redirect
@@ -29,21 +28,11 @@ function ensureOnDashboard(): Cypress.Chainable<boolean> {
 
 describe("Dashboard Page", () => {
   beforeEach(() => {
-    // Clear browser state
-    cy.clearCookies();
-    cy.clearLocalStorage();
-    cy.window().then((win) => {
-      win.sessionStorage.clear();
-    });
-
-    // Sign in
-    setupClerkTestingToken();
-    cy.visit("/");
-    cy.clerkLoaded();
-    cy.clerkSignIn({
-      strategy: "email_code",
-      identifier: TEST_USER_EMAIL,
-    });
+    // Use session caching for fast auth
+    // Use "legacy" tier to test all dashboard cards including Legacy Plan
+    cy.signInWithSession("legacy");
+    cy.visit("/dashboard", { timeout: 30000 });
+    cy.ensureOnboarded("/dashboard");
   });
 
   describe("Dashboard Stats Display", () => {

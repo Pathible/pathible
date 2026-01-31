@@ -123,23 +123,18 @@ describe("Profile Settings - E2E Test Suite", () => {
       cy.contains("Profile Settings", { timeout: 15000 }).should("be.visible");
     });
 
-    it("should show edit button for personal information", () => {
-      cy.contains("Personal Information")
-        .closest("div")
-        .parent()
-        .find('button:contains("Edit")')
-        .should("be.visible");
+    it("should show save button for name changes", () => {
+      // Personal Information has inline form with Save Name button
+      cy.contains("button", "Save Name").should("be.visible");
     });
 
-    it("should open edit dialog when clicking edit", () => {
-      cy.contains("Personal Information")
-        .closest("div")
-        .parent()
-        .find('button:contains("Edit")')
-        .click();
+    it("should open edit dialog when clicking email edit button", () => {
+      // The Edit button is for changing email, not the whole card
+      cy.contains("button", "Edit").click();
 
-      // Dialog should open
+      // Dialog should open for email change
       cy.get('[role="dialog"]').should("be.visible");
+      cy.contains("Change Email Address").should("be.visible");
     });
   });
 
@@ -157,23 +152,16 @@ describe("Profile Settings - E2E Test Suite", () => {
       cy.contains("Profile Settings", { timeout: 15000 }).should("be.visible");
     });
 
-    it("should show edit button for contact information", () => {
-      cy.contains("Contact Information")
-        .closest("div")
-        .parent()
-        .find('button:contains("Edit")')
-        .should("be.visible");
+    it("should show inline form fields for contact information", () => {
+      // Contact Information has inline editable fields, not an Edit button
+      cy.get("input#phone").should("exist");
+      cy.get("input#address").should("exist");
+      cy.get("input#city").should("exist");
     });
 
-    it("should open edit dialog for contact information", () => {
-      cy.contains("Contact Information")
-        .closest("div")
-        .parent()
-        .find('button:contains("Edit")')
-        .click();
-
-      // Dialog should open
-      cy.get('[role="dialog"]').should("be.visible");
+    it("should show save button for contact information", () => {
+      // Contact Information has Save Contact Info button
+      cy.contains("button", "Save Contact Info").should("be.visible");
     });
   });
 });

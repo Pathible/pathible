@@ -276,12 +276,45 @@ pnpm test:e2e:open      # Interactive Cypress UI
 
 ### E2E Test Helpers
 
-The project exposes Convex test helpers for E2E tests via `window.__CONVEX_TEST_HELPERS__`:
+**Session Caching Commands** (for faster test execution):
+
+- `cy.signInWithSession('heritage')` - Sign in with cached session (tiers: `foundations`, `heritage`, `legacy`)
+- `cy.signInFreshUser()` - Sign in with fresh state (for onboarding tests)
+- `cy.ensureOnboarded('/dashboard')` - Handle onboarding redirect and set subscription tier
+
+**Convex Test Helpers** (via `window.__CONVEX_TEST_HELPERS__`):
 
 - `cy.resetTestUser()` - Reset test user to clean state
 - `cy.setSubscriptionTier('heritage')` - Set subscription tier for testing gated features
 - `cy.grantAdminRole()` - Grant admin role to test user
 - `cy.cleanupTestArticles()` - Clean up test articles
+
+### E2E Test Patterns
+
+**Preferred pattern for authenticated tests:**
+
+```typescript
+beforeEach(() => {
+  cy.signInWithSession("heritage"); // Uses cached session
+  cy.visit("/your-page", { timeout: 30000 });
+  cy.ensureOnboarded("/your-page"); // Handles onboarding + sets tier
+});
+```
+
+**For tests requiring fresh user state:**
+
+```typescript
+beforeEach(() => {
+  cy.signInFreshUser(); // Creates unique session, no caching
+  cy.visit("/onboarding");
+});
+```
+
+**UI Component Patterns:**
+- Settings pages use inline forms with "Save" buttons (not Edit dialogs)
+- Radix UI Select dropdowns: use `button[role="combobox"]` and `[role="listbox"]`
+- Sticky headers may overlap elements - use `scrollIntoView()` or `{ force: true }`
+- Use unique names per test to avoid conflicts (e.g., `\`Test Item ${Date.now()}\`\`)
 
 ### Clerk Test Account (Development)
 

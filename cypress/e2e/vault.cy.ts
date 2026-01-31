@@ -14,6 +14,7 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  * - Count validation throughout all operations
  *
  * Uses Clerk testing tokens for automated authentication (no OTP needed).
+ * Uses cy.session() for faster test execution via auth caching.
  * All tests clean up after themselves.
  *
  * Run with: pnpm test:e2e
@@ -26,79 +27,10 @@ const _TEST_DESCRIPTION = "This is an automated test document for E2E testing";
 const TEST_CATEGORY_NAME = `Test Category ${Date.now()}`;
 const _TEST_SEARCH_TERM = "E2E Test";
 
-/**
- * Helper to ensure user is fully onboarded before accessing vault
- * Handles cases where user is redirected to onboarding or select-plan
- * Also sets subscription tier to 'heritage' for vault feature access
- */
-function ensureUserOnboarded() {
-  cy.url({ timeout: 15000 }).then((url) => {
-    if (url.includes("/onboarding")) {
-      cy.log("User needs onboarding - completing now");
-      // Complete profile step
-      cy.contains("Complete Your Profile", { timeout: 10000 }).should("be.visible");
-      cy.get("input#firstName").clear().type("E2E");
-      cy.get("input#lastName").clear().type("TestUser");
-      cy.contains("button", "Next").click();
-      cy.contains("Profile updated!", { timeout: 10000 }).should("be.visible");
-
-      // Complete household step
-      cy.contains("Create Your First Household", { timeout: 10000 }).should("be.visible");
-      cy.get("input#householdName").clear().type(`Test Household ${Date.now()}`);
-      cy.contains("button", "Next").click();
-      cy.contains("Household created!", { timeout: 10000 }).should("be.visible");
-
-      // Complete goals step
-      cy.contains("What brings you to Pathible?", { timeout: 10000 }).should("be.visible");
-      cy.get('button[role="checkbox"]').first().click();
-      cy.contains("button", "Complete Setup").click();
-      cy.contains("Onboarding complete!", { timeout: 10000 }).should("be.visible");
-
-      // Wait for redirect
-      cy.wait(1000);
-      cy.url().then((newUrl) => {
-        if (newUrl.includes("/select-plan")) {
-          // User already has plan from Clerk test mode, should redirect to dashboard
-          cy.url({ timeout: 15000 }).should("satisfy", (u: string) => {
-            return u.includes("/dashboard") || u.includes("/select-plan");
-          });
-        }
-      });
-
-      // Now navigate to vault
-      cy.visit("/vault", { timeout: 30000 });
-    } else if (url.includes("/select-plan")) {
-      cy.log("User on select-plan - waiting for redirect");
-      // User should have a plan from Clerk test mode
-      cy.url({ timeout: 30000 }).should("satisfy", (u: string) => {
-        return u.includes("/dashboard") || u.includes("/select-plan") || u.includes("/vault");
-      });
-      // Navigate to vault
-      cy.visit("/vault", { timeout: 30000 });
-    }
-    // If already on vault or dashboard, we're good
-  });
-
-  // Set subscription tier to 'heritage' for vault feature access
-  // This must be called after onboarding is complete (household exists)
-  cy.log("Setting subscription tier to heritage for vault access");
-  cy.setSubscriptionTier("heritage").then((result) => {
-    if (!result.success) {
-      cy.log(`Warning: Failed to set subscription tier: ${result.message}`);
-    }
-  });
-}
-
 describe("Heritage Vault - Complete E2E Test Suite", () => {
   // Store initial counts to verify changes (reserved for future tests)
   let _initialDocumentCount: number;
   let _initialCategoryCount: number;
-
-  beforeEach(() => {
-    // Clear state before each test
-    cy.clearCookies();
-    cy.clearLocalStorage();
-  });
 
   describe("Unauthenticated Access", () => {
     it("should redirect to login when accessing vault without auth", () => {
@@ -110,21 +42,10 @@ describe("Heritage Vault - Complete E2E Test Suite", () => {
 
   describe("Complete Vault Workflow", () => {
     beforeEach(() => {
-      // Set up Clerk testing token - must be called first
-      setupClerkTestingToken();
-      // Visit a public page to load Clerk JS (not a protected route)
-      cy.visit("/");
-      // Wait for Clerk to be ready
-      cy.clerkLoaded();
-      // Sign in with Clerk
-      cy.clerkSignIn({
-        strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
-      });
-      // Now navigate to the protected vault page
+      // Use session caching for fast auth
+      cy.signInWithSession("heritage");
       cy.visit("/vault", { timeout: 30000 });
-      // Ensure user is fully onboarded (handles redirects to onboarding/select-plan)
-      ensureUserOnboarded();
+      cy.ensureOnboarded("/vault");
       // Wait for the page to fully load
       cy.contains("Heritage Vault", { timeout: 15000 }).should("be.visible");
     });
@@ -191,16 +112,9 @@ describe("Heritage Vault - Complete E2E Test Suite", () => {
 
   describe("Category Management Tests", () => {
     beforeEach(() => {
-      setupClerkTestingToken();
-      cy.visit("/");
-      cy.clerkLoaded();
-      cy.clerkSignIn({
-        strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
-      });
+      cy.signInWithSession("heritage");
       cy.visit("/vault", { timeout: 30000 });
-      // Ensure user is fully onboarded (handles redirects to onboarding/select-plan)
-      ensureUserOnboarded();
+      cy.ensureOnboarded("/vault");
       cy.contains("Heritage Vault", { timeout: 15000 }).should("be.visible");
     });
 
@@ -224,16 +138,9 @@ describe("Heritage Vault - Complete E2E Test Suite", () => {
 
   describe("Search and Filter Edge Cases", () => {
     beforeEach(() => {
-      setupClerkTestingToken();
-      cy.visit("/");
-      cy.clerkLoaded();
-      cy.clerkSignIn({
-        strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
-      });
+      cy.signInWithSession("heritage");
       cy.visit("/vault", { timeout: 30000 });
-      // Ensure user is fully onboarded (handles redirects to onboarding/select-plan)
-      ensureUserOnboarded();
+      cy.ensureOnboarded("/vault");
       cy.contains("Heritage Vault", { timeout: 15000 }).should("be.visible");
     });
 

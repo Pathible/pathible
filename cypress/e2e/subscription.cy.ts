@@ -176,7 +176,8 @@ describe("Subscription & Billing - E2E Test Suite", () => {
     it("should grant access to wisdom features with heritage tier", () => {
       cy.setSubscriptionTier("heritage");
       cy.visit("/wisdom", { timeout: 30000 });
-      cy.contains("Wisdom Hub", { timeout: 15000 }).should("be.visible");
+      // The wisdom page header shows "Wisdom & Stories"
+      cy.contains("Wisdom & Stories", { timeout: 15000 }).should("be.visible");
     });
 
     it("should grant access to legacy features with heritage tier", () => {

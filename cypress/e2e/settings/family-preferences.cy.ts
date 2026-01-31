@@ -115,50 +115,33 @@ describe("Family Preferences - E2E Test Suite", () => {
       cy.contains("Family Preferences", { timeout: 15000 }).should("be.visible");
     });
 
-    it("should show household name in family information", () => {
-      // The household name appears in the Family Name input field
+    it("should show family name input field", () => {
+      // Family Information has inline form with Family Name input
       cy.contains("Family Name").should("be.visible");
-      cy.get('input[value*="Household"], input[value*="household"]').should("exist");
+      cy.get("input#name").should("exist");
     });
 
-    it("should show edit button for family information", () => {
-      cy.contains("Family Information")
-        .closest("div")
-        .parent()
-        .find('button:contains("Edit")')
-        .should("be.visible");
+    it("should show description field in family information", () => {
+      // Family Information has Description textarea
+      cy.contains("Description").should("be.visible");
+      cy.get("textarea#description").should("exist");
     });
 
-    it("should open edit dialog when clicking edit", () => {
-      cy.contains("Family Information")
-        .closest("div")
-        .parent()
-        .find('button:contains("Edit")')
-        .click();
-
-      // Dialog should open
-      cy.get('[role="dialog"]').should("be.visible");
+    it("should show save button for family information", () => {
+      // Family Information has inline form with Save Changes button
+      cy.contains("button", "Save Changes").should("be.visible");
     });
 
-    it("should update household name", () => {
-      // Open edit dialog
-      cy.contains("Family Information")
-        .closest("div")
-        .parent()
-        .find('button:contains("Edit")')
-        .click();
-
-      cy.get('[role="dialog"]').should("be.visible");
-
-      // Update household name
+    it("should update household name inline", () => {
+      // Update family name in inline form
       const newName = `Updated Family ${Date.now()}`;
-      cy.get('[role="dialog"]').find('input[name="name"]').clear().type(newName);
+      cy.get("input#name").clear().type(newName);
 
       // Save changes
-      cy.get('[role="dialog"]').find('button:contains("Save")').click();
+      cy.contains("button", "Save Changes").click();
 
       // Verify success
-      cy.contains("updated", { timeout: 10000 }).should("be.visible");
+      cy.contains("updated", { timeout: 10000, matchCase: false }).should("be.visible");
     });
   });
 
@@ -180,13 +163,11 @@ describe("Family Preferences - E2E Test Suite", () => {
       cy.contains("Notification Preferences").should("be.visible");
     });
 
-    it("should have toggleable notification options", () => {
-      // Check for notification toggle switches
-      cy.contains("Notification Preferences")
-        .closest("div")
-        .parent()
-        .find('button[role="switch"]')
-        .should("exist");
+    it("should show weekly activity digest toggle", () => {
+      // Notification Preferences has a Switch component with Weekly Activity Digest label
+      cy.contains("Weekly Activity Digest").should("be.visible");
+      // Switch component renders as button with role="switch"
+      cy.get('#weeklyNotifications[role="switch"]').should("exist");
     });
   });
 });

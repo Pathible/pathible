@@ -12,6 +12,29 @@ declare global {
   namespace Cypress {
     interface Chainable {
       /**
+       * Sign in with session caching - reuses auth across tests
+       * This dramatically speeds up test suites by caching Clerk auth state
+       * @param tier - Subscription tier to set (default: 'heritage')
+       * @example cy.signInWithSession('heritage')
+       */
+      signInWithSession(tier?: "foundations" | "heritage" | "legacy"): Chainable<void>;
+
+      /**
+       * Sign in with fresh state (for onboarding tests)
+       * Creates a unique session that resets the test user
+       * @example cy.signInFreshUser()
+       */
+      signInFreshUser(): Chainable<void>;
+
+      /**
+       * Shared onboarding helper - completes onboarding if needed
+       * Replaces duplicate ensureUserOnboarded functions in test files
+       * @param targetPage - Page to navigate to after onboarding (default: '/dashboard')
+       * @example cy.ensureOnboarded('/vault')
+       */
+      ensureOnboarded(targetPage?: string): Chainable<void>;
+
+      /**
        * Check if element exists without failing the test
        * @example cy.elementExists('[data-testid="profile"]').then(exists => {...})
        */
@@ -171,6 +194,139 @@ declare global {
     }
   }
 }
+
+// Import Clerk testing token setup
+import { setupClerkTestingToken } from "@clerk/testing/cypress";
+
+/**
+ * Sign in with session caching - reuses auth across tests
+ * Uses cy.session() to cache Clerk auth state and dramatically speed up test suites
+ *
+ * NOTE: The tier parameter is stored and used by ensureOnboarded() to set the
+ * subscription tier AFTER navigating to the target page. This avoids extra page loads.
+ */
+Cypress.Commands.add(
+  "signInWithSession",
+  (tier: "foundations" | "heritage" | "legacy" = "heritage") => {
+    // Store the tier for later use by ensureOnboarded
+    Cypress.env("CURRENT_TIER", tier);
+
+    // Restore the auth session (this is cached across specs)
+    cy.session(
+      ["auth"],
+      () => {
+        // Initial session setup - only runs on first call
+        setupClerkTestingToken();
+        cy.visit("/");
+        cy.clerkLoaded();
+        cy.clerkSignIn({
+          strategy: "email_code",
+          identifier: Cypress.env("TEST_USER_EMAIL"),
+        });
+        cy.visit("/dashboard", { timeout: 30000 });
+        cy.url().should("satisfy", (url: string) => {
+          return (
+            url.includes("/dashboard") ||
+            url.includes("/onboarding") ||
+            url.includes("/select-plan")
+          );
+        });
+      },
+      {
+        validate: () => {
+          // Lightweight validation - just check cookies exist
+          cy.getCookie("__clerk_db_jwt").should("exist");
+        },
+        cacheAcrossSpecs: true,
+      },
+    );
+  },
+);
+
+/**
+ * Sign in with fresh state (for onboarding tests)
+ * Creates a unique session that resets the test user to trigger onboarding
+ */
+Cypress.Commands.add("signInFreshUser", () => {
+  // Use a unique session ID based on timestamp to ensure fresh state each time
+  cy.session(
+    ["auth", "fresh", Date.now()],
+    () => {
+      setupClerkTestingToken();
+      cy.visit("/");
+      cy.clerkLoaded();
+      cy.clerkSignIn({
+        strategy: "email_code",
+        identifier: Cypress.env("TEST_USER_EMAIL"),
+      });
+      cy.visit("/dashboard", { timeout: 30000 });
+      cy.resetTestUser();
+    },
+    {
+      // No validation needed - always recreate fresh sessions
+      cacheAcrossSpecs: false,
+    },
+  );
+});
+
+/**
+ * Shared onboarding helper - completes onboarding if user is redirected there
+ * Replaces duplicate ensureUserOnboarded functions across test files
+ * Also sets the subscription tier stored by signInWithSession()
+ */
+Cypress.Commands.add("ensureOnboarded", (targetPage: string = "/dashboard") => {
+  cy.url({ timeout: 15000 }).then((url) => {
+    if (url.includes("/onboarding")) {
+      cy.log("User needs onboarding - completing now");
+
+      // Complete profile step
+      cy.get('[data-testid="onboarding-firstName"]', { timeout: 10000 }).clear().type("E2E");
+      cy.get('[data-testid="onboarding-lastName"]').clear().type("TestUser");
+      cy.get('[data-testid="onboarding-next-button"]').click();
+      cy.contains("Profile updated!", { timeout: 10000 }).should("be.visible");
+
+      // Complete household step
+      cy.get('[data-testid="onboarding-householdName"]', { timeout: 10000 })
+        .clear()
+        .type(`Test Household ${Date.now()}`);
+      cy.get('[data-testid="onboarding-next-button"]').click();
+      cy.contains("Household created!", { timeout: 10000 }).should("be.visible");
+
+      // Complete goals step
+      cy.get('button[role="checkbox"]').first().click();
+      cy.get('[data-testid="onboarding-next-button"]').click();
+      cy.contains("Onboarding complete!", { timeout: 10000 }).should("be.visible");
+
+      // Navigate to target page
+      cy.visit(targetPage, { timeout: 30000 });
+    } else if (url.includes("/select-plan")) {
+      cy.log("User on select-plan - navigating to target page");
+      cy.visit(targetPage, { timeout: 30000 });
+    }
+    // If already on target page or dashboard, we're good
+  });
+
+  // Set subscription tier after navigating to target page
+  // This uses the tier stored by signInWithSession()
+  // Wait for page to be fully loaded with Convex client before setting tier
+  const tier = Cypress.env("CURRENT_TIER") || "heritage";
+  cy.log(`Setting subscription tier to: ${tier}`);
+
+  // Wait for Convex test helpers to be available (retries until they exist)
+  cy.window({ timeout: 30000 })
+    .should((win) => {
+      const helpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+        .__CONVEX_TEST_HELPERS__;
+      expect(helpers).to.exist;
+    })
+    .then((win) => {
+      const helpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+        .__CONVEX_TEST_HELPERS__;
+      if (helpers) {
+        return cy.wrap(helpers.setTestSubscriptionTier(tier), { timeout: 30000 });
+      }
+    });
+});
 
 /**
  * Check if element exists without failing the test
@@ -730,6 +886,3 @@ Cypress.Commands.add(
       }) as Cypress.Chainable<CleanupTestWisdomDataResult>;
   },
 );
-
-// Export to make TypeScript happy
-export {};
