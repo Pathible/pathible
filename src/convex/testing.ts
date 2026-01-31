@@ -177,7 +177,7 @@ export const resetTestUser = mutation({
     // Delete user suggestions
     const userSuggestions = await ctx.db
       .query("userSuggestions")
-      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .withIndex("by_user_and_status", (q) => q.eq("userId", profile._id))
       .collect();
 
     for (const suggestion of userSuggestions) {
@@ -256,7 +256,7 @@ export const resetTestUser = mutation({
       // Delete all family members
       const familyMembers = await ctx.db
         .query("familyMembers")
-        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .withIndex("by_household_and_status", (q) => q.eq("householdId", householdId))
         .collect();
 
       for (const member of familyMembers) {
@@ -267,7 +267,7 @@ export const resetTestUser = mutation({
       // Delete all family units
       const familyUnits = await ctx.db
         .query("familyUnits")
-        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .withIndex("by_household_and_orderIndex", (q) => q.eq("householdId", householdId))
         .collect();
 
       for (const unit of familyUnits) {
@@ -280,7 +280,7 @@ export const resetTestUser = mutation({
       // Delete wisdom entries
       const wisdomEntries = await ctx.db
         .query("wisdomEntries")
-        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .withIndex("by_household_and_category", (q) => q.eq("householdId", householdId))
         .collect();
 
       for (const entry of wisdomEntries) {
@@ -302,7 +302,7 @@ export const resetTestUser = mutation({
       // Delete core beliefs
       const coreBeliefs = await ctx.db
         .query("coreBeliefs")
-        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .withIndex("by_household_and_orderIndex", (q) => q.eq("householdId", householdId))
         .collect();
 
       for (const belief of coreBeliefs) {
@@ -326,7 +326,7 @@ export const resetTestUser = mutation({
       // Delete legacy plans
       const legacyPlans = await ctx.db
         .query("legacyPlans")
-        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .withIndex("by_household_and_user", (q) => q.eq("householdId", householdId))
         .collect();
 
       for (const plan of legacyPlans) {
@@ -390,7 +390,7 @@ export const resetTestUser = mutation({
       // Delete all memberships for this household (from other users too)
       const allMemberships = await ctx.db
         .query("householdMemberships")
-        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .withIndex("by_household_and_status", (q) => q.eq("householdId", householdId))
         .collect();
 
       for (const m of allMemberships) {
@@ -404,7 +404,7 @@ export const resetTestUser = mutation({
       // Delete all invitations for this household
       const householdInvitations = await ctx.db
         .query("householdInvitations")
-        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .withIndex("by_household_email_status", (q) => q.eq("householdId", householdId))
         .collect();
 
       for (const inv of householdInvitations) {
@@ -576,18 +576,19 @@ export const cleanupTestArticles = mutation({
         article.slug.includes("test-article"),
     );
 
-    let deletedCount = 0;
-    for (const article of testArticles) {
-      // Also clean up any read records for this article
-      const readRecords = await ctx.db
-        .query("userArticleReads")
-        .withIndex("by_article", (q) => q.eq("articleId", article._id))
-        .collect();
+    // Collect article IDs for batch cleanup of read records
+    const testArticleIds = new Set(testArticles.map((a) => a._id));
 
-      for (const record of readRecords) {
+    // Clean up read records for test articles (query all and filter since by_article index was removed)
+    const allReadRecords = await ctx.db.query("userArticleReads").collect();
+    for (const record of allReadRecords) {
+      if (testArticleIds.has(record.articleId)) {
         await ctx.db.delete(record._id);
       }
+    }
 
+    let deletedCount = 0;
+    for (const article of testArticles) {
       await ctx.db.delete(article._id);
       deletedCount++;
     }
@@ -639,18 +640,19 @@ export const adminCleanupTestArticles = mutation({
         article.slug.includes("test-article"),
     );
 
-    let deletedCount = 0;
-    for (const article of testArticles) {
-      // Also clean up any read records for this article
-      const readRecords = await ctx.db
-        .query("userArticleReads")
-        .withIndex("by_article", (q) => q.eq("articleId", article._id))
-        .collect();
+    // Collect article IDs for batch cleanup of read records
+    const testArticleIds = new Set(testArticles.map((a) => a._id));
 
-      for (const record of readRecords) {
+    // Clean up read records for test articles (query all and filter since by_article index was removed)
+    const allReadRecords = await ctx.db.query("userArticleReads").collect();
+    for (const record of allReadRecords) {
+      if (testArticleIds.has(record.articleId)) {
         await ctx.db.delete(record._id);
       }
+    }
 
+    let deletedCount = 0;
+    for (const article of testArticles) {
       await ctx.db.delete(article._id);
       deletedCount++;
     }

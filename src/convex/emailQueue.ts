@@ -10,9 +10,12 @@ import { internalAction, internalMutation, internalQuery } from "./_generated/se
  * Emails are scheduled 500ms apart (1000ms / 2 = 500ms per email).
  *
  * Flow:
- * 1. Emails are enqueued with staggered scheduledFor timestamps
- * 2. Cron job (every 30 seconds) processes ready emails
- * 3. Failed emails are retried with exponential backoff
+ * 1. Emails are enqueued and immediately scheduled for processing via ctx.scheduler
+ * 2. Each email is processed individually by sendSingleEmail action
+ * 3. Failed emails are automatically retried with exponential backoff
+ *
+ * This approach eliminates polling crons and only consumes resources when there
+ * are actual emails to send.
  */
 
 // ============================================================================
@@ -30,6 +33,7 @@ const BATCH_PROCESS_SIZE = 10; // Process 10 emails at a time
 
 /**
  * Enqueue a single email for sending
+ * Immediately schedules the email for processing via sendSingleEmail action
  */
 export const enqueueEmail = internalMutation({
   args: {
@@ -52,8 +56,9 @@ export const enqueueEmail = internalMutation({
   returns: v.id("emailQueue"),
   handler: async (ctx, args) => {
     const now = Date.now();
+    const scheduledFor = args.scheduledFor ?? now;
 
-    return await ctx.db.insert("emailQueue", {
+    const emailId = await ctx.db.insert("emailQueue", {
       to: args.to,
       subject: args.subject,
       htmlContent: args.htmlContent,
@@ -63,14 +68,22 @@ export const enqueueEmail = internalMutation({
       status: "queued",
       attempts: 0,
       maxAttempts: args.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
-      scheduledFor: args.scheduledFor ?? now,
+      scheduledFor,
     });
+
+    // Immediately schedule the email for processing
+    // If scheduledFor is in the future, delay accordingly
+    const delayMs = Math.max(0, scheduledFor - now);
+    await ctx.scheduler.runAfter(delayMs, internal.emailQueue.sendSingleEmail, { emailId });
+
+    return emailId;
   },
 });
 
 /**
  * Enqueue a batch of emails with staggered scheduling
  * Each email is scheduled 500ms after the previous one to respect rate limits
+ * Immediately schedules all emails for processing via sendSingleEmail actions
  */
 export const enqueueEmailBatch = internalMutation({
   args: {
@@ -104,6 +117,7 @@ export const enqueueEmailBatch = internalMutation({
     for (let i = 0; i < args.emails.length; i++) {
       const email = args.emails[i];
       const scheduledFor = now + i * RATE_LIMIT_DELAY_MS;
+      const delayMs = i * RATE_LIMIT_DELAY_MS;
 
       const emailId = await ctx.db.insert("emailQueue", {
         to: email.to,
@@ -119,6 +133,9 @@ export const enqueueEmailBatch = internalMutation({
       });
 
       emailIds.push(emailId);
+
+      // Schedule each email for processing with staggered delays
+      await ctx.scheduler.runAfter(delayMs, internal.emailQueue.sendSingleEmail, { emailId });
     }
 
     return {
@@ -188,6 +205,7 @@ export const markSent = internalMutation({
 
 /**
  * Mark email as failed
+ * If retryable, automatically schedules a retry with exponential backoff
  */
 export const markFailed = internalMutation({
   args: {
@@ -223,18 +241,117 @@ export const markFailed = internalMutation({
           });
         }
       }
+
+      // Check campaign completion after final failure
+      if (email.campaignId) {
+        await ctx.scheduler.runAfter(0, internal.emailQueue.checkCampaignCompletionAction, {
+          campaignId: email.campaignId,
+        });
+      }
     } else {
       // Schedule for retry with exponential backoff
-      const retryDelay = RETRY_DELAYS_MS[Math.min(newAttempts - 1, RETRY_DELAYS_MS.length - 1)];
+      const retryDelayMs = RETRY_DELAYS_MS[Math.min(newAttempts - 1, RETRY_DELAYS_MS.length - 1)];
 
       await ctx.db.patch(args.emailId, {
         status: "queued",
         attempts: newAttempts,
         errorMessage: args.errorMessage,
-        scheduledFor: Date.now() + retryDelay,
+        scheduledFor: Date.now() + retryDelayMs,
+      });
+
+      // Schedule the retry
+      await ctx.scheduler.runAfter(retryDelayMs, internal.emailQueue.sendSingleEmail, {
+        emailId: args.emailId,
       });
     }
 
+    return null;
+  },
+});
+
+// ============================================================================
+// EMAIL SENDING (IMMEDIATE PROCESSING)
+// ============================================================================
+
+/**
+ * Send a single email - called immediately after enqueue via scheduler
+ * This replaces the polling cron approach with immediate processing
+ */
+export const sendSingleEmail = internalAction({
+  args: { emailId: v.id("emailQueue") },
+  returns: v.null(),
+  handler: async (ctx, { emailId }): Promise<null> => {
+    // Fetch the email from queue
+    const email = await ctx.runQuery(internal.emailQueue.getEmailById, { emailId });
+
+    if (!email) {
+      // Email was deleted, nothing to do
+      return null;
+    }
+
+    // If not queued, it's already been processed (or is being processed)
+    if (email.status !== "queued") {
+      return null;
+    }
+
+    // Mark as processing
+    const acquired = await ctx.runMutation(internal.emailQueue.markProcessing, { emailId });
+    if (!acquired) {
+      // Another process grabbed this email
+      return null;
+    }
+
+    // Send via Resend
+    const { Resend } = await import("resend");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    try {
+      const response = await resend.emails.send({
+        from: "Pathible <noreply@app.pathible.com>",
+        replyTo: "support@pathible.com",
+        to: email.to,
+        subject: email.subject,
+        html: email.htmlContent,
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      await ctx.runMutation(internal.emailQueue.markSent, {
+        emailId,
+        resendId: response.data?.id,
+      });
+
+      // Check campaign completion if applicable
+      if (email.campaignId) {
+        await ctx.runMutation(internal.emailQueue.checkCampaignCompletion, {
+          campaignId: email.campaignId,
+        });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      console.error(`[Email Queue] Failed to send email ${emailId}: ${errorMessage}`);
+
+      // markFailed will schedule a retry if appropriate
+      await ctx.runMutation(internal.emailQueue.markFailed, {
+        emailId,
+        errorMessage,
+      });
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Helper action to check campaign completion (called from mutations via scheduler)
+ */
+export const checkCampaignCompletionAction = internalAction({
+  args: { campaignId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { campaignId }): Promise<null> => {
+    await ctx.runMutation(internal.emailQueue.checkCampaignCompletion, { campaignId });
     return null;
   },
 });
@@ -244,8 +361,46 @@ export const markFailed = internalMutation({
 // ============================================================================
 
 /**
+ * Get a single email by ID for processing
+ */
+export const getEmailById = internalQuery({
+  args: { emailId: v.id("emailQueue") },
+  returns: v.union(
+    v.object({
+      _id: v.id("emailQueue"),
+      to: v.string(),
+      subject: v.string(),
+      htmlContent: v.string(),
+      status: v.union(
+        v.literal("queued"),
+        v.literal("processing"),
+        v.literal("sent"),
+        v.literal("failed"),
+      ),
+      campaignId: v.optional(v.string()),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, { emailId }) => {
+    const email = await ctx.db.get(emailId);
+    if (!email) return null;
+
+    return {
+      _id: email._id,
+      to: email.to,
+      subject: email.subject,
+      htmlContent: email.htmlContent,
+      status: email.status,
+      campaignId: email.campaignId,
+    };
+  },
+});
+
+/**
  * Get emails ready for processing
  * Returns emails where status=queued AND scheduledFor <= now
+ *
+ * @deprecated This query was used by the polling cron. Kept for debugging/monitoring.
  */
 export const getReadyEmails = internalQuery({
   args: {
@@ -293,6 +448,8 @@ export const getReadyEmails = internalQuery({
 
 /**
  * Get failed emails that can be retried
+ *
+ * @deprecated This query was used by the polling cron. Kept for debugging/monitoring.
  */
 export const getRetryableEmails = internalQuery({
   args: {},
@@ -307,7 +464,7 @@ export const getRetryableEmails = internalQuery({
     // Get failed emails where attempts < maxAttempts
     const failedEmails = await ctx.db
       .query("emailQueue")
-      .withIndex("by_status", (q) => q.eq("status", "failed"))
+      .withIndex("by_status_scheduledFor", (q) => q.eq("status", "failed"))
       .collect();
 
     // Filter to only retryable ones
@@ -335,22 +492,22 @@ export const getQueueStats = internalQuery({
   handler: async (ctx) => {
     const queued = await ctx.db
       .query("emailQueue")
-      .withIndex("by_status", (q) => q.eq("status", "queued"))
+      .withIndex("by_status_scheduledFor", (q) => q.eq("status", "queued"))
       .collect();
 
     const processing = await ctx.db
       .query("emailQueue")
-      .withIndex("by_status", (q) => q.eq("status", "processing"))
+      .withIndex("by_status_scheduledFor", (q) => q.eq("status", "processing"))
       .collect();
 
     const sent = await ctx.db
       .query("emailQueue")
-      .withIndex("by_status", (q) => q.eq("status", "sent"))
+      .withIndex("by_status_scheduledFor", (q) => q.eq("status", "sent"))
       .collect();
 
     const failed = await ctx.db
       .query("emailQueue")
-      .withIndex("by_status", (q) => q.eq("status", "failed"))
+      .withIndex("by_status_scheduledFor", (q) => q.eq("status", "failed"))
       .collect();
 
     return {
@@ -471,11 +628,15 @@ export const checkCampaignCompletion = internalMutation({
 });
 
 // ============================================================================
-// QUEUE PROCESSING (CRON HANDLERS)
+// QUEUE PROCESSING (DEPRECATED - KEPT FOR REFERENCE)
 // ============================================================================
 
 /**
- * Process the email queue - called by cron every 30 seconds
+ * Process the email queue
+ *
+ * @deprecated This action was used by the polling cron. Email processing is now
+ * handled immediately via sendSingleEmail scheduled from enqueueEmail/enqueueEmailBatch.
+ * Kept for manual intervention if needed.
  */
 export const processEmailQueue = internalAction({
   args: {},
@@ -574,7 +735,11 @@ export const processEmailQueue = internalAction({
 });
 
 /**
- * Retry failed emails - called by cron every 5 minutes
+ * Retry failed emails
+ *
+ * @deprecated This action was used by the polling cron. Retries are now
+ * automatically scheduled by markFailed with exponential backoff.
+ * Kept for manual intervention if needed.
  */
 export const retryFailedEmails = internalAction({
   args: {},

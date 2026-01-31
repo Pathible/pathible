@@ -177,7 +177,7 @@ export const create = mutation({
     // Check limit
     const existingBeliefs = await ctx.db
       .query("coreBeliefs")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .withIndex("by_household_and_orderIndex", (q) => q.eq("householdId", args.householdId))
       .collect();
 
     if (existingBeliefs.length >= MAX_CORE_BELIEFS) {

@@ -203,7 +203,7 @@ export const listMembers = query({
 
     const memberships = await ctx.db
       .query("householdMemberships")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .withIndex("by_household_and_status", (q) => q.eq("householdId", args.householdId))
       .collect();
 
     // Batch fetch all profiles in parallel
@@ -280,7 +280,7 @@ export const listInvitations = query({
 
     const invitations = await ctx.db
       .query("householdInvitations")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .withIndex("by_household_email_status", (q) => q.eq("householdId", args.householdId))
       .collect();
 
     // Get inviter details for each invitation
@@ -706,7 +706,7 @@ export const removeMember = mutation({
     if (targetMembership.role === "owner") {
       const allMemberships = await ctx.db
         .query("householdMemberships")
-        .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+        .withIndex("by_household_and_status", (q) => q.eq("householdId", args.householdId))
         .collect();
 
       const ownerCount = allMemberships.filter(
@@ -792,7 +792,7 @@ export const updateMemberRole = mutation({
     ) {
       const allMemberships = await ctx.db
         .query("householdMemberships")
-        .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+        .withIndex("by_household_and_status", (q) => q.eq("householdId", args.householdId))
         .collect();
 
       const ownerCount = allMemberships.filter(

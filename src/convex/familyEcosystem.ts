@@ -652,7 +652,7 @@ export const createFamilyUnit = mutation({
     // Get current max orderIndex for this household
     const existingUnits = await ctx.db
       .query("familyUnits")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .withIndex("by_household_and_orderIndex", (q) => q.eq("householdId", args.householdId))
       .collect();
 
     const maxOrderIndex = existingUnits.reduce((max, unit) => Math.max(max, unit.orderIndex), -1);

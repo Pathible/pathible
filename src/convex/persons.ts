@@ -283,7 +283,7 @@ export const getCurrentUserAsFamilyMember = query({
 
     const member = await ctx.db
       .query("familyMembers")
-      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .withIndex("by_household_and_status", (q) => q.eq("householdId", args.householdId))
       .filter((q) => q.eq(q.field("profileId"), profile._id))
       .first();
 

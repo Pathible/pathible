@@ -16,25 +16,13 @@ import { internal } from "./_generated/api";
  * - "0 18 * * 0" - Sunday at 6 PM UTC
  * - "0 9 * * 1-5" - Weekdays at 9 AM UTC
  * - "0 0 1 * *" - First day of each month at midnight UTC
+ *
+ * Note: Email queue processing no longer uses polling crons.
+ * Emails are processed immediately via ctx.scheduler when enqueued.
+ * See src/convex/emailQueue.ts for details.
  */
 
 const crons = cronJobs();
-
-// ============================================================================
-// EMAIL QUEUE PROCESSING
-// ============================================================================
-
-/**
- * Process the email queue every 30 seconds
- * Picks up queued emails and sends them via Resend with rate limiting
- */
-crons.interval("process email queue", { seconds: 30 }, internal.emailQueue.processEmailQueue, {});
-
-/**
- * Check for failed emails that can be retried every 5 minutes
- * Failed emails with attempts < maxAttempts are rescheduled with exponential backoff
- */
-crons.interval("retry failed emails", { minutes: 5 }, internal.emailQueue.retryFailedEmails, {});
 
 // ============================================================================
 // AUTOMATED ENGAGEMENT EMAILS

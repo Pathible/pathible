@@ -104,7 +104,7 @@ export const listPublished = query({
     const MAX_LIMIT = 50;
     const limit = Math.min(args.limit ?? 20, MAX_LIMIT);
 
-    // Use composite index when category is provided, otherwise use simple status index
+    // Use composite index when category is provided, otherwise use status+visibility index
     const category = args.category;
     const articles = category
       ? await ctx.db
@@ -116,7 +116,7 @@ export const listPublished = query({
           .take(limit)
       : await ctx.db
           .query("educationalArticles")
-          .withIndex("by_status", (q) => q.eq("status", "published"))
+          .withIndex("by_status_and_visibility", (q) => q.eq("status", "published"))
           .order("desc")
           .take(limit);
 
