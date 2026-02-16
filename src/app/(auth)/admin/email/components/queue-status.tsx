@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { CheckCircle2, Clock, Info, Loader2, Mail, XCircle } from "lucide-react";
+import { Info, Loader2, Mail } from "lucide-react";
 import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,13 +14,7 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
 import { formatDateTimeCompact } from "@/lib/date-utils";
-
-const QUEUE_ICONS: Record<string, React.ReactNode> = {
-  queued: <Clock className="h-3 w-3" />,
-  processing: <Loader2 className="h-3 w-3 animate-spin" />,
-  sent: <CheckCircle2 className="h-3 w-3" />,
-  failed: <XCircle className="h-3 w-3" />,
-};
+import { QUEUE_STATUS_ICONS } from "./status-icons";
 
 export function QueueStatus() {
   const stats = useQuery(api.adminEmail.getQueueStats);
@@ -69,7 +63,7 @@ export function QueueStatus() {
                     <TableCell className="max-w-[200px] truncate">{email.subject}</TableCell>
                     <TableCell>
                       <AdminStatusBadge type="queueStatus" value={email.status} className="gap-1">
-                        {QUEUE_ICONS[email.status]}
+                        {QUEUE_STATUS_ICONS[email.status]}
                         {email.status.charAt(0).toUpperCase() + email.status.slice(1)}
                       </AdminStatusBadge>
                     </TableCell>

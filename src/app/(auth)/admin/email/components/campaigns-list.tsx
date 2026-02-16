@@ -1,7 +1,7 @@
 "use client";
 
 import { usePaginatedQuery } from "convex/react";
-import { AlertCircle, CheckCircle2, Clock, Loader2, Mail, RefreshCw, Send } from "lucide-react";
+import { Loader2, Mail, RefreshCw, Send } from "lucide-react";
 import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
 import { formatDateTime } from "@/lib/date-utils";
+import { CAMPAIGN_STATUS_ICONS } from "./status-icons";
 
 function formatCampaignType(type: string): string {
   switch (type) {
@@ -28,13 +29,6 @@ function formatCampaignType(type: string): string {
       return type;
   }
 }
-
-const CAMPAIGN_STATUS_ICONS: Record<string, React.ReactNode> = {
-  pending: <Clock className="h-3 w-3" />,
-  sending: <Loader2 className="h-3 w-3 animate-spin" />,
-  completed: <CheckCircle2 className="h-3 w-3" />,
-  failed: <AlertCircle className="h-3 w-3" />,
-};
 
 function getTypeIcon(type: string) {
   switch (type) {

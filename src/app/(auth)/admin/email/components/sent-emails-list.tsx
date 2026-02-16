@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
 import { formatDateTime } from "@/lib/date-utils";
+import { QUEUE_STATUS_ICONS } from "./status-icons";
 
 const RECIPIENT_TYPE_LABELS: Record<string, string> = {
   individual: "Individual",
@@ -114,6 +115,7 @@ export function SentEmailsList() {
                 </TableCell>
                 <TableCell>
                   <AdminStatusBadge type="emailStatus" value={email.status}>
+                    {QUEUE_STATUS_ICONS[email.status]}
                     {email.status.charAt(0).toUpperCase() +
                       email.status.slice(1)}
                   </AdminStatusBadge>
