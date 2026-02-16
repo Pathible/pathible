@@ -4,7 +4,7 @@
 
 ## The Gap
 
-CFR already promises legacy planning to 7,800+ investors through Stewardship Steps. But when a family asks *"How do I actually do this?"* — there's no tool to hand them.
+CFR already promises legacy planning to 7,800+ investors through Stewardship Steps. But when a family asks _"How do I actually do this?"_ — there's no tool to hand them.
 
 Pathible fills that gap.
 
@@ -29,12 +29,9 @@ Pathible is a production-ready platform that helps Christian families organize t
 ## Why CFR Should Care
 
 1. **Deliver on a promise you already make.** Legacy planning is a CFR service line. Pathible gives you the platform to deliver it at scale.
-
-2. **Deepen investor relationships.** Families who use Pathible engage with stewardship beyond investments — making CFR stickier and more meaningful.
-
+2. **Deepen investor relationships.** Families who use Pathible engage with stewardship beyond investments, making CFR stickier and more meaningful.
 3. **Differentiate from every other Christian financial ministry.** No one else offers this.
-
-4. **Built on shared values.** Pathible is rooted in Proverbs 13:22 — *"A good man leaves an inheritance to his children's children."* The platform includes faith-aligned content, wisdom categories for values and traditions, and a stewardship-first approach.
+4. **Built on shared values.** Pathible is rooted in Proverbs 13:22 — _"A good man leaves an inheritance to his children's children."_ The platform includes faith-aligned content, wisdom categories for values and traditions, and a stewardship-first approach.
 
 ---
 
@@ -42,14 +39,14 @@ Pathible is a production-ready platform that helps Christian families organize t
 
 **Zero risk. Zero cost. 90 days.**
 
-| Detail | |
-|--------|---|
-| **Families** | 25 CFR investor families |
-| **Duration** | 90 days |
-| **Cost to CFR** | $0 |
-| **What CFR provides** | Introductions to 25 families willing to try it |
-| **What Pathible provides** | Full platform access (Heritage tier), onboarding support, engagement reporting |
-| **Success metric** | Family engagement — are they uploading documents, writing wisdom entries, completing legal documents? |
+| Detail                     |                                                                                                       |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Families**               | 25 CFR investor families                                                                              |
+| **Duration**               | 90 days                                                                                               |
+| **Cost to CFR**            | $0                                                                                                    |
+| **What CFR provides**      | Introductions to 25 families willing to try it                                                        |
+| **What Pathible provides** | Full platform access (Heritage tier), onboarding support, engagement reporting                        |
+| **Success metric**         | Family engagement — are they uploading documents, writing wisdom entries, completing legal documents? |
 
 At the end of 90 days, we review the data together and decide what comes next.
 
@@ -64,5 +61,5 @@ At the end of 90 days, we review the data together and decide what comes next.
 
 ---
 
-**James Gibbs** | Founder, Pathible
-james@pathible.com | pathible.com
+**Jim Gibbs** | Founder, Pathible
+jim@pathible.com | pathible.com
