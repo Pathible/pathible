@@ -107,13 +107,14 @@ export async function getHasTierOverride(): Promise<boolean> {
 
     const subscription = await convexClient.query(api.auth.getEffectiveSubscription);
 
-    return subscription !== null && subscription.hasOverride;
+    return subscription?.hasOverride ?? false;
   } catch (error) {
     console.error("[Auth] Failed to check tier override:", error);
     return false;
   }
 }
- *
+
+/**
  * Returns false if:
  * - User is not authenticated
  * - Convex URL is not configured

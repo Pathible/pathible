@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Crimson_Text, Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
-import { CrispChat } from "@/components/crisp-chat";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ConvexClientProvider } from "./ConvexClientProvider";
@@ -111,7 +110,6 @@ export default function RootLayout({
             {children}
             <Toaster />
             <Analytics />
-            <CrispChat />
           </ConvexClientProvider>
         </ThemeProvider>
       </body>

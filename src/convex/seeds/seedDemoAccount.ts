@@ -488,7 +488,7 @@ export const cleanup = internalMutation({
       for (const membership of memberships) {
         // Reset the profile's onboarding status
         const profile = await ctx.db.get(membership.userId);
-        if (profile && profile.onboardingCompletedAt) {
+        if (profile?.onboardingCompletedAt) {
           await ctx.db.patch(membership.userId, {
             onboardingStatus: "not_started" as const,
             onboardingStep: undefined,
