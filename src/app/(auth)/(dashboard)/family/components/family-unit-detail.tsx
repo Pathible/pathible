@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { formatDateForInput } from "@/lib/date-utils";
 import { FEATURES } from "@/lib/feature-access";
 import { MemberCard } from "./member-card";
 import { INITIAL_FORM_STATE, MemberFormDialog, type MemberFormState } from "./member-form-dialog";
@@ -29,18 +30,10 @@ interface FamilyUnitDetailProps {
   unitId: string;
 }
 
-// Format timestamp to YYYY-MM-DD in local timezone (not UTC)
-// Using toISOString() would shift dates backward for US timezones
-function formatDateForInput(timestamp: number): string {
-  const date = new Date(timestamp);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-// Helper to build mutation args from form state
-// Converts empty strings to undefined for optional fields
+/**
+ * Helper to build mutation args from form state
+ * Converts empty strings to undefined for optional fields
+ */
 function buildMutationArgs(formState: MemberFormState) {
   // Helper to convert empty strings to undefined (for union types that include "")
   const toUndefinedIfEmpty = <T extends string>(val: T | ""): Exclude<T, ""> | undefined =>

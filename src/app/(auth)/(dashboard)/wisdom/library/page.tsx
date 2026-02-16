@@ -17,7 +17,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FeatureGate } from "@/components/feature-gate";
-import { StatCard } from "@/components/stat-card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { formatDate } from "@/lib/date-utils";
 import { FEATURES } from "@/lib/feature-access";
 
 const CATEGORIES = [
@@ -58,14 +58,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   advice: "Advice",
   traditions: "Traditions",
 };
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
@@ -103,9 +95,6 @@ export default function WisdomLibraryPage() {
       : "skip",
   );
 
-  // Get stats
-  const stats = useQuery(api.wisdom.getStats, householdId ? { householdId } : "skip");
-
   // Mutations
   const removeEntry = useMutation(api.wisdom.remove);
 
@@ -132,9 +121,6 @@ export default function WisdomLibraryPage() {
       </div>
     );
   }
-
-  const wisdomEntries = stats?.totalEntries ?? 0;
-  const sharedWithFamily = stats?.publishedEntries ?? 0;
 
   return (
     <FeatureGate feature={FEATURES.WISDOM_ENTRIES}>
@@ -165,32 +151,6 @@ export default function WisdomLibraryPage() {
               Add New
             </Link>
           </Button>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <StatCard
-            icon={BookOpen}
-            iconColor="text-primary"
-            value={wisdomEntries === 0 ? "\u2014" : wisdomEntries}
-            title="Wisdom Entries"
-            description={
-              wisdomEntries === 0
-                ? "Your first story is waiting to be written"
-                : "Stories and lessons you've shared"
-            }
-          />
-          <StatCard
-            icon={Users}
-            iconColor="text-secondary"
-            value={sharedWithFamily === 0 ? "\u2014" : sharedWithFamily}
-            title="Shared with Family"
-            description={
-              sharedWithFamily === 0
-                ? "Publish entries to share with loved ones"
-                : "Available to your loved ones"
-            }
-          />
         </div>
 
         {/* Filters */}

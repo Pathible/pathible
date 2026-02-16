@@ -36,6 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { formatDateLongWithTime } from "@/lib/date-utils";
 
 interface Document {
   _id: Id<"vaultDocuments">;
@@ -72,17 +73,6 @@ function formatFileSize(bytes: number): string {
   const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`;
-}
-
-function formatDate(timestamp: number): string {
-  const date = new Date(timestamp);
-  return date.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export function DocumentDetailModal({
@@ -290,13 +280,15 @@ export function DocumentDetailModal({
                   <Calendar className="h-4 w-4" />
                   <span>Upload date</span>
                 </div>
-                <p className="text-sm font-medium">{formatDate(document._creationTime)}</p>
+                <p className="text-sm font-medium">
+                  {formatDateLongWithTime(document._creationTime)}
+                </p>
               </div>
             </div>
 
             {document.updatedAt !== document._creationTime && (
               <div className="text-xs text-muted-foreground">
-                Last updated: {formatDate(document.updatedAt)}
+                Last updated: {formatDateLongWithTime(document.updatedAt)}
               </div>
             )}
           </div>
