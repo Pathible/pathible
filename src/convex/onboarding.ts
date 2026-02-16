@@ -225,6 +225,8 @@ export const createFirstHousehold = mutation({
         v.literal("founders"),
       ),
     ),
+    // Partner referral tracking - captured from ?ref= URL parameter
+    referralSource: v.optional(v.string()),
   },
   returns: v.id("households"),
   handler: async (ctx, args) => {
@@ -261,6 +263,7 @@ export const createFirstHousehold = mutation({
       storageUsedBytes: 0,
       memberCount: 0,
       familyUnitCount: 0,
+      referralSource: args.referralSource?.trim() || undefined,
       updatedAt: Date.now(),
     });
 
@@ -335,12 +338,14 @@ export const createFirstHousehold = mutation({
       step: 2,
       step_name: "household",
       subscription_tier: tier,
+      referral_source: args.referralSource || undefined,
     });
 
     // Analytics: Associate user with household group
     await identifyGroupAnalytics(ctx, user._id, "household", householdId, {
       name: args.name.trim(),
       subscription_tier: tier,
+      referral_source: args.referralSource || undefined,
     });
 
     return householdId;
