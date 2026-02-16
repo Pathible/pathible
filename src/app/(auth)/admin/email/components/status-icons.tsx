@@ -1,10 +1,4 @@
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Loader2,
-  XCircle,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
 
 export const QUEUE_STATUS_ICONS: Record<string, ReactNode> = {
