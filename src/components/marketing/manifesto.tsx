@@ -1,55 +1,76 @@
+import { Check, X } from "lucide-react";
 import { Card } from "../ui/card";
 
-export function Manifesto() {
+export function TheStakes() {
+  const without = [
+    "They search for months",
+    "They guess what you wanted",
+    "They argue over decisions",
+    "They grieve your disorganization\u2014on top of grieving you",
+  ];
+
+  const withPathible = [
+    "They find everything in one place",
+    "They hear your voice and your wishes",
+    "They know exactly what to do",
+    "They grieve you\u2014not your mess",
+  ];
+
   return (
-    <section className="relative py-16 sm:py-20 overflow-hidden">
-      {/* Decorative quotes */}
-      <div className="absolute top-12 left-1/4 text-pathible-forest/5 font-crimson text-[200px] leading-none pointer-events-none hidden lg:block">
-        "
-      </div>
+    <section className="relative py-20 sm:py-28 overflow-hidden">
+      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <p className="text-pathible-forest font-medium tracking-wide text-sm uppercase mb-4">
+            The choice is yours
+          </p>
+          <h2 className="font-crimson text-4xl sm:text-5xl lg:text-6xl leading-tight">
+            Two paths forward
+          </h2>
+        </div>
 
-      <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        <Card className="relative overflow-hidden rounded-[2.5rem] p-12 sm:p-16 lg:p-20 text-center bg-white border-0 shadow-2xl shadow-pathible-forest/10">
-          {/* Decorative gradient orbs */}
-          <div className="absolute -top-20 -left-20 w-40 h-40 rounded-full bg-linear-to-br from-pathible-sage/20 to-transparent blur-3xl" />
-          <div className="absolute -bottom-20 -right-20 w-40 h-40 rounded-full bg-linear-to-br from-pathible-gold/20 to-transparent blur-3xl" />
-
-          <div className="relative">
-            <p className="text-pathible-forest font-medium tracking-wide text-sm uppercase mb-6">
-              Our Belief
+        <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto">
+          {/* Without preparation */}
+          <Card className="rounded-3xl p-8 lg:p-10 bg-foreground/3 border-foreground/10">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-8">
+              Without preparation
             </p>
+            <ul className="space-y-5">
+              {without.map((item) => (
+                <li key={item} className="flex items-start gap-3">
+                  <div className="mt-1.5 shrink-0 w-5 h-5 rounded-full bg-destructive/10 flex items-center justify-center">
+                    <X className="h-3 w-3 text-destructive" />
+                  </div>
+                  <span className="text-muted-foreground leading-relaxed">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
 
-            <blockquote className="font-crimson text-2xl sm:text-3xl lg:text-4xl leading-relaxed text-foreground mb-8">
-              "A good man leaves an inheritance to his children's children."
-            </blockquote>
-            <p className="text-muted-foreground text-lg mb-10">Proverbs 13:22</p>
+          {/* With Pathible */}
+          <Card className="rounded-3xl p-8 lg:p-10 bg-linear-to-br from-pathible-forest to-pathible-green-hover border-0 shadow-lg shadow-pathible-forest/10">
+            <p className="text-sm font-medium text-pathible-sage uppercase tracking-wide mb-8">
+              With Pathible
+            </p>
+            <ul className="space-y-5">
+              {withPathible.map((item) => (
+                <li key={item} className="flex items-start gap-3">
+                  <div className="mt-1.5 shrink-0 w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                    <Check className="h-3 w-3 text-white" />
+                  </div>
+                  <span className="text-white/90 leading-relaxed">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
 
-            <div className="space-y-4 text-xl sm:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              <p>
-                We believe your{" "}
-                <span className="text-foreground font-medium">
-                  grandchildren deserve to know you
-                </span>
-                .
-              </p>
-              <p>
-                We believe your{" "}
-                <span className="text-foreground font-medium">stories are worth saving</span>.
-              </p>
-              <p>
-                We believe your{" "}
-                <span className="text-foreground font-medium">family shouldn't have to guess</span>.
-              </p>
-            </div>
-
-            <div className="mt-12 pt-8 border-t border-pathible-sage/20">
-              <p className="text-muted-foreground leading-relaxed max-w-xl mx-auto">
-                That's why we built Pathible. To help your family find what they need. And{" "}
-                <span className="text-foreground font-medium">hear your story</span>.
-              </p>
-            </div>
-          </div>
-        </Card>
+        {/* Scripture anchor */}
+        <div className="mt-16 sm:mt-20 text-center max-w-2xl mx-auto">
+          <blockquote className="font-crimson text-2xl sm:text-3xl lg:text-4xl text-foreground/80 leading-relaxed">
+            &ldquo;A good man leaves an inheritance to his children&apos;s children.&rdquo;
+          </blockquote>
+          <p className="mt-4 text-muted-foreground text-lg">Proverbs 13:22</p>
+        </div>
       </div>
     </section>
   );
