@@ -182,7 +182,12 @@ function IncompleteLegacyPlans() {
 function SubscriptionBreakdown({
   tiers,
 }: {
-  tiers: { foundations: number; heritage: number; legacy: number; founders: number };
+  tiers: {
+    foundations: number;
+    heritage: number;
+    legacy: number;
+    founders: number;
+  };
 }) {
   const total = tiers.foundations + tiers.heritage + tiers.legacy + tiers.founders;
 

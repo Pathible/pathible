@@ -5,8 +5,8 @@
  *
  * Tests for the main dashboard page including:
  * - Stats display (vault items, wisdom entries, legacy plan completion)
- * - Next step CTA
- * - Daily reflection section
+ * - Quick actions section
+ * - Contextual tips section
  *
  * Uses cy.session() for faster test execution via auth caching.
  *
@@ -147,7 +147,7 @@ describe("Dashboard Page", () => {
       });
     });
 
-    it("should display next step CTA section", () => {
+    it("should display quick actions section", () => {
       cy.visit("/dashboard", { failOnStatusCode: false });
 
       ensureOnDashboard().then((onDashboard) => {
@@ -156,12 +156,12 @@ describe("Dashboard Page", () => {
           return;
         }
 
-        cy.get('[data-tour="next-step-cta"]', { timeout: 10000 }).should("be.visible");
-        cy.contains("Next Step", { timeout: 10000 }).should("be.visible");
+        cy.get('[data-tour="quick-actions"]', { timeout: 10000 }).should("be.visible");
+        cy.contains("Get Started", { timeout: 10000 }).should("be.visible");
       });
     });
 
-    it("should display daily reflection section", () => {
+    it("should display tips section", () => {
       cy.visit("/dashboard", { failOnStatusCode: false });
 
       ensureOnDashboard().then((onDashboard) => {
@@ -170,8 +170,8 @@ describe("Dashboard Page", () => {
           return;
         }
 
-        cy.get('[data-tour="daily-reflection"]', { timeout: 10000 }).should("be.visible");
-        cy.contains("Daily Reflection", { timeout: 10000 }).should("be.visible");
+        cy.get('[data-tour="dashboard-tips"]', { timeout: 10000 }).should("be.visible");
+        cy.contains("Tips for You", { timeout: 10000 }).should("be.visible");
       });
     });
   });

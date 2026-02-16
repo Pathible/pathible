@@ -27,7 +27,7 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="relative py-24 sm:py-32 bg-linear-to-b from-pathible-sand to-card/30 overflow-hidden"
+      className="relative py-16 sm:py-20 bg-linear-to-b from-pathible-sand to-card/30 overflow-hidden"
     >
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-20">
@@ -58,8 +58,8 @@ export function HowItWorks() {
                         {s.number}
                       </span>
                     </div>
-                    {/* Pulse effect */}
-                    <div className="absolute inset-0 w-20 h-20 rounded-full bg-pathible-forest/10 animate-pulse" />
+                    {/* Subtle ring */}
+                    <div className="absolute inset-0 w-20 h-20 rounded-full bg-pathible-forest/5" />
                   </div>
 
                   <h3 className="font-crimson text-2xl lg:text-3xl mb-4">{s.title}</h3>

@@ -15,7 +15,7 @@ export function HeroSection() {
         <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.015]" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 sm:py-36 lg:py-44">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36">
         <div className="max-w-4xl mx-auto text-center">
           {/* THE hero tagline - the single dominant visual element */}
           <h1 className="font-crimson text-5xl sm:text-6xl lg:text-7xl leading-[1.1] tracking-tight text-foreground animate-fade-in-up animation-delay-100">
@@ -35,9 +35,9 @@ export function HeroSection() {
             </span>
           </h1>
 
-          {/* Supporting subtext - PEACE soundbites as gentle reinforcement */}
-          <p className="mt-8 text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto animate-fade-in-up animation-delay-200">
-            We have!
+          {/* Supporting subtext */}
+          <p className="mt-8 text-xl sm:text-2xl text-foreground/80 leading-relaxed max-w-2xl mx-auto animate-fade-in-up animation-delay-200 font-crimson">
+            We have. And we built something so yours won&apos;t have to.
           </p>
 
           <div className="mt-12 flex gap-4 flex-wrap justify-center animate-fade-in-up animation-delay-300">

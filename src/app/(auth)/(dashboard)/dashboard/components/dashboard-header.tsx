@@ -42,7 +42,7 @@ export function DashboardHeader({ familyName, userName }: DashboardHeaderProps) 
               data-testid="user-menu-trigger"
             >
               <div
-                className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-medium text-sm"
+                className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-foreground font-medium text-sm"
                 data-testid="user-avatar"
               >
                 {userName

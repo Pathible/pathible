@@ -36,36 +36,36 @@ describe("Wisdom Hub - E2E Test Suite", () => {
       cy.signInWithSession("heritage");
       cy.visit("/wisdom", { timeout: 30000 });
       cy.ensureOnboarded("/wisdom");
-      cy.contains("Wisdom & Stories", { timeout: 15000 }).should("be.visible");
+      cy.get('[data-testid="wisdom-hub-heading"]', { timeout: 15000 }).should("be.visible");
     });
 
-    it("should display wisdom hub main page with navigation cards", () => {
-      // Verify navigation cards are visible
-      cy.contains("Share Your Wisdom").should("be.visible");
-      cy.contains("Your Wisdom Library").should("be.visible");
+    it("should display wisdom hub main page with key sections", () => {
+      // Verify key sections are visible
+      cy.contains("Write Something Today").should("be.visible");
+      cy.contains("Your Stories").should("be.visible");
       cy.contains("Core Beliefs").should("be.visible");
     });
 
     it("should display stats cards", () => {
       // Verify stats cards are visible
-      cy.contains("Your Wisdom Entries").should("be.visible");
+      cy.contains("Stories Preserved").should("be.visible");
       cy.contains("Shared with Family").should("be.visible");
     });
 
     it("should navigate to create entry page", () => {
-      cy.contains("Share Your Wisdom").click();
+      cy.contains("Start writing").click();
       cy.url().should("include", "/wisdom/create-entry");
       cy.contains("What would you like to share today?").should("be.visible");
     });
 
     it("should navigate to wisdom library", () => {
-      cy.contains("Your Wisdom Library").click();
+      cy.visit("/wisdom/library", { timeout: 30000 });
       cy.url().should("include", "/wisdom/library");
       cy.contains("Wisdom Library").should("be.visible");
     });
 
     it("should navigate to core beliefs", () => {
-      cy.contains("Core Beliefs").click();
+      cy.get('[data-tour="wisdom-core-beliefs"]').find("a").first().click();
       cy.url().should("include", "/wisdom/core-beliefs");
     });
   });

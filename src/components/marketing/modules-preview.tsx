@@ -42,20 +42,20 @@ export function ModulesPreview() {
   ];
 
   return (
-    <section className="relative py-24 sm:py-32 bg-linear-to-b from-card/30 to-pathible-sand overflow-hidden">
+    <section className="relative py-16 sm:py-20 bg-linear-to-b from-card/30 to-pathible-sand overflow-hidden">
       {/* Background texture */}
       <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.02] pointer-events-none" />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-20">
           <p className="text-pathible-forest font-medium tracking-wide text-sm uppercase mb-4">
-            What you can do
+            Four ways to protect your family
           </p>
           <h2 className="font-crimson text-4xl sm:text-5xl lg:text-6xl mb-6 leading-tight">
-            Everything in one place
+            Files. Finances. Stories. Plans.
           </h2>
           <p className="text-xl text-muted-foreground leading-relaxed">
-            No more scattered files, forgotten passwords, or wondering where things are.
+            Everything in one place. No more scattered files or wondering where things are.
           </p>
         </div>
 

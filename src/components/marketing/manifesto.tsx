@@ -2,7 +2,7 @@ import { Card } from "../ui/card";
 
 export function Manifesto() {
   return (
-    <section className="relative py-24 sm:py-32 overflow-hidden">
+    <section className="relative py-16 sm:py-20 overflow-hidden">
       {/* Decorative quotes */}
       <div className="absolute top-12 left-1/4 text-pathible-forest/5 font-crimson text-[200px] leading-none pointer-events-none hidden lg:block">
         "

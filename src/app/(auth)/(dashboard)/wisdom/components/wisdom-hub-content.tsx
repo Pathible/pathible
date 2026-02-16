@@ -2,87 +2,25 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { ArrowRight, BookMarked, BookOpen, Heart, Loader2, Share2 } from "lucide-react";
+import { ArrowRight, BookOpen, Heart, Lightbulb, Loader2, PenLine, Users } from "lucide-react";
 import Link from "next/link";
-import { ComingSoonBadge } from "@/components/coming-soon";
+import { StatCard } from "@/components/stat-card";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
-
-interface NavCardProps {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  disabled?: boolean;
-  comingSoon?: boolean;
-}
-
-function NavCard({ href, icon, title, description, disabled, comingSoon }: NavCardProps) {
-  const content = (
-    <Card
-      className={`h-full transition-all ${
-        disabled
-          ? "opacity-60 cursor-not-allowed"
-          : "hover:shadow-md hover:border-primary/30 cursor-pointer"
-      }`}
-    >
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">{icon}</div>
-            <div>
-              <h3 className="font-semibold text-lg flex items-center gap-2">
-                {title}
-                {comingSoon && <ComingSoonBadge size="sm" />}
-              </h3>
-              <p className="text-muted-foreground text-sm mt-1">{description}</p>
-            </div>
-          </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground" />
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  if (disabled) {
-    return <div className="block">{content}</div>;
-  }
-
-  return (
-    <Link href={href} className="block">
-      {content}
-    </Link>
-  );
-}
-
-interface StatCardProps {
-  title: string;
-  value: number;
-}
-
-function StatCard({ title, value }: StatCardProps) {
-  return (
-    <Card>
-      <CardContent className="p-6">
-        <p className="text-muted-foreground text-sm">{title}</p>
-        <p className="text-3xl font-bold mt-1">{value}</p>
-      </CardContent>
-    </Card>
-  );
-}
+import { QuickActionCard } from "../../dashboard/components/quick-action-card";
+import { TipCard } from "../../dashboard/components/tip-card";
 
 export function WisdomHubContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
 
-  // Get user's households
   const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
-
   const householdId = households?.[0]?._id;
 
-  // Get wisdom stats
   const wisdomStats = useQuery(api.wisdom.getStats, householdId ? { householdId } : "skip");
+  const recentEntries = useQuery(api.wisdom.list, householdId ? { householdId } : "skip");
+  const coreBeliefsData = useQuery(api.coreBeliefs.list, householdId ? { householdId } : "skip");
 
-  // Loading state
   if (!isUserLoaded || households === undefined) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -91,7 +29,6 @@ export function WisdomHubContent() {
     );
   }
 
-  // No household state
   if (!householdId) {
     return (
       <div className="text-center py-12">
@@ -107,66 +44,182 @@ export function WisdomHubContent() {
     sharedWithFamily: wisdomStats?.publishedEntries ?? 0,
   };
 
+  const entries = recentEntries ?? [];
+  const previewEntries = entries.slice(0, 3);
+  const beliefs = coreBeliefsData?.beliefs ?? [];
+  const previewBeliefs = beliefs.slice(0, 3);
+
   return (
     <>
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3">
+      {/* Header - matches vault, financial, family, legacy pattern */}
+      <div className="mb-8" data-testid="wisdom-hub-heading">
+        <div className="flex items-center gap-3 mb-2">
           <div className="p-2 rounded-lg bg-primary/10">
             <BookOpen className="h-8 w-8 text-primary" />
           </div>
           <h1 className="text-4xl font-bold">Wisdom & Stories</h1>
         </div>
-        <p className="text-muted-foreground text-lg max-w-2xl">
-          Pass down your faith, not just your finances. This is where your heart lives on.
+        <p className="text-muted-foreground text-lg">
+          Your grandchildren deserve to know you. Pass down your faith, your stories, and the
+          lessons that shaped who you are.
         </p>
       </div>
 
-      {/* Navigation Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div data-tour="wisdom-create-entry">
-          <NavCard
-            href="/wisdom/create-entry"
-            icon={<BookOpen className="h-5 w-5" />}
-            title="Share Your Wisdom"
-            description="Share a piece of your heart that will outlast you"
+      {/* Journey Progress - top position so users see where they stand */}
+      <div className="mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <QuickActionCard
+            title="Write Something Today"
+            description="A story, a lesson, a piece of advice - whatever is on your heart."
+            route="/wisdom/create-entry"
+            icon={PenLine}
+            ctaLabel="Start writing"
           />
-        </div>
-
-        <div data-tour="wisdom-library">
-          <NavCard
+          <StatCard
+            icon={BookOpen}
+            iconColor="text-primary"
+            value={stats.wisdomEntries === 0 ? "\u2014" : stats.wisdomEntries}
+            title="Stories Preserved"
+            description={
+              stats.wisdomEntries === 0
+                ? "Your first story is waiting to be written"
+                : "Stories and lessons you've shared"
+            }
             href="/wisdom/library"
-            icon={<BookMarked className="h-5 w-5" />}
-            title="Your Wisdom Library"
-            description="Everything you've written for the ones you love"
+          />
+          <StatCard
+            icon={Users}
+            iconColor="text-secondary"
+            value={stats.sharedWithFamily === 0 ? "\u2014" : stats.sharedWithFamily}
+            title="Shared with Family"
+            description={
+              stats.sharedWithFamily === 0
+                ? "Publish entries to share with loved ones"
+                : "Available to your loved ones"
+            }
+            href="/wisdom/library"
           />
         </div>
+      </div>
 
-        <div data-tour="wisdom-core-beliefs">
-          <NavCard
-            href="/wisdom/core-beliefs"
-            icon={<Heart className="h-5 w-5" />}
-            title="Core Beliefs"
-            description="The truths you've built your life on, written down for generations"
-          />
+      {/* Your Stories section */}
+      <div className="mb-8" data-tour="wisdom-library">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Your Stories</h2>
+          {entries.length > 0 && (
+            <Link
+              href="/wisdom/library"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline font-medium"
+            >
+              View all
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          )}
         </div>
 
-        {/* Coming Soon - Shared Wisdom Pages */}
-        <NavCard
-          href="#"
-          icon={<Share2 className="h-5 w-5" />}
-          title="Shared Wisdom Pages"
-          description="Create beautiful, shareable pages of your wisdom for family and friends"
-          disabled
-          comingSoon
+        {recentEntries === undefined ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="h-32">
+                <CardContent className="p-4">
+                  <div className="h-4 w-3/4 bg-muted animate-pulse rounded mb-3" />
+                  <div className="h-3 w-full bg-muted animate-pulse rounded mb-2" />
+                  <div className="h-3 w-2/3 bg-muted animate-pulse rounded" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : entries.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="p-8 text-center">
+              <BookOpen className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="font-medium mb-1">Your family is waiting to hear from you</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                The stories only you can tell &mdash; start with one.
+              </p>
+              <Button asChild>
+                <Link href="/wisdom/create-entry">Write Your First Story</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {previewEntries.map((entry) => (
+              <Link key={entry._id} href={`/wisdom/library/${entry._id}`} className="block">
+                <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-1 line-clamp-1">{entry.title}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-3">{entry.content}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Core Beliefs section */}
+      <div className="mb-8" data-tour="wisdom-core-beliefs">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Core Beliefs</h2>
+          {beliefs.length > 0 && (
+            <Link
+              href="/wisdom/core-beliefs"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline font-medium"
+            >
+              View all
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          )}
+        </div>
+
+        {coreBeliefsData === undefined ? (
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="h-4 w-2/3 bg-muted animate-pulse rounded" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : beliefs.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="p-8 text-center">
+              <Heart className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="font-medium mb-1">What do you stand for?</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                The convictions that shaped your life, written down for generations.
+              </p>
+              <Button asChild>
+                <Link href="/wisdom/core-beliefs">Define Your First Belief</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {previewBeliefs.map((belief) => (
+              <Link key={belief._id} href="/wisdom/core-beliefs" className="block">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-4">
+                    <p className="font-medium">{belief.statement}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Contextual tip - only when no entries */}
+      {stats.wisdomEntries === 0 && (
+        <TipCard
+          icon={Lightbulb}
+          text="Start with something simple. What's one piece of advice you'd want your grandchildren to know?"
+          route="/wisdom/create-entry"
+          linkText="Write it now"
         />
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StatCard title="Your Wisdom Entries" value={stats.wisdomEntries} />
-        <StatCard title="Shared with Family" value={stats.sharedWithFamily} />
-      </div>
+      )}
     </>
   );
 }

@@ -60,7 +60,7 @@ export function FamilyUnitCard({ unit, onClick }: FamilyUnitCardProps) {
             {unit.memberPreview.map((member) => (
               <div key={member._id} className="flex flex-col items-center">
                 <Avatar className="h-12 w-12 mb-1">
-                  <AvatarFallback className="bg-[#6B7B5C] text-white text-sm font-medium">
+                  <AvatarFallback className="bg-muted text-foreground text-sm font-medium">
                     {getInitials(member.firstName, member.lastName)}
                   </AvatarFallback>
                 </Avatar>

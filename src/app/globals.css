@@ -92,8 +92,8 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 135 17% 56%; /* Sage green borders */
-  --input: 135 17% 56%;
+  --border: 30 6% 83%; /* Warm neutral gray */
+  --input: 30 6% 83%;
   --ring: 46 65% 52%; /* Gold focus ring */
 
   --radius: 0.5rem;
@@ -122,7 +122,7 @@
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 36 33% 95%;
   --sidebar-accent-foreground: 0 0% 17%;
-  --sidebar-border: 135 17% 56%;
+  --sidebar-border: 30 6% 83%;
   --sidebar-ring: 46 65% 52%;
 }
 

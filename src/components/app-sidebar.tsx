@@ -16,7 +16,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -152,9 +151,6 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r bg-sidebar border-border">
       <SidebarContent className="gap-0">
         <SidebarGroup className="py-4">
-          <SidebarGroupLabel className="px-2 text-xs font-medium text-muted-foreground mb-2">
-            Navigation
-          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
               {visibleNavItems.map((item) => {

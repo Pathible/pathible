@@ -2,23 +2,13 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import {
-  AlertCircle,
-  CheckCircle2,
-  FileText,
-  Heart,
-  LayoutTemplate,
-  Loader2,
-  ScrollText,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, Heart, Loader2, ScrollText } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ComingSoonCard } from "@/components/coming-soon";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
-import { FEATURES } from "@/lib/feature-access";
 import { LegacySummary } from "./legacy-summary";
 import { LegacyWizard } from "./legacy-wizard";
 import { LegalDocumentsSection } from "./legal-documents-section";
@@ -166,7 +156,8 @@ export function LegacyContent() {
             <h1 className="text-4xl font-bold">Legacy Planning</h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Give your family clarity, not confusion. A simple way to put your intentions in writing.
+            Give your family clarity, not confusion. So they never have to guess what you would have
+            wanted.
           </p>
         </div>
       </div>
@@ -209,21 +200,11 @@ export function LegacyContent() {
               stats={stats}
             />
           ) : (
-            <>
-              <LegacyWizard
-                householdId={householdId}
-                legacyPlan={legacyPlan}
-                onCreatePlan={() => createPlan({ householdId })}
-              />
-
-              {/* Coming Soon Features */}
-              <ComingSoonCard
-                feature={FEATURES.LEGACY_STORY_TEMPLATES}
-                title="Story Templates"
-                description="Pre-written templates to help you capture life stories, values, and memories for future generations."
-                icon={<LayoutTemplate className="h-5 w-5" />}
-              />
-            </>
+            <LegacyWizard
+              householdId={householdId}
+              legacyPlan={legacyPlan}
+              onCreatePlan={() => createPlan({ householdId })}
+            />
           )}
         </TabsContent>
 

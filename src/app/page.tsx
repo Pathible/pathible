@@ -5,7 +5,6 @@ import { HeroSection } from "@/components/marketing/hero";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { Manifesto } from "@/components/marketing/manifesto";
 import { ModulesPreview } from "@/components/marketing/modules-preview";
-import { ValuePillars } from "@/components/marketing/value-pillars";
 import { WhyPathible } from "@/components/marketing/whypathible";
 import { PublicPageLayout } from "@/components/PublicPageLayout";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -26,7 +25,6 @@ export default function Index() {
 
       <HeroSection />
       <WhyPathible />
-      <ValuePillars />
       <HowItWorks />
       <ForWhoSection />
       <ModulesPreview />

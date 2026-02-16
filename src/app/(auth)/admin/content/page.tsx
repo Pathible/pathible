@@ -1,7 +1,18 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { Archive, Eye, FileText, Globe, Loader2, Lock, Plus, Send, Trash2 } from "lucide-react";
+import {
+  Archive,
+  Eye,
+  FileText,
+  Globe,
+  Loader2,
+  Lock,
+  MoreHorizontal,
+  Plus,
+  Send,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -19,6 +30,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -322,58 +340,49 @@ export default function ContentManagerPage() {
                               </Link>
                             </Button>
                           )}
-                          {article.status === "draft" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handlePublish(article._id)}
-                              title="Publish article"
-                            >
-                              <Send className="h-4 w-4 text-muted-foreground hover:text-green-600" />
-                            </Button>
-                          )}
-                          {article.status === "published" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleArchive(article._id)}
-                              title="Archive article"
-                            >
-                              <Archive className="h-4 w-4 text-muted-foreground hover:text-amber-600" />
-                            </Button>
-                          )}
-                          {article.visibility === "subscribers" ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleMakePublic(article._id)}
-                              title="Make public"
-                            >
-                              <Globe className="h-4 w-4 text-muted-foreground hover:text-blue-600" />
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleMakeSubscribers(article._id)}
-                              title="Make subscribers only"
-                            >
-                              <Lock className="h-4 w-4 text-muted-foreground hover:text-amber-600" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleDeleteClick(article._id, article.title)}
-                            title="Delete article"
-                          >
-                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {article.status === "draft" && (
+                                <DropdownMenuItem onClick={() => handlePublish(article._id)}>
+                                  <Send className="mr-2 h-4 w-4" />
+                                  Publish
+                                </DropdownMenuItem>
+                              )}
+                              {article.status === "published" && (
+                                <DropdownMenuItem onClick={() => handleArchive(article._id)}>
+                                  <Archive className="mr-2 h-4 w-4" />
+                                  Archive
+                                </DropdownMenuItem>
+                              )}
+                              {article.visibility === "subscribers" ? (
+                                <DropdownMenuItem onClick={() => handleMakePublic(article._id)}>
+                                  <Globe className="mr-2 h-4 w-4" />
+                                  Make Public
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => handleMakeSubscribers(article._id)}
+                                >
+                                  <Lock className="mr-2 h-4 w-4" />
+                                  Subscribers Only
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => handleDeleteClick(article._id, article.title)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>

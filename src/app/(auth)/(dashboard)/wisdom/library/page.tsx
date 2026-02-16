@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FeatureGate } from "@/components/feature-gate";
+import { StatCard } from "@/components/stat-card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -132,9 +133,8 @@ export default function WisdomLibraryPage() {
     );
   }
 
-  const totalEntries = stats?.totalEntries ?? 0;
   const wisdomEntries = stats?.totalEntries ?? 0;
-  const lettersCount = 0; // Letters deferred to post-MVP
+  const sharedWithFamily = stats?.publishedEntries ?? 0;
 
   return (
     <FeatureGate feature={FEATURES.WISDOM_ENTRIES}>
@@ -168,25 +168,29 @@ export default function WisdomLibraryPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-muted-foreground text-sm">Total Entries</p>
-              <p className="text-2xl font-bold">{totalEntries}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-muted-foreground text-sm">Wisdom Entries</p>
-              <p className="text-2xl font-bold">{wisdomEntries}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-muted-foreground text-sm">Letters</p>
-              <p className="text-2xl font-bold">{lettersCount}</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <StatCard
+            icon={BookOpen}
+            iconColor="text-primary"
+            value={wisdomEntries === 0 ? "\u2014" : wisdomEntries}
+            title="Wisdom Entries"
+            description={
+              wisdomEntries === 0
+                ? "Your first story is waiting to be written"
+                : "Stories and lessons you've shared"
+            }
+          />
+          <StatCard
+            icon={Users}
+            iconColor="text-secondary"
+            value={sharedWithFamily === 0 ? "\u2014" : sharedWithFamily}
+            title="Shared with Family"
+            description={
+              sharedWithFamily === 0
+                ? "Publish entries to share with loved ones"
+                : "Available to your loved ones"
+            }
+          />
         </div>
 
         {/* Filters */}
@@ -227,12 +231,14 @@ export default function WisdomLibraryPage() {
           <Card>
             <CardContent className="p-12 text-center">
               <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Your library is waiting</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Your family is waiting to hear from you
+              </h3>
               <p className="text-muted-foreground mb-4">
-                Start sharing the lessons and stories that matter most.
+                The stories only you can tell, start with one, it doesn&apos;t have to be perfect.
               </p>
               <Button asChild>
-                <Link href="/wisdom/create-entry">Create Your First Entry</Link>
+                <Link href="/wisdom/create-entry">Write Your First Story</Link>
               </Button>
             </CardContent>
           </Card>

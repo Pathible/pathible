@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 
 export function CTASection() {
   return (
-    <section className="relative py-24 sm:py-32 overflow-hidden">
+    <section className="relative py-16 sm:py-20 overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-linear-to-br from-pathible-forest via-pathible-green-hover to-pathible-forest" />
 

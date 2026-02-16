@@ -5,7 +5,6 @@ import { useMutation, useQuery } from "convex/react";
 import {
   CheckCircle2,
   Download,
-  FileText,
   Heart,
   Loader2,
   MapPin,
@@ -13,10 +12,8 @@ import {
   Pencil,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
@@ -223,40 +220,6 @@ export function LegacySummary({
           legacyPlanId={legacyPlan._id}
           contacts={keyContacts || []}
         />
-
-        {/* Document Access Map */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Document Access Map
-            </CardTitle>
-            <CardDescription>Quick links to the documents that matter most</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Link
-              href="/vault"
-              className="w-full flex items-center justify-between p-3 border border-border rounded-lg hover:bg-accent transition-colors"
-            >
-              <span className="text-sm font-medium">Will & Testament</span>
-              <Badge variant="secondary">Vault</Badge>
-            </Link>
-            <Link
-              href="/vault"
-              className="w-full flex items-center justify-between p-3 border border-border rounded-lg hover:bg-accent transition-colors"
-            >
-              <span className="text-sm font-medium">Insurance Documents</span>
-              <Badge variant="secondary">Vault</Badge>
-            </Link>
-            <Link
-              href="/vault"
-              className="w-full flex items-center justify-between p-3 border border-border rounded-lg hover:bg-accent transition-colors"
-            >
-              <span className="text-sm font-medium">Financial Accounts</span>
-              <Badge variant="secondary">Vault</Badge>
-            </Link>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Action Buttons */}
