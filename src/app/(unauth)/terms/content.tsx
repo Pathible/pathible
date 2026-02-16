@@ -99,12 +99,14 @@ export function TermsOfServiceContent() {
 
         <SubSection title="1.3 Modifications to Terms">
           <Paragraph>
-            We reserve the right to modify, amend, or update these Terms at any time, in our sole
-            discretion, with or without notice. Any changes will be effective immediately upon
-            posting of the revised Terms on the Platform. The &ldquo;Effective Date&rdquo; at the
-            top of these Terms indicates when they were last updated. Your continued use of the
-            Service after any modifications constitutes your acceptance of the modified Terms. It is
-            your responsibility to review these Terms periodically.
+            We reserve the right to modify, amend, or update these Terms at any time. For material
+            changes, we will provide reasonable advance notice (at least 30 days) through one or
+            more of the methods described in Section 15.1. Non-material changes (such as
+            typographical corrections or clarifications) may be made at any time and will be
+            effective upon posting. The &ldquo;Effective Date&rdquo; at the top of these Terms
+            indicates when they were last updated. Your continued use of the Service after any
+            modifications constitutes your acceptance of the modified Terms. It is your
+            responsibility to review these Terms periodically.
           </Paragraph>
         </SubSection>
 
@@ -308,12 +310,12 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 4A: Subscription and Payment */}
+      {/* Section 5: Subscription and Payment */}
       <Section
         id="subscription-payment-and-billing-terms"
-        title="4A. Subscription, Payment, and Billing Terms"
+        title="5. Subscription, Payment, and Billing Terms"
       >
-        <SubSection title="4A.1 Subscription Plans">
+        <SubSection title="5.1 Subscription Plans">
           <Paragraph>
             Pathible offers subscription-based access to the Service. By subscribing to Pathible,
             you agree to the following terms:
@@ -327,28 +329,29 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="4A.2 Third-Party Payment Processing">
+        <SubSection title="5.2 Third-Party Payment Processing">
           <ImportantNotice variant="info">
-            <Strong>IMPORTANT:</Strong> All payment processing for Pathible is handled by Stripe,
-            Inc. (&ldquo;Stripe&rdquo;), a third-party payment processor.
+            <Strong>IMPORTANT:</Strong> Subscription management for Pathible is handled through
+            Clerk, Inc. (&ldquo;Clerk&rdquo;), our authentication and billing provider, which uses
+            Stripe, Inc. (&ldquo;Stripe&rdquo;) as the underlying payment processor.
             <ul className="mt-3 space-y-1 list-disc list-inside font-normal">
               <li>
-                By subscribing to Pathible, you agree to Stripe&apos;s Terms of Service and Privacy
-                Policy
+                By subscribing to Pathible, you agree to Clerk&apos;s Terms of Service and Privacy
+                Policy, as well as Stripe&apos;s Terms of Service and Privacy Policy
               </li>
               <li>
                 Pathible does NOT store your full credit card number, CVV, or other sensitive
                 payment card data
               </li>
               <li>
-                All payment card information is collected, stored, and processed directly by Stripe
-                in accordance with PCI DSS compliance standards
+                All payment card information is collected, stored, and processed by Stripe (via
+                Clerk) in accordance with PCI DSS compliance standards
               </li>
             </ul>
           </ImportantNotice>
         </SubSection>
 
-        <SubSection title="4A.3 Billing and Payment Terms">
+        <SubSection title="5.3 Billing and Payment Terms">
           <Paragraph>
             <Strong>Recurring Billing:</Strong>
           </Paragraph>
@@ -372,7 +375,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="4A.4 Automatic Renewal">
+        <SubSection title="5.4 Automatic Renewal">
           <ImportantNotice>
             <Strong>AUTO-RENEWAL NOTICE:</Strong> YOUR SUBSCRIPTION WILL AUTOMATICALLY RENEW AT THE
             END OF EACH BILLING PERIOD UNLESS YOU CANCEL BEFORE THE RENEWAL DATE.
@@ -388,7 +391,7 @@ export function TermsOfServiceContent() {
           </ImportantNotice>
         </SubSection>
 
-        <SubSection title="4A.5 Refund Policy">
+        <SubSection title="5.5 Refund Policy">
           <Paragraph>
             <Strong>General Policy:</Strong>
           </Paragraph>
@@ -421,7 +424,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="4A.6 Cancellation">
+        <SubSection title="5.6 Cancellation">
           <Paragraph>
             <Strong>How to Cancel:</Strong>
           </Paragraph>
@@ -454,9 +457,9 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 5: Intellectual Property */}
-      <Section id="intellectual-property-rights" title="5. Intellectual Property Rights">
-        <SubSection title="5.1 Pathible's Intellectual Property">
+      {/* Section 6: Intellectual Property */}
+      <Section id="intellectual-property-rights" title="6. Intellectual Property Rights">
+        <SubSection title="6.1 Pathible's Intellectual Property">
           <Paragraph>
             The Service and all of its contents, features, functionality, and underlying technology
             (including but not limited to all information, software, code, text, displays, graphics,
@@ -467,7 +470,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="5.2 Limited License to Use">
+        <SubSection title="6.2 Limited License to Use">
           <Paragraph>
             Subject to your compliance with these Terms, Pathible grants you a limited,
             non-exclusive, non-transferable, non-sublicensable, revocable license to access and use
@@ -484,7 +487,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="5.3 Trademarks">
+        <SubSection title="6.3 Trademarks">
           <Paragraph>
             Pathible&apos;s name, logo, and all related names, logos, product and service names,
             designs, and slogans are trademarks of Pathible or its affiliates or licensors. You must
@@ -494,7 +497,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="5.4 Feedback">
+        <SubSection title="6.4 Feedback">
           <Paragraph>
             If you provide us with any feedback, suggestions, ideas, or other information or
             materials regarding the Service (&ldquo;Feedback&rdquo;), you grant to Pathible a
@@ -507,12 +510,12 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 6: User-Generated Content */}
+      {/* Section 7: User-Generated Content */}
       <Section
         id="user-generated-content-and-uploaded-documents"
-        title="6. User-Generated Content and Uploaded Documents"
+        title="7. User-Generated Content and Uploaded Documents"
       >
-        <SubSection title="6.1 User Content">
+        <SubSection title="7.1 User Content">
           <Paragraph>
             You may have the opportunity to upload, submit, store, or otherwise make available
             documents, data, information, text, images, or other content through the Service
@@ -520,13 +523,13 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="6.2 License Grant to Pathible">
+        <SubSection title="7.2 License Grant to Pathible">
           <Paragraph>
             By uploading, submitting, or otherwise making available any User Content through the
-            Service, you grant to Pathible a worldwide, non-exclusive, royalty-free, fully paid-up,
-            sublicensable, and transferable license to use, reproduce, modify, adapt, publish,
-            translate, create derivative works from, distribute, perform, and display such User
-            Content solely for the purposes of:
+            Service, you grant to Pathible a worldwide, non-exclusive, royalty-free, fully paid-up
+            license to use, reproduce, modify, adapt, and create derivative works from such User
+            Content solely for the following purposes. This license is sublicensable only to service
+            providers necessary to operate the Service (as described in our Privacy Policy):
           </Paragraph>
           <BulletList
             items={[
@@ -545,7 +548,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="6.3 Representations and Warranties">
+        <SubSection title="7.3 Representations and Warranties">
           <Paragraph>You represent and warrant that:</Paragraph>
           <BulletList
             items={[
@@ -558,7 +561,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="6.4 Backup and Data Loss">
+        <SubSection title="7.4 Backup and Data Loss">
           <Paragraph>
             While we implement backup procedures, you are solely responsible for maintaining your
             own backup copies of your User Content. Pathible shall not be liable for any loss,
@@ -567,9 +570,9 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 7: Disclaimers */}
-      <Section id="disclaimers" title="7. DISCLAIMERS">
-        <SubSection title="7.1 NO PROFESSIONAL ADVICE">
+      {/* Section 8: Disclaimers */}
+      <Section id="disclaimers" title="8. DISCLAIMERS">
+        <SubSection title="8.1 NO PROFESSIONAL ADVICE">
           <ImportantNotice>
             <Strong>PATHIBLE IS NOT A PROFESSIONAL ADVISOR OF ANY KIND.</Strong> THE SERVICE DOES
             NOT PROVIDE, AND SHOULD NOT BE CONSTRUED AS PROVIDING, ANY PROFESSIONAL ADVICE INCLUDING
@@ -595,7 +598,7 @@ export function TermsOfServiceContent() {
           </ImportantNotice>
         </SubSection>
 
-        <SubSection title="7.2 NO PROFESSIONAL RELATIONSHIP">
+        <SubSection title="8.2 NO PROFESSIONAL RELATIONSHIP">
           <Paragraph>
             <Strong>NO PROFESSIONAL-CLIENT RELATIONSHIP IS CREATED</Strong> by your use of the
             Service. Your use of the Service does not create a financial advisor-client
@@ -604,7 +607,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="7.3 CONSULT QUALIFIED PROFESSIONALS">
+        <SubSection title="8.3 CONSULT QUALIFIED PROFESSIONALS">
           <Paragraph>
             <Strong>YOU MUST CONSULT WITH QUALIFIED LICENSED PROFESSIONALS</Strong> before making
             any financial, legal, tax, or other important decisions. The Service is intended to help
@@ -624,7 +627,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="7.4 NO GUARANTEE OF ACCURACY">
+        <SubSection title="8.4 NO GUARANTEE OF ACCURACY">
           <ImportantNotice>
             <Strong>
               WE MAKE NO REPRESENTATIONS OR WARRANTIES ABOUT THE ACCURACY, RELIABILITY,
@@ -642,7 +645,7 @@ export function TermsOfServiceContent() {
           </ImportantNotice>
         </SubSection>
 
-        <SubSection title="7.5 'AS IS' AND 'AS AVAILABLE'">
+        <SubSection title="8.5 'AS IS' AND 'AS AVAILABLE'">
           <Paragraph>
             <Strong>
               THE SERVICE IS PROVIDED ON AN &ldquo;AS IS&rdquo; AND &ldquo;AS AVAILABLE&rdquo; BASIS
@@ -661,7 +664,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="7.6 NO FIDUCIARY DUTY">
+        <SubSection title="8.6 NO FIDUCIARY DUTY">
           <Paragraph>
             <Strong>PATHIBLE DOES NOT OWE YOU ANY FIDUCIARY DUTY OR DUTY OF CARE.</Strong> We are
             not acting as your fiduciary, agent, or advisor. We have no obligation to act in your
@@ -670,7 +673,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="7.7 ASSUMPTION OF RISK">
+        <SubSection title="8.7 ASSUMPTION OF RISK">
           <Paragraph>
             <Strong>
               YOU ASSUME ALL RISK ASSOCIATED WITH YOUR USE OF THE SERVICE AND ANY DECISIONS YOU MAKE
@@ -682,9 +685,9 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 8: Limitation of Liability */}
-      <Section id="limitation-of-liability" title="8. Limitation of Liability">
-        <SubSection title="8.1 EXCLUSION OF DAMAGES">
+      {/* Section 9: Limitation of Liability */}
+      <Section id="limitation-of-liability" title="9. Limitation of Liability">
+        <SubSection title="9.1 EXCLUSION OF DAMAGES">
           <ImportantNotice>
             <Strong>
               TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL PATHIBLE, ITS
@@ -709,9 +712,9 @@ export function TermsOfServiceContent() {
           </ImportantNotice>
         </SubSection>
 
-        <SubSection title="8.2 Examples of Excluded Liability">
+        <SubSection title="9.2 Examples of Excluded Liability">
           <Paragraph>
-            Without limiting the generality of Section 8.1, Pathible shall not be liable for any
+            Without limiting the generality of Section 9.1, Pathible shall not be liable for any
             damages arising from or related to:
           </Paragraph>
           <BulletList
@@ -743,7 +746,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="8.3 CAP ON LIABILITY">
+        <SubSection title="9.3 CAP ON LIABILITY">
           <Paragraph>
             <Strong>
               TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, THE TOTAL LIABILITY OF PATHIBLE TO
@@ -760,9 +763,9 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 9: Indemnification */}
-      <Section id="indemnification" title="9. Indemnification">
-        <SubSection title="9.1 Your Indemnification Obligation">
+      {/* Section 10: Indemnification */}
+      <Section id="indemnification" title="10. Indemnification">
+        <SubSection title="10.1 Your Indemnification Obligation">
           <Paragraph>
             <Strong>
               YOU AGREE TO INDEMNIFY, DEFEND, AND HOLD HARMLESS PATHIBLE, ITS PARENT, SUBSIDIARIES,
@@ -787,10 +790,10 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 10: Arbitration */}
+      {/* Section 11: Arbitration */}
       <Section
         id="arbitration-and-dispute-resolution"
-        title="10. Arbitration and Dispute Resolution"
+        title="11. Arbitration and Dispute Resolution"
       >
         <ImportantNotice>
           <Strong>
@@ -799,16 +802,16 @@ export function TermsOfServiceContent() {
           </Strong>
         </ImportantNotice>
 
-        <SubSection title="10.1 Binding Arbitration">
+        <SubSection title="11.1 Binding Arbitration">
           <Paragraph>
             You and Pathible agree that any dispute, claim, or controversy arising out of or
             relating to these Terms, the Service, or your relationship with Pathible (collectively,
             &ldquo;Disputes&rdquo;) will be resolved by binding individual arbitration, except as
-            specified in Section 10.3 below.
+            specified in Section 11.3 below.
           </Paragraph>
         </SubSection>
 
-        <SubSection title="10.2 Arbitration Rules and Forum">
+        <SubSection title="11.2 Arbitration Rules and Forum">
           <Paragraph>
             The arbitration will be administered by the American Arbitration Association
             (&ldquo;AAA&rdquo;) under its Commercial Arbitration Rules and Supplementary Procedures
@@ -826,9 +829,9 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="10.3 Exceptions to Arbitration">
+        <SubSection title="11.3 Exceptions to Arbitration">
           <Paragraph>
-            Notwithstanding Section 10.1, the following Disputes may be brought in court:
+            Notwithstanding Section 11.1, the following Disputes may be brought in court:
           </Paragraph>
           <BulletList
             items={[
@@ -848,7 +851,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="10.4 Opt-Out Right">
+        <SubSection title="11.4 Opt-Out Right">
           <Paragraph>
             <Strong>YOU HAVE THE RIGHT TO OPT OUT OF BINDING ARBITRATION</Strong> within 30 days
             after you first accept these Terms by sending written notice of your decision to opt out
@@ -860,10 +863,21 @@ export function TermsOfServiceContent() {
             account, and a clear statement that you wish to opt out of arbitration.
           </Paragraph>
         </SubSection>
+
+        <SubSection title="11.5 EU/UK Users">
+          <Paragraph>
+            If you are a consumer residing in the European Economic Area, United Kingdom, or
+            Switzerland, the arbitration and class action waiver provisions in Sections 11 and 12
+            may not apply to you to the extent they are inconsistent with mandatory consumer
+            protection laws in your jurisdiction. Nothing in these Terms limits your right to bring
+            a claim before the courts of your country of residence or to file a complaint with your
+            local consumer protection authority or data protection supervisory authority.
+          </Paragraph>
+        </SubSection>
       </Section>
 
-      {/* Section 11: Class Action Waiver */}
-      <Section id="class-action-waiver" title="11. Class Action Waiver">
+      {/* Section 12: Class Action Waiver */}
+      <Section id="class-action-waiver" title="12. Class Action Waiver">
         <ImportantNotice>
           <Strong>
             YOU AND PATHIBLE AGREE THAT EACH PARTY MAY BRING DISPUTES AGAINST THE OTHER PARTY ONLY
@@ -877,7 +891,7 @@ export function TermsOfServiceContent() {
           </p>
         </ImportantNotice>
 
-        <SubSection title="11.1 No Class Actions in Court">
+        <SubSection title="12.1 No Class Actions in Court">
           <Paragraph>
             To the extent that arbitration is not required or if the arbitration agreement is found
             to be unenforceable, you and Pathible agree that any judicial proceeding must be brought
@@ -886,7 +900,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="11.2 Representative Actions">
+        <SubSection title="12.2 Representative Actions">
           <Paragraph>
             <Strong>
               YOU WAIVE ANY RIGHT TO PURSUE CLAIMS ON A REPRESENTATIVE OR PRIVATE ATTORNEY GENERAL
@@ -899,9 +913,9 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 12: Governing Law */}
-      <Section id="governing-law-and-jurisdiction" title="12. Governing Law and Jurisdiction">
-        <SubSection title="12.1 Governing Law">
+      {/* Section 13: Governing Law */}
+      <Section id="governing-law-and-jurisdiction" title="13. Governing Law and Jurisdiction">
+        <SubSection title="13.1 Governing Law">
           <Paragraph>
             These Terms and any Dispute arising out of or related to these Terms or the Service
             shall be governed by and construed in accordance with the laws of the State of Delaware,
@@ -909,7 +923,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="12.2 Waiver of Jury Trial">
+        <SubSection title="13.2 Waiver of Jury Trial">
           <Paragraph>
             <Strong>
               TO THE FULLEST EXTENT PERMITTED BY LAW, YOU AND PATHIBLE WAIVE ANY RIGHT TO A JURY
@@ -918,7 +932,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="12.3 International Users">
+        <SubSection title="13.3 International Users">
           <Paragraph>
             The Service is controlled and operated from the United States. If you access or use the
             Service from outside the United States, you do so at your own risk and are responsible
@@ -928,9 +942,9 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 13: Termination */}
-      <Section id="termination-rights" title="13. Termination Rights">
-        <SubSection title="13.1 Termination by You">
+      {/* Section 14: Termination */}
+      <Section id="termination-rights" title="14. Termination Rights">
+        <SubSection title="14.1 Termination by You">
           <Paragraph>
             You may terminate your account and stop using the Service at any time by:
           </Paragraph>
@@ -950,7 +964,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="13.2 Termination by Pathible">
+        <SubSection title="14.2 Termination by Pathible">
           <Paragraph>
             Pathible reserves the right to suspend or terminate your account and your access to the
             Service at any time, with or without cause, with or without notice, effective
@@ -970,7 +984,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="13.3 Effect of Termination">
+        <SubSection title="14.3 Effect of Termination">
           <Paragraph>Upon termination of your account for any reason:</Paragraph>
           <BulletList
             items={[
@@ -982,23 +996,25 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="13.4 No Refunds">
+        <SubSection title="14.4 Refunds Upon Termination">
           <Paragraph>
             <Strong>
-              EXCEPT AS REQUIRED BY APPLICABLE LAW, ALL FEES PAID TO PATHIBLE ARE NON-REFUNDABLE.
+              EXCEPT AS PROVIDED IN SECTION 5.5 (REFUND POLICY) OR AS REQUIRED BY APPLICABLE LAW,
+              FEES PAID TO PATHIBLE ARE GENERALLY NON-REFUNDABLE.
             </Strong>{" "}
             If your account is terminated, you will not receive any refund for fees paid, including
-            fees for any unused portion of a subscription period.
+            fees for any unused portion of a subscription period, unless the termination is covered
+            by an exception described in Section 5.5.
           </Paragraph>
         </SubSection>
       </Section>
 
-      {/* Section 14: Modifications */}
+      {/* Section 15: Modifications */}
       <Section
         id="modifications-to-terms-and-service"
-        title="14. Modifications to Terms and Service"
+        title="15. Modifications to Terms and Service"
       >
-        <SubSection title="14.1 Right to Modify Terms">
+        <SubSection title="15.1 Right to Modify Terms">
           <Paragraph>
             Pathible reserves the right, in its sole discretion, to modify, amend, or update these
             Terms at any time. We may notify you of material changes by:
@@ -1012,7 +1028,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="14.2 Modifications to Service">
+        <SubSection title="15.2 Modifications to Service">
           <Paragraph>Pathible reserves the right at any time to:</Paragraph>
           <BulletList
             items={[
@@ -1029,8 +1045,8 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 15: Severability */}
-      <Section id="severability" title="15. Severability">
+      {/* Section 16: Severability */}
+      <Section id="severability" title="16. Severability">
         <Paragraph>
           If any provision of these Terms is held to be invalid, illegal, or unenforceable by a
           court of competent jurisdiction or arbitrator, such provision shall be limited or
@@ -1039,9 +1055,9 @@ export function TermsOfServiceContent() {
         </Paragraph>
       </Section>
 
-      {/* Section 16: Entire Agreement */}
-      <Section id="entire-agreement" title="16. Entire Agreement">
-        <SubSection title="16.1 Complete Agreement">
+      {/* Section 17: Entire Agreement */}
+      <Section id="entire-agreement" title="17. Entire Agreement">
+        <SubSection title="17.1 Complete Agreement">
           <Paragraph>
             These Terms, together with our Privacy Policy and any Additional Terms incorporated by
             reference, constitute the entire agreement between you and Pathible regarding the
@@ -1050,7 +1066,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="16.2 No Waiver">
+        <SubSection title="17.2 No Waiver">
           <Paragraph>
             No waiver of any term or condition of these Terms shall be deemed a further or
             continuing waiver of such term or condition or any other term or condition.
@@ -1059,7 +1075,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="16.3 Assignment">
+        <SubSection title="17.3 Assignment">
           <Paragraph>
             You may not assign, transfer, or delegate these Terms or your rights and obligations
             under these Terms without Pathible&apos;s prior written consent. Pathible may freely
@@ -1068,7 +1084,7 @@ export function TermsOfServiceContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="16.4 Force Majeure">
+        <SubSection title="17.4 Force Majeure">
           <Paragraph>
             Pathible shall not be liable for any failure or delay in performing its obligations
             under these Terms due to causes beyond its reasonable control, including but not limited
@@ -1079,9 +1095,9 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 17: Additional Provisions */}
-      <Section id="additional-provisions" title="17. Additional Provisions">
-        <SubSection title="17.1 User Responsibilities for Professional Consultation">
+      {/* Section 18: Additional Provisions */}
+      <Section id="additional-provisions" title="18. Additional Provisions">
+        <SubSection title="18.1 User Responsibilities for Professional Consultation">
           <Paragraph>You acknowledge and agree that:</Paragraph>
           <BulletList
             items={[
@@ -1093,7 +1109,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="17.2 Regulatory Compliance">
+        <SubSection title="18.2 Regulatory Compliance">
           <Paragraph>You acknowledge and agree that:</Paragraph>
           <BulletList
             items={[
@@ -1105,7 +1121,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="17.3 No Guarantee of Availability">
+        <SubSection title="18.3 No Guarantee of Availability">
           <Paragraph>You acknowledge and agree that:</Paragraph>
           <BulletList
             items={[
@@ -1117,9 +1133,9 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 18: Contact Information */}
-      <Section id="contact-information" title="18. Contact Information">
-        <SubSection title="18.1 Questions and Concerns">
+      {/* Section 19: Contact Information */}
+      <Section id="contact-information" title="19. Contact Information">
+        <SubSection title="19.1 Questions and Concerns">
           <Paragraph>
             If you have any questions, concerns, or complaints about these Terms or the Service,
             please contact us at:
@@ -1152,7 +1168,7 @@ export function TermsOfServiceContent() {
           </div>
         </SubSection>
 
-        <SubSection title="18.2 California Users">
+        <SubSection title="19.2 California Users">
           <Paragraph>
             Under California Civil Code Section 1789.3, California users are entitled to the
             following consumer rights notice: If you have a question or complaint regarding the
@@ -1164,9 +1180,9 @@ export function TermsOfServiceContent() {
         </SubSection>
       </Section>
 
-      {/* Section 19: Acknowledgment */}
-      <Section id="acknowledgment-and-acceptance" title="19. Acknowledgment and Acceptance">
-        <SubSection title="19.1 Acknowledgment">
+      {/* Section 20: Acknowledgment */}
+      <Section id="acknowledgment-and-acceptance" title="20. Acknowledgment and Acceptance">
+        <SubSection title="20.1 Acknowledgment">
           <Paragraph>
             <Strong>BY USING THE SERVICE, YOU ACKNOWLEDGE THAT:</Strong>
           </Paragraph>
@@ -1184,7 +1200,7 @@ export function TermsOfServiceContent() {
           />
         </SubSection>
 
-        <SubSection title="19.2 Acceptance">
+        <SubSection title="20.2 Acceptance">
           <Paragraph>
             Your use of the Service constitutes your acceptance of these Terms. If you do not agree
             to these Terms, you must not access or use the Service.
@@ -1197,8 +1213,8 @@ export function TermsOfServiceContent() {
       {/* Footer disclaimer */}
       <div className="text-center text-muted-foreground text-sm">
         <p className="mb-2">
-          <Strong>Effective Date:</Strong> January 1, 2026 | <Strong>Last Updated:</Strong> December
-          14, 2025 | <Strong>Version:</Strong> 1.0
+          <Strong>Effective Date:</Strong> February 16, 2026 | <Strong>Last Updated:</Strong>{" "}
+          February 16, 2026 | <Strong>Version:</Strong> 1.1
         </p>
         <p>&copy; 2026 Pathible, Inc. All rights reserved.</p>
       </div>

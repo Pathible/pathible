@@ -563,8 +563,9 @@ export function PrivacyPolicyContent() {
       >
         <SubSection title="6.1 AI-Powered Features">
           <Paragraph>
-            Our Service uses artificial intelligence (AI) and machine learning (ML) technologies to
-            analyze your documents and data, including:
+            Our Service uses or plans to use artificial intelligence (AI) and machine learning (ML)
+            technologies to analyze your documents and data. As we develop and expand these
+            capabilities, they may include:
           </Paragraph>
           <BulletList
             items={[
@@ -688,7 +689,8 @@ export function PrivacyPolicyContent() {
           </h4>
           <Paragraph>
             We share information with trusted third-party service providers who perform services on
-            our behalf:
+            our behalf. We maintain Data Processing Agreements (DPAs) with all sub-processors that
+            handle personal data, as required by applicable data protection laws:
           </Paragraph>
           <BulletList
             items={[
@@ -697,6 +699,7 @@ export function PrivacyPolicyContent() {
               "Payment processors and billing systems",
               "Customer support and helpdesk platforms",
               "Email delivery services",
+              "Product analytics and usage tracking services",
               "Security and fraud prevention services",
             ]}
           />
@@ -728,10 +731,37 @@ export function PrivacyPolicyContent() {
                 "Data storage and sync",
                 "Account info, documents, user data",
               ],
-              ["Authentication", "Clerk", "User authentication", "Email, profile info"],
+              [
+                "Authentication & Billing",
+                "Clerk",
+                "User authentication and subscription management",
+                "Email, profile info, subscription status",
+              ],
               ["Email Delivery", "Resend", "Transactional emails", "Email address, name"],
-              ["Payment Processing", "Stripe", "Subscription billing", "Name, email, payment info"],
-              ["AI Processing", "Various", "Document analysis", "Document content, queries"],
+              [
+                "Payment Processing",
+                "Stripe (via Clerk)",
+                "Subscription billing and payment processing",
+                "Name, email, payment info",
+              ],
+              [
+                "Document Storage",
+                "Backblaze B2",
+                "Secure storage for uploaded documents",
+                "Uploaded documents and associated metadata",
+              ],
+              [
+                "Product Analytics",
+                "PostHog",
+                "Usage analytics and product improvement",
+                "Usage data, device info, interaction events",
+              ],
+              [
+                "AI Processing",
+                "To be disclosed upon implementation",
+                "Document analysis (planned)",
+                "Document content, queries",
+              ],
             ]}
           />
         </SubSection>
@@ -881,8 +911,15 @@ export function PrivacyPolicyContent() {
             Access your browser&apos;s privacy settings to manage cookies.
           </Paragraph>
           <Paragraph>
-            <Strong>Do Not Track (DNT):</Strong> We currently do not respond to DNT browser signals
-            as there is no industry standard for DNT interpretation.
+            <Strong>Global Privacy Control (GPC):</Strong> We honor Global Privacy Control (GPC)
+            signals as required by the California Consumer Privacy Act (CCPA/CPRA) and other
+            applicable laws. When we detect a GPC signal, we treat it as a valid opt-out request for
+            the sale or sharing of personal information.
+          </Paragraph>
+          <Paragraph>
+            <Strong>Do Not Track (DNT):</Strong> There is currently no industry standard for DNT
+            signal interpretation. We do not currently respond to DNT browser signals, but we do
+            honor GPC signals as described above.
           </Paragraph>
         </SubSection>
       </Section>
@@ -1007,7 +1044,17 @@ export function PrivacyPolicyContent() {
           </Paragraph>
         </SubSection>
 
-        <SubSection title="13.2 User Notification">
+        <SubSection title="13.2 Notification Timelines">
+          <Paragraph>
+            We will notify the relevant supervisory authority within <Strong>72 hours</Strong> of
+            becoming aware of a breach involving personal data of individuals in the European
+            Economic Area, as required by GDPR Article 33. For breaches affecting residents of other
+            jurisdictions, we will comply with applicable state and national breach notification
+            timelines.
+          </Paragraph>
+        </SubSection>
+
+        <SubSection title="13.3 User Notification">
           <Paragraph>We will notify you if a breach:</Paragraph>
           <BulletList
             items={[
@@ -1256,12 +1303,27 @@ export function PrivacyPolicyContent() {
           </ContactCard>
         </div>
 
+        <SubSection title="18.1 Data Protection Officer">
+          <Paragraph>
+            Our designated Data Protection Officer (DPO) can be reached at{" "}
+            <a
+              href="mailto:privacy@pathible.com"
+              className="text-pathible-forest hover:text-pathible-green-hover underline"
+            >
+              privacy@pathible.com
+            </a>
+            . The DPO is responsible for overseeing our data protection strategy and ensuring
+            compliance with applicable privacy laws including GDPR, CCPA/CPRA, and other data
+            protection regulations.
+          </Paragraph>
+        </SubSection>
+
         <Paragraph>
           <Strong>Mailing Address:</Strong>
           <br />
           Pathible, Inc.
           <br />
-          Attn: Privacy Officer
+          Attn: Data Protection Officer
           <br />
           390 NE 191st St
           <br />
@@ -1376,8 +1438,8 @@ export function PrivacyPolicyContent() {
       {/* Footer disclaimer */}
       <div className="text-center text-muted-foreground text-sm">
         <p className="mb-2">
-          <Strong>Effective Date:</Strong> January 1, 2026 | <Strong>Last Updated:</Strong> December
-          14, 2025 | <Strong>Version:</Strong> 1.0
+          <Strong>Effective Date:</Strong> February 16, 2026 | <Strong>Last Updated:</Strong>{" "}
+          February 16, 2026 | <Strong>Version:</Strong> 1.1
         </p>
         <p>&copy; 2026 Pathible, Inc. All rights reserved.</p>
       </div>
