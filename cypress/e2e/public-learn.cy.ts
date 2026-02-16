@@ -31,8 +31,8 @@ describe("Public Learn Page - Unauthenticated Access", () => {
     cy.get("body", { timeout: 15000 }).should("be.visible");
 
     // Verify hero section loads with key elements
-    cy.contains("Clarity for your", { timeout: 15000 }).should("be.visible");
-    cy.contains("family", { timeout: 10000 }).should("be.visible");
+    cy.contains("Clarity for your family.", { timeout: 15000 }).should("be.visible");
+    cy.contains("Before they need it.", { timeout: 10000 }).should("be.visible");
   });
 
   it("should display navigation elements on learn page", () => {
@@ -48,18 +48,16 @@ describe("Public Learn Page - Unauthenticated Access", () => {
     cy.contains("Get Started", { timeout: 10000 }).should("exist");
   });
 
-  it("should display staged learning journey layout", () => {
+  it("should display article grid with category filters", () => {
     cy.visit("/learn", { failOnStatusCode: false });
 
     // Wait for articles to load
     cy.get("body", { timeout: 15000 }).should("be.visible");
 
-    // Check for staged journey UI (stages appear when articles are seeded)
+    // Check for category filter pills
     cy.get("body").then(($body) => {
-      if ($body.text().includes("Understanding Your Why")) {
-        cy.contains("Understanding Your Why").should("be.visible");
-        cy.contains("Building Your Foundation").should("be.visible");
-        cy.contains("Strengthening Your Legacy").should("be.visible");
+      if ($body.find('button:contains("All")').length > 0) {
+        cy.contains("button", "All").should("be.visible");
       }
     });
   });
@@ -69,7 +67,7 @@ describe("Public Learn Page - Unauthenticated Access", () => {
 
     // Wait for page to be fully loaded
     cy.get("body", { timeout: 15000 }).should("be.visible");
-    cy.contains("Clarity for your", { timeout: 10000 }).should("be.visible");
+    cy.contains("Clarity for your family.", { timeout: 10000 }).should("be.visible");
 
     // Check page title - the page title includes "Learn"
     cy.title().should("include", "Learn");
