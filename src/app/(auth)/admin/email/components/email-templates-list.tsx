@@ -25,7 +25,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -53,7 +52,7 @@ import {
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate } from "@/lib/date-utils";
-import { getCategoryLabel, getCategoryStyle } from "@/lib/email-utils";
+import { getCategoryLabel } from "@/lib/email-utils";
 import { EmailPreview } from "./email-preview";
 
 export function EmailTemplatesList() {
@@ -148,9 +147,13 @@ export function EmailTemplatesList() {
                     {template.subject}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={getCategoryStyle(template.category)}>
+                    <AdminStatusBadge
+                      type="emailCategory"
+                      value={template.category ?? "other"}
+                      className="text-xs font-medium"
+                    >
                       {getCategoryLabel(template.category)}
-                    </Badge>
+                    </AdminStatusBadge>
                   </TableCell>
                   <TableCell>
                     {template.isAutomated ? (

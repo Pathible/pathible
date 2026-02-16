@@ -5,7 +5,13 @@ import { Loader2, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -52,7 +58,9 @@ export function SentEmailsList() {
       <Card className="border-border">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <Mail className="h-8 w-8 text-muted-foreground/30 mb-2" />
-          <h3 className="font-crimson text-lg font-medium">No emails sent yet</h3>
+          <h3 className="font-crimson text-lg font-medium">
+            No emails sent yet
+          </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             When you send emails, they will appear here.
           </p>
@@ -98,13 +106,16 @@ export function SentEmailsList() {
                 <TableCell className="text-muted-foreground">
                   {email.templateName || "Custom"}
                 </TableCell>
-                <TableCell className="text-muted-foreground">{email.sentByName}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {email.sentByName}
+                </TableCell>
                 <TableCell className="text-muted-foreground">
                   {formatDateTime(email._creationTime)}
                 </TableCell>
                 <TableCell>
                   <AdminStatusBadge type="emailStatus" value={email.status}>
-                    {email.status.charAt(0).toUpperCase() + email.status.slice(1)}
+                    {email.status.charAt(0).toUpperCase() +
+                      email.status.slice(1)}
                   </AdminStatusBadge>
                 </TableCell>
               </TableRow>

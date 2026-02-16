@@ -5,7 +5,6 @@ import { Clock, Code2, Eye, Loader2, Pencil, Zap } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -92,10 +91,10 @@ export function SystemTemplatesList() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{template.name}</span>
-                      <Badge variant="outline" className="text-xs">
+                      <AdminStatusBadge type="emailCategory" value="system" className="text-xs">
                         <Code2 className="mr-1 h-3 w-3" />
                         System
-                      </Badge>
+                      </AdminStatusBadge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
                   </TableCell>
