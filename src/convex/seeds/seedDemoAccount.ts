@@ -169,12 +169,20 @@ const DEMO_FINANCIAL_ACCOUNTS = [
 
 export const seed = internalMutation({
   args: {
-    profileId: v.id("profiles"),
+    // Clerk user ID — copy from Clerk Dashboard → Users → click user → "User ID"
+    // This is the only thing you need. The seed creates everything else.
+    clerkUserId: v.string(),
+    // Optional: customize the demo user's name (defaults to "Demo User")
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    email: v.optional(v.string()),
   },
   returns: v.object({
+    profileId: v.id("profiles"),
     householdId: v.id("households"),
     familyUnitId: v.id("familyUnits"),
     created: v.object({
+      profile: v.boolean(),
       household: v.number(),
       familyMembers: v.number(),
       wisdomEntries: v.number(),
@@ -183,18 +191,57 @@ export const seed = internalMutation({
     }),
   }),
   handler: async (ctx, args) => {
-    const profile = await ctx.db.get(args.profileId);
+    const now = Date.now();
+    let createdProfile = false;
+
+    // 0. Find or create the profile for this Clerk user
+    let profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.clerkUserId))
+      .unique();
+
     if (!profile) {
-      throw new Error("Profile not found");
+      // Create the profile — this is what onboarding step 1 normally does
+      const profileId = await ctx.db.insert("profiles", {
+        userId: args.clerkUserId,
+        email: args.email,
+        firstName: args.firstName ?? "Demo",
+        lastName: args.lastName ?? "User",
+        onboardingStatus: "complete",
+        onboardingStep: 3,
+        onboardingCompletedAt: now,
+        updatedAt: now,
+      });
+      profile = await ctx.db.get(profileId);
+      if (!profile) throw new Error("Failed to create profile");
+      createdProfile = true;
+    } else {
+      // Profile exists — just mark it as fully onboarded
+      await ctx.db.patch(profile._id, {
+        onboardingStatus: "complete" as const,
+        onboardingStep: 3,
+        onboardingCompletedAt: now,
+        updatedAt: now,
+      });
     }
 
-    const now = Date.now();
+    // Check for existing household (don't create duplicates)
+    const existingMembership = await ctx.db
+      .query("householdMemberships")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .first();
+
+    if (existingMembership) {
+      throw new Error(
+        "This user already has a household. Run cleanup first, or use a different Clerk user.",
+      );
+    }
 
     // 1. Create demo household
     const householdId = await ctx.db.insert("households", {
       name: "The Harrison Family",
       description: "A faithful family building a legacy that matters",
-      primaryContactId: args.profileId,
+      primaryContactId: profile._id,
       subscriptionTier: "heritage",
       subscriptionStatus: "active",
       storageUsedBytes: 0,
@@ -209,7 +256,7 @@ export const seed = internalMutation({
     // 2. Create membership
     await ctx.db.insert("householdMemberships", {
       householdId,
-      userId: args.profileId,
+      userId: profile._id,
       role: "owner",
       status: "active",
       joinedAt: now,
@@ -223,7 +270,7 @@ export const seed = internalMutation({
       relationshipToHousehold: "Primary",
       isPrimary: true,
       orderIndex: 0,
-      createdBy: args.profileId,
+      createdBy: profile._id,
       updatedAt: now,
     });
 
@@ -231,14 +278,14 @@ export const seed = internalMutation({
     await ctx.db.insert("familyMembers", {
       familyUnitId,
       householdId,
-      profileId: args.profileId,
+      profileId: profile._id,
       firstName: profile.firstName,
       lastName: profile.lastName,
       relationshipType: "parent",
       roles: ["Family Admin"],
       status: "active",
       orderIndex: 0,
-      createdBy: args.profileId,
+      createdBy: profile._id,
       updatedAt: now,
     });
 
@@ -254,7 +301,7 @@ export const seed = internalMutation({
         roles: member.roles,
         status: member.status,
         orderIndex: member.orderIndex,
-        createdBy: args.profileId,
+        createdBy: profile._id,
         updatedAt: now,
       });
       familyMembersCreated++;
@@ -265,7 +312,7 @@ export const seed = internalMutation({
     for (const entry of DEMO_WISDOM_ENTRIES) {
       await ctx.db.insert("wisdomEntries", {
         householdId,
-        authorId: args.profileId,
+        authorId: profile._id,
         title: entry.title,
         content: entry.content,
         category: entry.category,
@@ -287,7 +334,7 @@ export const seed = internalMutation({
         reflection: belief.reflection,
         category: belief.category,
         orderIndex: belief.orderIndex,
-        createdBy: args.profileId,
+        createdBy: profile._id,
         updatedAt: now,
       });
       beliefsCreated++;
@@ -316,17 +363,9 @@ export const seed = internalMutation({
       updatedAt: now,
     });
 
-    // Mark profile as fully onboarded so the auth layout doesn't redirect
-    await ctx.db.patch(args.profileId, {
-      onboardingStatus: "complete" as const,
-      onboardingStep: 3,
-      onboardingCompletedAt: now,
-      updatedAt: now,
-    });
-
     // Create user preferences (normally created during onboarding step 3)
     await ctx.db.insert("userPreferences", {
-      profileId: args.profileId,
+      profileId: profile._id,
       goals: ["legacy_planning", "family_heritage", "financial_clarity"],
       emailNotifications: true,
       interestedFeatures: [],
@@ -335,9 +374,11 @@ export const seed = internalMutation({
     });
 
     return {
+      profileId: profile._id,
       householdId,
       familyUnitId,
       created: {
+        profile: createdProfile,
         household: 1,
         familyMembers: familyMembersCreated,
         wisdomEntries: wisdomCreated,
