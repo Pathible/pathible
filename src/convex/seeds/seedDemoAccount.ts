@@ -8,13 +8,16 @@ import { internalMutation } from "../_generated/server";
  * Includes family members, wisdom entries, core beliefs, and financial data.
  *
  * Usage:
- *   npx convex run seeds/seedDemoAccount:seed
+ *   npx convex run seeds/seedDemoAccount:seed \
+ *     --args '{"clerkUserId": "user_xxx"}'
+ *
+ * The seed defaults to "David Harrison" to match the Harrison family narrative.
+ * Override with firstName/lastName/email args if needed.
  *
  * To clean up:
  *   npx convex run seeds/seedDemoAccount:cleanup --args '{"confirmDelete": true}'
  *
- * IMPORTANT: This requires a real authenticated user profile to attach to.
- * Pass the profileId of the demo user account.
+ * See docs/DEMO_ACCOUNT_SETUP.md for the full walkthrough.
  */
 
 // ============================================================================
@@ -172,7 +175,7 @@ export const seed = internalMutation({
     // Clerk user ID — copy from Clerk Dashboard → Users → click user → "User ID"
     // This is the only thing you need. The seed creates everything else.
     clerkUserId: v.string(),
-    // Optional: customize the demo user's name (defaults to "Demo User")
+    // Optional: customize the demo user's name (defaults to "David Harrison")
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
     email: v.optional(v.string()),
@@ -205,8 +208,8 @@ export const seed = internalMutation({
       const profileId = await ctx.db.insert("profiles", {
         userId: args.clerkUserId,
         email: args.email,
-        firstName: args.firstName ?? "Demo",
-        lastName: args.lastName ?? "User",
+        firstName: args.firstName ?? "David",
+        lastName: args.lastName ?? "Harrison",
         onboardingStatus: "complete",
         onboardingStep: 3,
         onboardingCompletedAt: now,
