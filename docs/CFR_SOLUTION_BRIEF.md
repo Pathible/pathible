@@ -29,38 +29,37 @@ This is not a pitch deck. This is what the actual codebase contains, verified ag
 
 ### Production-Ready Features
 
-| Feature | What Exists | Depth | CFR Relevance |
-|---------|------------|-------|---------------|
-| **Heritage Vault** | Backblaze B2 file storage, upload/download, categories, search, access control (household/admins/custom), file hash verification, storage quotas | Deep | **HIGH** — Families need a place for insurance policies, deeds, account statements |
-| **6 Legal Document Wizards** | Will, Trust, Pour-Over Will, Financial POA, Healthcare POA, Advance Directive. Full wizard UI with step-by-step input. 50-state legal requirements. PDF generation with react-pdf. Disclaimer acknowledgment. | Deep | **MEDIUM** — Useful but CFR may prefer to refer clients to attorneys. Could be positioned as "educational drafts" |
-| **50-State Legal Requirements** | Witness counts, notary requirements, execution rules, state-specific clauses for all 50 states + DC. Comprehensive data in `state-legal-requirements/` | Deep | **MEDIUM** — Validates that document wizards aren't generic templates |
-| **Financial Tracking** | Accounts (checking, savings, investment, retirement, crypto), Properties (primary/secondary/rental/land/commercial), Insurance Policies (life, health, home, auto, disability, LTC, umbrella) with premiums, coverage, beneficiaries | Deep | **HIGH** — CFR investors already have financial accounts. This organizes the full picture beyond just CFR holdings |
-| **Family Management** | Households, Family Units, Family Members with full demographics (name, DOB, gender, address, marital status, relationship types). Roles: owner, steward, viewer, executor | Deep | **HIGH** — Legacy planning is inherently family-centric |
-| **Legacy Planning** | Legacy plans with trusted contacts, guardians, pet care, memorial preferences, final message. Key contacts with roles (attorney, financial advisor, executor, trustee, guardian, healthcare proxy, friend, religious org). Completion tracking. | Deep | **HIGH** — This IS what CFR's legacy planning service needs to deliver digitally |
-| **Wisdom & Values** | Wisdom entries (values, lessons, stories, advice, traditions) with rich text, media attachments, sharing controls. Core beliefs (faith, family, work, community, personal). Letters to loved ones with delivery conditions (specific date, after death, milestone, manual). | Deep | **VERY HIGH** — Faith-based stewardship mission alignment. "A good man leaves an inheritance to his children's children" |
-| **Onboarding** | 3-step wizard: Profile > Household > Goals/Preferences. Goals include: document organization, legacy planning, family heritage, financial clarity, estate planning, end-of-life planning | Complete | **HIGH** — Clean first-run experience for new families |
-| **Subscription Tiers** | 4 tiers (Foundations, Heritage, Legacy, Founders). 26 features mapped to tiers. Storage/member/family-unit limits per tier. Clerk billing integration. Admin tier override with expiration and audit trail. | Complete | **HIGH** — Tier override system means you can give CFR families access without changing billing infrastructure |
-| **Admin Dashboard** | User management (search, view, deactivate). Household management (view details, update tier, apply/remove overrides). Platform analytics (users, households, content stats, tier breakdown). Activity logs with filtering. | Complete | **HIGH** — You can manage CFR pilot families manually from day one |
-| **Email System** | Email templates (system + manual), email queue with rate limiting (Resend API), email campaigns, sent email tracking, system template scheduling (weekly/daily), trigger conditions. | Complete | **MEDIUM** — Engagement emails, onboarding nudges |
-| **Activity Logging** | Full audit trail: vault, wisdom, financial, family, legacy, household, legal document actions. Per-household, per-user tracking. | Complete | **HIGH** — Proves engagement to CFR ("your families are using this") |
-| **Educational Content** | Admin-authored articles with categories, read tracking, public/subscriber visibility, daily wisdom quotes | Complete | **MEDIUM** — CFR could contribute faith-based financial stewardship content |
-| **Guided Tours** | Admin-managed product tours with steps, routes, anchors, versioning, user progress tracking | Complete | **MEDIUM** — Useful for CFR family onboarding |
-| **Smart Suggestions** | Context-aware suggestions based on eligibility rules (tier, documents, onboarding status, days since signup, feature usage) | Complete | **MEDIUM** — Nudges families toward next steps |
-| **Notifications** | In-app notifications (invitation, document shared, letter delivered, reminder, system) with read tracking | Complete | **LOW** — Standard feature, not a differentiator |
+| Feature                         | What Exists                                                                                                                                                                                                                                                                 | Depth    | CFR Relevance                                                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Heritage Vault**              | Backblaze B2 file storage, upload/download, categories, search, access control (household/admins/custom), file hash verification, storage quotas                                                                                                                            | Deep     | **HIGH** — Families need a place for insurance policies, deeds, account statements                                       |
+| **6 Legal Document Wizards**    | Will, Trust, Pour-Over Will, Financial POA, Healthcare POA, Advance Directive. Full wizard UI with step-by-step input. 50-state legal requirements. PDF generation with react-pdf. Disclaimer acknowledgment.                                                               | Deep     | **MEDIUM** — Useful but CFR may prefer to refer clients to attorneys. Could be positioned as "educational drafts"        |
+| **50-State Legal Requirements** | Witness counts, notary requirements, execution rules, state-specific clauses for all 50 states + DC. Comprehensive data in `state-legal-requirements/`                                                                                                                      | Deep     | **MEDIUM** — Validates that document wizards aren't generic templates                                                    |
+| **Financial Tracking**          | Accounts (checking, savings, investment, retirement, crypto), Properties (primary/secondary/rental/land/commercial), Insurance Policies (life, health, home, auto, disability, LTC, umbrella) with premiums, coverage, beneficiaries                                        | Deep     | **HIGH** — CFR investors already have financial accounts. This organizes the full picture beyond just CFR holdings       |
+| **Family Management**           | Households, Family Units, Family Members with full demographics (name, DOB, gender, address, marital status, relationship types). Roles: owner, steward, viewer, executor                                                                                                   | Deep     | **HIGH** — Legacy planning is inherently family-centric                                                                  |
+| **Legacy Planning**             | Legacy plans with trusted contacts, guardians, pet care, memorial preferences, final message. Key contacts with roles (attorney, financial advisor, executor, trustee, guardian, healthcare proxy, friend, religious org). Completion tracking.                             | Deep     | **HIGH** — This IS what CFR's legacy planning service needs to deliver digitally                                         |
+| **Wisdom & Values**             | Wisdom entries (values, lessons, stories, advice, traditions) with rich text, media attachments, sharing controls. Core beliefs (faith, family, work, community, personal). Letters to loved ones with delivery conditions (specific date, after death, milestone, manual). | Deep     | **VERY HIGH** — Faith-based stewardship mission alignment. "A good man leaves an inheritance to his children's children" |
+| **Onboarding**                  | 3-step wizard: Profile > Household > Goals/Preferences. Goals include: document organization, legacy planning, family heritage, financial clarity, estate planning, end-of-life planning                                                                                    | Complete | **HIGH** — Clean first-run experience for new families                                                                   |
+| **Subscription Tiers**          | 4 tiers (Foundations, Heritage, Legacy, Founders). 26 features mapped to tiers. Storage/member/family-unit limits per tier. Clerk billing integration. Admin tier override with expiration and audit trail.                                                                 | Complete | **HIGH** — Tier override system means you can give CFR families access without changing billing infrastructure           |
+| **Admin Dashboard**             | User management (search, view, deactivate). Household management (view details, update tier, apply/remove overrides). Platform analytics (users, households, content stats, tier breakdown). Activity logs with filtering.                                                  | Complete | **HIGH** — You can manage CFR pilot families manually from day one                                                       |
+| **Email System**                | Email templates (system + manual), email queue with rate limiting (Resend API), email campaigns, sent email tracking, system template scheduling (weekly/daily), trigger conditions.                                                                                        | Complete | **MEDIUM** — Engagement emails, onboarding nudges                                                                        |
+| **Activity Logging**            | Full audit trail: vault, wisdom, financial, family, legacy, household, legal document actions. Per-household, per-user tracking.                                                                                                                                            | Complete | **HIGH** — Proves engagement to CFR ("your families are using this")                                                     |
+| **Educational Content**         | Admin-authored articles with categories, read tracking, public/subscriber visibility, daily wisdom quotes                                                                                                                                                                   | Complete | **MEDIUM** — CFR could contribute faith-based financial stewardship content                                              |
+| **Guided Tours**                | Admin-managed product tours with steps, routes, anchors, versioning, user progress tracking                                                                                                                                                                                 | Complete | **MEDIUM** — Useful for CFR family onboarding                                                                            |
+| **Notifications**               | In-app notifications (invitation, document shared, letter delivered, reminder, system) with read tracking                                                                                                                                                                   | Complete | **LOW** — Standard feature, not a differentiator                                                                         |
 
 ### What Does NOT Exist
 
-| Missing | Impact | Effort to Build |
-|---------|--------|----------------|
-| **Organization/Partner model** | No way to track "this household came from CFR" | 1-2 weeks |
-| **Partner referral tracking** | No `?ref=cfr` signup flow, no attribution | 1 week |
-| **Co-branding/white-label** | All users see "Pathible" branding, no CFR logo option | 1-2 weeks |
-| **Partner dashboard** | CFR has no view of their families' engagement | 2-3 weeks |
-| **Bulk user management** | Can't create 50 CFR accounts at once | 1 week |
-| **SSO/SAML** | CFR investors need separate Pathible login | Not needed for pilot |
-| **API for integration** | No programmatic access for CFR systems | Not needed for pilot |
-| **Module toggles per partner** | Can't hide legal docs for CFR if they don't want them | 1 week |
-| **"Shared with advisor" view** | No read-only view for CFR staff to see family progress | 2 weeks |
+| Missing                        | Impact                                                 | Effort to Build      |
+| ------------------------------ | ------------------------------------------------------ | -------------------- |
+| **Organization/Partner model** | No way to track "this household came from CFR"         | 1-2 weeks            |
+| **Partner referral tracking**  | No `?ref=cfr` signup flow, no attribution              | 1 week               |
+| **Co-branding/white-label**    | All users see "Pathible" branding, no CFR logo option  | 1-2 weeks            |
+| **Partner dashboard**          | CFR has no view of their families' engagement          | 2-3 weeks            |
+| **Bulk user management**       | Can't create 50 CFR accounts at once                   | 1 week               |
+| **SSO/SAML**                   | CFR investors need separate Pathible login             | Not needed for pilot |
+| **API for integration**        | No programmatic access for CFR systems                 | Not needed for pilot |
+| **Module toggles per partner** | Can't hide legal docs for CFR if they don't want them  | 1 week               |
+| **"Shared with advisor" view** | No read-only view for CFR staff to see family progress | 2 weeks              |
 
 ---
 
@@ -71,12 +70,14 @@ This is not a pitch deck. This is what the actual codebase contains, verified ag
 CFR is a ministry. Darren Key is an ordained minister with a finance degree. Their core values are: **Sacred Trust, Strategic Stewardship, Strong Partnerships.**
 
 They are NOT looking for:
+
 - A SaaS vendor pitch
 - "We'll disrupt legacy planning"
 - Revenue projections and TAM slides
 - Technical architecture diagrams
 
 They ARE looking for:
+
 - Ministry alignment (does this serve families?)
 - Trust (will their investors' data be safe?)
 - Simplicity (can their 30-person team actually support this?)
@@ -93,6 +94,7 @@ They ARE looking for:
 > I noticed CFR offers legacy planning as part of your stewardship services. I built the tool your families need to actually do it.
 >
 > **What it does today:**
+>
 > - Families organize their important documents in a secure vault
 > - They track their financial accounts, properties, and insurance policies in one place
 > - They name their key contacts — attorneys, executors, trustees, healthcare proxies
@@ -173,6 +175,7 @@ CFR introduces you to 25 families. You send each family:
 3. Your personal email/phone for questions
 
 **Expected friction points (be honest about these):**
+
 - Families will need a separate login (Clerk, not CFR's portal). This is a real friction point. Mitigate with clear instructions.
 - Older investors may struggle with the interface. The onboarding wizard helps, but expect support emails.
 - Some families won't upload documents (trust barrier). Vault usage will lag behind other features.
@@ -182,18 +185,18 @@ CFR introduces you to 25 families. You send each family:
 
 **What you measure with existing tools:**
 
-| Metric | How You Track It | Source |
-|--------|-----------------|--------|
-| Signups completed | Admin dashboard → Users → filter by referral | `profiles` table |
-| Onboarding completion | Admin dashboard → User detail → onboarding status | `profiles.onboardingStatus` |
-| Vault uploads | Admin dashboard → Household detail → vault document count | `households.vaultDocumentCount` |
-| Financial accounts added | Activity log → filter by "financial" module | `activityLog` table |
-| Legacy plan progress | Admin dashboard → Household detail | `legacyPlans.completionPercentage` |
-| Wisdom entries created | Activity log → filter by "wisdom" module | `activityLog` table |
-| Legal documents started | Activity log → filter by "legal_document_created" | `activityLog` table |
-| Legal documents completed | Activity log → filter by "legal_document_completed" | `activityLog` table |
-| Weekly active users | Activity log → unique users with actions in last 7 days | `activityLog` table |
-| Feature-by-feature usage | Activity log → group by module | `activityLog` table |
+| Metric                    | How You Track It                                          | Source                             |
+| ------------------------- | --------------------------------------------------------- | ---------------------------------- |
+| Signups completed         | Admin dashboard → Users → filter by referral              | `profiles` table                   |
+| Onboarding completion     | Admin dashboard → User detail → onboarding status         | `profiles.onboardingStatus`        |
+| Vault uploads             | Admin dashboard → Household detail → vault document count | `households.vaultDocumentCount`    |
+| Financial accounts added  | Activity log → filter by "financial" module               | `activityLog` table                |
+| Legacy plan progress      | Admin dashboard → Household detail                        | `legacyPlans.completionPercentage` |
+| Wisdom entries created    | Activity log → filter by "wisdom" module                  | `activityLog` table                |
+| Legal documents started   | Activity log → filter by "legal_document_created"         | `activityLog` table                |
+| Legal documents completed | Activity log → filter by "legal_document_completed"       | `activityLog` table                |
+| Weekly active users       | Activity log → unique users with actions in last 7 days   | `activityLog` table                |
+| Feature-by-feature usage  | Activity log → group by module                            | `activityLog` table                |
 
 You can generate all of this from the existing admin dashboard and activity log. No new analytics infrastructure needed.
 
@@ -204,6 +207,7 @@ Present to Darren Key and his team:
 **The data story:**
 
 "Of your 25 pilot families:
+
 - X completed onboarding (Y% completion rate)
 - X uploaded at least one document to their vault
 - X started their legacy plan
@@ -225,24 +229,24 @@ Don't discuss pricing until you have pilot data. But have a framework ready.
 
 ### Option A: Flat License (Predictable for CFR)
 
-| Component | Price |
-|-----------|-------|
-| Annual platform license | $15,000/year |
-| Includes | Up to 200 active households |
-| Additional households | $5/household/month |
-| Setup + onboarding support | $2,500 one-time |
-| Dedicated support | Email + monthly check-in |
+| Component                  | Price                       |
+| -------------------------- | --------------------------- |
+| Annual platform license    | $15,000/year                |
+| Includes                   | Up to 200 active households |
+| Additional households      | $5/household/month          |
+| Setup + onboarding support | $2,500 one-time             |
+| Dedicated support          | Email + monthly check-in    |
 
 At 500 families: $15,000 + (300 x $5 x 12) = **$33,000/year**
 At 1,000 families: $15,000 + (800 x $5 x 12) = **$63,000/year**
 
 ### Option B: Per-Household (Aligns cost with value)
 
-| Component | Price |
-|-----------|-------|
-| Per active household | $7/month |
-| Minimum commitment | 50 households |
-| Setup fee | $0 |
+| Component            | Price         |
+| -------------------- | ------------- |
+| Per active household | $7/month      |
+| Minimum commitment   | 50 households |
+| Setup fee            | $0            |
 
 At 200 families: **$16,800/year**
 At 500 families: **$42,000/year**
@@ -250,12 +254,12 @@ At 1,000 families: **$84,000/year**
 
 ### Option C: CFR Resells (They Charge Families)
 
-| Component | Details |
-|-----------|---------|
-| Wholesale per household | $4/month to you |
-| CFR charges families | $7.99-9.99/month (their choice) |
-| CFR margin | $3.99-5.99/month per family |
-| Setup fee | $0 |
+| Component               | Details                         |
+| ----------------------- | ------------------------------- |
+| Wholesale per household | $4/month to you                 |
+| CFR charges families    | $7.99-9.99/month (their choice) |
+| CFR margin              | $3.99-5.99/month per family     |
+| Setup fee               | $0                              |
 
 At 500 families paying $7.99: CFR revenue $23,970/year, your revenue $24,000/year.
 
@@ -267,15 +271,15 @@ At 500 families paying $7.99: CFR revenue $23,970/year, your revenue $24,000/yea
 
 If the pilot works and CFR wants to roll out broadly, THEN you build:
 
-| Feature | Why | Effort |
-|---------|-----|--------|
-| **Partner organization table** | Track CFR as a partner entity, not just a referral string | 1 week |
-| **Partner dashboard** | CFR admin sees their families' aggregate engagement (no PII, just metrics) | 2-3 weeks |
-| **Co-branded signup** | CFR logo on onboarding, "Powered by Pathible" footer | 1 week |
-| **Advisor read-only view** | CFR staff can see a family's legacy plan progress (with family's consent) | 2-3 weeks |
-| **Custom module config** | Toggle legal documents off if CFR prefers to handle that via attorney referrals | 1 week |
-| **Bulk invitation system** | CFR imports a CSV of families, each gets a personalized invitation email | 1-2 weeks |
-| **Engagement reports** | Automated monthly PDF report for CFR showing aggregate metrics | 1-2 weeks |
+| Feature                        | Why                                                                             | Effort    |
+| ------------------------------ | ------------------------------------------------------------------------------- | --------- |
+| **Partner organization table** | Track CFR as a partner entity, not just a referral string                       | 1 week    |
+| **Partner dashboard**          | CFR admin sees their families' aggregate engagement (no PII, just metrics)      | 2-3 weeks |
+| **Co-branded signup**          | CFR logo on onboarding, "Powered by Pathible" footer                            | 1 week    |
+| **Advisor read-only view**     | CFR staff can see a family's legacy plan progress (with family's consent)       | 2-3 weeks |
+| **Custom module config**       | Toggle legal documents off if CFR prefers to handle that via attorney referrals | 1 week    |
+| **Bulk invitation system**     | CFR imports a CSV of families, each gets a personalized invitation email        | 1-2 weeks |
+| **Engagement reports**         | Automated monthly PDF report for CFR showing aggregate metrics                  | 1-2 weeks |
 
 Total post-pilot build: **8-12 weeks** of focused development. But you don't build any of this until the pilot proves families actually use it.
 
@@ -331,11 +335,11 @@ Total post-pilot build: **8-12 weeks** of focused development. But you don't bui
 
 ## Contact Information
 
-| Person | Title | Likely Email | LinkedIn |
-|--------|-------|-------------|----------|
-| Darren Key | CEO & Founder | d.key@cfrministry.org | linkedin.com/in/darren-key-475b187/ |
+| Person           | Title                  | Likely Email                | LinkedIn                            |
+| ---------------- | ---------------------- | --------------------------- | ----------------------------------- |
+| Darren Key       | CEO & Founder          | d.key@cfrministry.org       | linkedin.com/in/darren-key-475b187/ |
 | Daniel Patterson | VP Investment Services | d.patterson@cfrministry.org | linkedin.com/in/danielbobpatterson/ |
-| David Powers | Senior Regional VP | d.powers@cfrministry.org | — |
+| David Powers     | Senior Regional VP     | d.powers@cfrministry.org    | —                                   |
 
 **CFR Main:** (800) 881-3863 | Lake Mary, FL 32746
 **Website:** cfrministry.org

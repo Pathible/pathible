@@ -215,7 +215,9 @@ describe("Financial Module - E2E Test Suite", () => {
       cy.contains("button", "Create").click();
 
       // Verify success toast (component shows "Insurance policy created successfully")
-      cy.contains("Insurance policy created successfully", { timeout: 10000 }).should("be.visible");
+      cy.contains("Insurance policy created successfully", {
+        timeout: 10000,
+      }).should("be.visible");
 
       // Verify policy appears in list
       cy.contains(TEST_POLICY_PROVIDER, { timeout: 10000 }).should("be.visible");
@@ -227,7 +229,9 @@ describe("Financial Module - E2E Test Suite", () => {
       cy.get('[role="dialog"]').should("be.visible");
       cy.get("input#provider").clear().type(TEST_POLICY_PROVIDER);
       cy.contains("button", "Create").click();
-      cy.contains("Insurance policy created successfully", { timeout: 10000 }).should("be.visible");
+      cy.contains("Insurance policy created successfully", {
+        timeout: 10000,
+      }).should("be.visible");
 
       // Find and click delete button for the policy
       cy.contains(TEST_POLICY_PROVIDER)
@@ -242,7 +246,9 @@ describe("Financial Module - E2E Test Suite", () => {
       });
 
       // Verify success toast (component shows "Insurance policy deleted successfully")
-      cy.contains("Insurance policy deleted successfully", { timeout: 10000 }).should("be.visible");
+      cy.contains("Insurance policy deleted successfully", {
+        timeout: 10000,
+      }).should("be.visible");
     });
   });
 
@@ -259,20 +265,6 @@ describe("Financial Module - E2E Test Suite", () => {
       cy.contains("Accounts").should("be.visible");
       cy.contains("Properties").should("be.visible");
       cy.contains("Insurance").should("be.visible");
-    });
-
-    it("should navigate between tabs", () => {
-      // Click Smart Suggestions tab
-      cy.contains("Smart Suggestions").click();
-      cy.url().should("include", "tab=suggestions");
-
-      // Click Faith & Finances tab
-      cy.contains("Faith & Finances").click();
-      cy.url().should("include", "tab=learning");
-
-      // Click Overview tab
-      cy.contains("Overview").click();
-      cy.url().should("not.include", "tab=");
     });
   });
 });

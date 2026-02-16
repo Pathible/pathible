@@ -1503,10 +1503,6 @@ Don't leave them a mess. Leave them a blessing.
       "A comprehensive estate planning checklist covering the 25 essential documents your family needs. Organized by category with actionable steps to protect your loved ones from chaos during difficult times.",
     content: `# Estate Planning Checklist: 25 Essential Documents Your Family Needs
 
-<!--
-Meta Description: Complete estate planning checklist with 25 essential documents organized by category. Protect your family from chaos with this actionable guide to getting your affairs in order.
--->
-
 Have you ever spent weeks searching through boxes, drawers, and filing cabinets while your heart was breaking? We have. The hunting. The guessing. The arguments with siblings about what Mom or Dad actually wanted.
 
 It's a pain no one should have to experience. And yet, millions of families go through this every year because the people they loved never took time to organize their essential documents.

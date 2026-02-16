@@ -48,17 +48,18 @@ describe("Public Learn Page - Unauthenticated Access", () => {
     cy.contains("Get Started", { timeout: 10000 }).should("exist");
   });
 
-  it("should show subscriber content section with upgrade CTA", () => {
+  it("should display staged learning journey layout", () => {
     cy.visit("/learn", { failOnStatusCode: false });
 
     // Wait for articles to load
     cy.get("body", { timeout: 15000 }).should("be.visible");
 
-    // Check for subscriber section (may or may not have articles depending on seed data)
+    // Check for staged journey UI (stages appear when articles are seeded)
     cy.get("body").then(($body) => {
-      if ($body.text().includes("More for Subscribers")) {
-        cy.contains("More for Subscribers").should("be.visible");
-        cy.contains("Unlock detailed guides").should("be.visible");
+      if ($body.text().includes("Understanding Your Why")) {
+        cy.contains("Understanding Your Why").should("be.visible");
+        cy.contains("Building Your Foundation").should("be.visible");
+        cy.contains("Strengthening Your Legacy").should("be.visible");
       }
     });
   });

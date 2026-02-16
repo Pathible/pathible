@@ -36,7 +36,7 @@ export function ArticleCard({ article, isRead, accentColor = "primary" }: Articl
   }[accentColor];
 
   return (
-    <Link href={`/financial/articles/${article.slug}`}>
+    <Link href={`/learn/${article.slug}`}>
       <Card
         className={`
           h-full

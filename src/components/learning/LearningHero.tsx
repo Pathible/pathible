@@ -28,7 +28,7 @@ export function LearningHero({ featuredArticle, totalArticles, readCount }: Lear
       </div>
 
       {/* Featured "Start Here" Card */}
-      <Link href={`/financial/articles/${featuredArticle.slug}`}>
+      <Link href={`/learn/${featuredArticle.slug}`}>
         <Card
           className={`
             relative overflow-hidden

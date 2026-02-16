@@ -327,7 +327,7 @@ export default function EditArticlePage() {
                 </Button>
                 {article.status === "published" && (
                   <Button variant="outline" className="w-full" asChild>
-                    <Link href={`/financial/articles/${article.slug}`} target="_blank">
+                    <Link href={`/learn/${article.slug}`} target="_blank">
                       View Published Article
                     </Link>
                   </Button>

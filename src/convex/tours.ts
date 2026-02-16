@@ -1147,136 +1147,31 @@ export const seedFeatureTours = mutation({
 
 /**
  * Seed Learning Center Tour (internal - run via CLI)
- * Creates or updates the tour for the Faith & Finances / Learning Center feature
+ * Archives the old Faith & Finances tour since learning content moved to public /learn page
  *
  * Usage: npx convex run tours:seedLearningCenterTour
  */
 export const seedLearningCenterTour = internalMutation({
   args: {},
   returns: v.object({
-    tourId: v.id("tours"),
-    created: v.boolean(),
-    stepsUpdated: v.number(),
+    tourId: v.optional(v.id("tours")),
+    archived: v.boolean(),
   }),
   handler: async (ctx) => {
-    const now = Date.now();
-    let created = false;
-
-    // Check if tour already exists
     const existing = await ctx.db
       .query("tours")
       .withIndex("by_key", (q) => q.eq("key", "learning-center-tour"))
       .unique();
 
-    let tourId: Id<"tours">;
-
     if (existing) {
-      tourId = existing._id;
-      // Update tour metadata
       await ctx.db.patch(existing._id, {
-        name: "Faith & Finances Tour",
-        description: "Explore biblical wisdom and practical resources for faithful stewardship.",
-        status: "published",
-        priority: 45,
-        updatedAt: now,
+        status: "archived",
+        updatedAt: Date.now(),
       });
-    } else {
-      // Create the tour
-      tourId = await ctx.db.insert("tours", {
-        key: "learning-center-tour",
-        name: "Faith & Finances Tour",
-        description: "Explore biblical wisdom and practical resources for faithful stewardship.",
-        status: "published",
-        version: 1,
-        priority: 45,
-        createdBy: "system",
-        createdAt: now,
-        updatedAt: now,
-      });
-      created = true;
+      return { tourId: existing._id, archived: true };
     }
 
-    // Define the tour steps
-    const steps = [
-      {
-        stepKey: "learning-tab",
-        route: "/financial",
-        anchorKey: "faith-finances-tab",
-        title: "Faith & Finances",
-        body: "Click this tab to explore biblical wisdom on money, stewardship, and legacy. We've prepared articles and principles to guide your planning journey.",
-      },
-      {
-        stepKey: "learning-header",
-        route: "/financial?tab=learning",
-        anchorKey: "learning-center-header",
-        title: "Welcome to Faith & Finances",
-        body: "This is your space for biblical wisdom on money and legacy. Explore articles written from a faith perspective to guide your planning journey.",
-      },
-      {
-        stepKey: "learning-resources",
-        route: "/financial?tab=learning",
-        anchorKey: "learning-resources-section",
-        title: "Learning Resources",
-        body: "Browse articles covering estate planning, insurance, financial literacy, and more. Each article is designed to help you make wise, faith-informed decisions.",
-      },
-      {
-        stepKey: "learning-principles",
-        route: "/financial?tab=learning",
-        anchorKey: "stewardship-principles-section",
-        title: "Stewardship Principles",
-        body: "These foundational biblical principles remind us that everything belongs to God. Let these truths guide your approach to planning and generosity.",
-      },
-      {
-        stepKey: "learning-wisdom",
-        route: "/financial?tab=learning",
-        anchorKey: "biblical-wisdom-section",
-        title: "Biblical Wisdom",
-        body: "Scripture speaks directly to how we handle money and possessions. These verses offer timeless guidance for your financial decisions.",
-      },
-    ];
-
-    // Create or update each step
-    let stepsUpdated = 0;
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i];
-
-      // Check if step exists
-      const existingStep = await ctx.db
-        .query("tourSteps")
-        .withIndex("by_tour_and_stepKey", (q) => q.eq("tourId", tourId).eq("stepKey", step.stepKey))
-        .unique();
-
-      if (existingStep) {
-        // Update existing step
-        await ctx.db.patch(existingStep._id, {
-          order: i,
-          route: step.route,
-          anchorKey: step.anchorKey,
-          title: step.title,
-          body: step.body,
-          enabled: true,
-          updatedAt: now,
-        });
-      } else {
-        // Create new step
-        await ctx.db.insert("tourSteps", {
-          tourId,
-          stepKey: step.stepKey,
-          order: i,
-          route: step.route,
-          anchorKey: step.anchorKey,
-          title: step.title,
-          body: step.body,
-          enabled: true,
-          versionIntroduced: 1,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-      stepsUpdated++;
-    }
-
-    return { tourId, created, stepsUpdated };
+    return { tourId: undefined, archived: false };
   },
 });
 
