@@ -82,7 +82,7 @@ export function AdminSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
+    <Sidebar collapsible="icon" className="border-border bg-sidebar">
       <SidebarHeader className="px-4 py-4">
         <Link href="/admin" className="flex items-center gap-2">
           <Shield className="h-6 w-6 shrink-0 text-primary" />
@@ -92,7 +92,7 @@ export function AdminSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="gap-0">
+      <SidebarContent className="gap-0 overflow-x-hidden">
         {/* Main Navigation */}
         <SidebarGroup className="py-2">
           <SidebarGroupLabel className="px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">

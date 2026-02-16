@@ -372,7 +372,7 @@ export function TourEditor({ tourId }: TourEditorProps) {
           <div>
             <h1 className="font-crimson text-3xl font-semibold">{tour.name}</h1>
             <p className="text-muted-foreground">
-              <code className="rounded bg-zinc-200 px-1.5 py-0.5 text-sm text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+              <code className="rounded bg-muted px-1.5 py-0.5 text-sm text-foreground">
                 {tour.key}
               </code>
               <span className="mx-2">•</span>
@@ -554,12 +554,12 @@ export function TourEditor({ tourId }: TourEditorProps) {
                       />
                     </TableCell>
                     <TableCell>
-                      <code className="rounded bg-zinc-200 px-1.5 py-0.5 text-xs text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">
                         {step.route}
                       </code>
                     </TableCell>
                     <TableCell>
-                      <code className="rounded bg-zinc-200 px-1.5 py-0.5 text-xs text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">
                         {step.anchorKey}
                       </code>
                     </TableCell>

@@ -101,13 +101,9 @@ function PreviewContent({ tourId }: PreviewContentProps) {
                     <p className="font-medium">{s.title}</p>
                     <p className="text-sm text-muted-foreground">
                       Route:{" "}
-                      <code className="rounded bg-zinc-200 px-1 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
-                        {s.route}
-                      </code>{" "}
-                      • Anchor:{" "}
-                      <code className="rounded bg-zinc-200 px-1 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
-                        {s.anchorKey}
-                      </code>
+                      <code className="rounded bg-muted px-1 text-foreground">{s.route}</code> •
+                      Anchor:{" "}
+                      <code className="rounded bg-muted px-1 text-foreground">{s.anchorKey}</code>
                     </p>
                   </div>
                   <Badge variant={s.enabled ? "default" : "secondary"}>
@@ -133,13 +129,13 @@ function PreviewContent({ tourId }: PreviewContentProps) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Route</p>
-                  <code className="rounded bg-zinc-200 px-2 py-1 text-sm text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                  <code className="rounded bg-muted px-2 py-1 text-sm text-foreground">
                     {step.route}
                   </code>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Anchor Key</p>
-                  <code className="rounded bg-zinc-200 px-2 py-1 text-sm text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                  <code className="rounded bg-muted px-2 py-1 text-sm text-foreground">
                     {step.anchorKey}
                   </code>
                 </div>
@@ -178,11 +174,9 @@ function PreviewContent({ tourId }: PreviewContentProps) {
                 <AlertTitle>How anchors work</AlertTitle>
                 <AlertDescription>
                   Tour steps anchor to elements using the{" "}
-                  <code className="rounded bg-zinc-200 px-1 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
-                    data-tour
-                  </code>{" "}
+                  <code className="rounded bg-muted px-1 text-foreground">data-tour</code>{" "}
                   attribute. Make sure the target element has{" "}
-                  <code className="rounded bg-zinc-200 px-1 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                  <code className="rounded bg-muted px-1 text-foreground">
                     data-tour=&quot;{step.anchorKey}&quot;
                   </code>{" "}
                   on the page.
@@ -195,19 +189,16 @@ function PreviewContent({ tourId }: PreviewContentProps) {
                   {anchorStatus === "checking" ? "Opening..." : "Open Route to Test"}
                 </Button>
                 <p className="text-sm text-muted-foreground">
-                  Opens{" "}
-                  <code className="rounded bg-zinc-200 px-1 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
-                    {step.route}
-                  </code>{" "}
+                  Opens <code className="rounded bg-muted px-1 text-foreground">{step.route}</code>{" "}
                   in a new tab
                 </p>
               </div>
 
               {anchorStatus === "found" && (
-                <Alert className="border-green-200 bg-green-50">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertTitle className="text-green-800">Anchor Found</AlertTitle>
-                  <AlertDescription className="text-green-700">
+                <Alert className="border-primary/20 bg-primary/5">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <AlertTitle className="text-primary">Anchor Found</AlertTitle>
+                  <AlertDescription className="text-primary/80">
                     The element with data-tour=&quot;{step.anchorKey}&quot; was found on the page.
                   </AlertDescription>
                 </Alert>

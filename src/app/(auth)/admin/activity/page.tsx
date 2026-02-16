@@ -3,6 +3,7 @@
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { Search } from "lucide-react";
 import { useState } from "react";
+import { AdminPageHeader } from "@/app/(auth)/admin/components/admin-page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
@@ -43,12 +44,11 @@ export default function ActivityLogsPage() {
   const hasActiveFilters = Boolean(search || actionType || module || startDate || endDate);
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="font-crimson text-3xl font-semibold">Activity Logs</h1>
-        <p className="text-muted-foreground">Track user actions across the platform</p>
-      </div>
+    <div className="space-y-8">
+      <AdminPageHeader
+        title="Activity Logs"
+        subtitle="Every action is a family taking one more step"
+      />
 
       {/* Filters */}
       <ActivityFilters
@@ -67,13 +67,11 @@ export default function ActivityLogsPage() {
 
       {/* Activity Table Card */}
       <Card className="border-border">
-        <CardHeader>
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="font-crimson text-xl">User Activity</CardTitle>
-              <CardDescription>
-                Logins, signups, content creation, and profile changes
-              </CardDescription>
+              <CardDescription>Logins, content creation, and profile changes</CardDescription>
             </div>
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

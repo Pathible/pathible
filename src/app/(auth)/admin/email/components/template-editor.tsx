@@ -263,7 +263,7 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
               {isEditing ? name || "Edit Template" : "New Template"}
             </h1>
             {isAutomated && (
-              <Badge variant="outline" className="bg-amber-500/10 text-amber-700">
+              <Badge variant="outline" className="bg-accent/10 text-accent">
                 Automated
               </Badge>
             )}

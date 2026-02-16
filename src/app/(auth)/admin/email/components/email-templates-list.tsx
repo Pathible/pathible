@@ -1,10 +1,20 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { Clock, Eye, Loader2, Mail, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  Clock,
+  Eye,
+  LayoutTemplate,
+  Loader2,
+  Mail,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +52,7 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { formatDate } from "@/lib/date-utils";
 import { getCategoryLabel, getCategoryStyle } from "@/lib/email-utils";
 import { EmailPreview } from "./email-preview";
 
@@ -69,17 +80,9 @@ export function EmailTemplatesList() {
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
   if (templates === undefined) {
     return (
-      <Card>
+      <Card className="border-border">
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </CardContent>
@@ -89,12 +92,12 @@ export function EmailTemplatesList() {
 
   if (templates.length === 0) {
     return (
-      <Card>
+      <Card className="border-border">
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <Mail className="h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-semibold">No email templates yet</h3>
-          <p className="mt-2 text-center text-muted-foreground">
-            Create your first template to get started with email communications.
+          <Mail className="h-8 w-8 text-muted-foreground/30 mb-2" />
+          <h3 className="font-crimson text-lg font-medium">No email templates yet</h3>
+          <p className="mt-1 text-sm text-muted-foreground text-center">
+            Create your first template to start reaching families.
           </p>
           <Button asChild className="mt-4">
             <Link href="/admin/email/templates/new">Create Template</Link>
@@ -106,10 +109,17 @@ export function EmailTemplatesList() {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-crimson text-xl">Email Templates</CardTitle>
-          <CardDescription>Manage reusable email templates for communications</CardDescription>
+      <Card className="border-border">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="rounded-lg bg-primary/10 p-1.5">
+              <LayoutTemplate className="h-4 w-4 text-primary" />
+            </div>
+            <CardTitle className="font-crimson text-xl">Email Templates</CardTitle>
+          </div>
+          <CardDescription>
+            Reusable templates for reaching families at the right moment
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -125,7 +135,7 @@ export function EmailTemplatesList() {
             </TableHeader>
             <TableBody>
               {templates.map((template) => (
-                <TableRow key={template._id}>
+                <TableRow key={template._id} className="hover:bg-muted/30">
                   <TableCell className="font-medium">
                     <Link
                       href={`/admin/email/templates/${template._id}`}
@@ -138,7 +148,7 @@ export function EmailTemplatesList() {
                     {template.subject}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className={getCategoryStyle(template.category)}>
+                    <Badge variant="outline" className={getCategoryStyle(template.category)}>
                       {getCategoryLabel(template.category)}
                     </Badge>
                   </TableCell>
@@ -151,19 +161,16 @@ export function EmailTemplatesList() {
                             {template.scheduleDescription}
                           </span>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={
-                            template.enabled
-                              ? "bg-green-500/10 text-green-700 text-xs w-fit"
-                              : "text-muted-foreground text-xs w-fit"
-                          }
+                        <AdminStatusBadge
+                          type="enabled"
+                          value={template.enabled ? "enabled" : "disabled"}
+                          className="text-xs w-fit"
                         >
                           {template.enabled ? "Enabled" : "Disabled"}
-                        </Badge>
+                        </AdminStatusBadge>
                       </div>
                     ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <span className="text-xs text-muted-foreground">{"\u2014"}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
@@ -216,7 +223,7 @@ export function EmailTemplatesList() {
       <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Email Preview</DialogTitle>
+            <DialogTitle className="font-crimson">Email Preview</DialogTitle>
             <DialogDescription>Preview how this email will appear to recipients</DialogDescription>
           </DialogHeader>
           {previewTemplate && <EmailPreview templateId={previewTemplate} />}
@@ -227,7 +234,7 @@ export function EmailTemplatesList() {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogTitle className="font-crimson">Delete Template</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete this template? This action cannot be undone.
             </AlertDialogDescription>

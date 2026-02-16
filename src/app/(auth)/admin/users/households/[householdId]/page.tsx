@@ -4,6 +4,8 @@ import { useQuery } from "convex/react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
+import { formatActionType } from "@/app/(auth)/admin/components/admin-utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { formatDateLong } from "@/lib/date-utils";
 import { TierOverrideCard } from "../../components/tier-override-card";
 
 export default function HouseholdDetailPage() {
@@ -24,90 +27,14 @@ export default function HouseholdDetailPage() {
 
   const household = useQuery(api.admin.users.getHousehold, { householdId });
 
-  const formatDate = (timestamp: number | undefined) => {
-    if (!timestamp) return "N/A";
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   const formatBytes = (bytes: number | undefined) => {
     if (!bytes) return "0 GB";
     const gb = bytes / (1024 * 1024 * 1024);
     return `${gb.toFixed(2)} GB`;
   };
 
-  const getTierBadge = (tier: string) => {
-    const styles = {
-      foundations: "bg-pathible-forest/10 text-pathible-forest border-pathible-forest/20",
-      heritage: "bg-pathible-sage/20 text-pathible-sage border-pathible-sage/30",
-      legacy: "bg-pathible-gold/20 text-pathible-gold border-pathible-gold/30",
-      founders: "bg-primary text-primary-foreground border-primary",
-    };
-    return <Badge className={styles[tier as keyof typeof styles] || ""}>{tier}</Badge>;
-  };
-
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      active: "bg-primary/10 text-primary border-primary/20",
-      inactive: "bg-muted text-muted-foreground border-muted",
-      cancelled: "bg-destructive/10 text-destructive border-destructive/20",
-      past_due: "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400",
-    };
-    return <Badge className={styles[status as keyof typeof styles] || ""}>{status}</Badge>;
-  };
-
   const getRoleBadge = (role: string) => {
     return <Badge variant="outline">{role}</Badge>;
-  };
-
-  const getMemberStatusBadge = (status: string) => {
-    const styles = {
-      active: "bg-primary/10 text-primary border-primary/20",
-      pending: "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400",
-      inactive: "bg-muted text-muted-foreground border-muted",
-    };
-    return <Badge className={styles[status as keyof typeof styles] || ""}>{status}</Badge>;
-  };
-
-  const formatActionType = (actionType: string): string => {
-    const actionLabels: Record<string, string> = {
-      document_uploaded: "Document uploaded",
-      document_viewed: "Document viewed",
-      document_updated: "Document updated",
-      document_deleted: "Document deleted",
-      wisdom_created: "Wisdom entry created",
-      wisdom_updated: "Wisdom entry updated",
-      wisdom_deleted: "Wisdom entry deleted",
-      letter_created: "Letter created",
-      household_created: "Household created",
-      household_updated: "Household updated",
-      member_invited: "Member invited",
-      member_joined: "Member joined",
-      member_removed: "Member removed",
-      member_role_updated: "Member role updated",
-      plan_updated: "Legacy plan updated",
-      asset_created: "Financial asset added",
-      asset_updated: "Financial asset updated",
-      asset_deleted: "Financial asset deleted",
-      policy_created: "Insurance policy added",
-      policy_updated: "Insurance policy updated",
-      policy_deleted: "Insurance policy deleted",
-      category_created: "Category created",
-      category_updated: "Category updated",
-      category_deleted: "Category deleted",
-      family_unit_created: "Family unit created",
-      family_unit_updated: "Family unit updated",
-      family_unit_deleted: "Family unit deleted",
-      family_member_created: "Family member added",
-      family_member_updated: "Family member updated",
-      family_member_deleted: "Family member removed",
-      suggestion_completed: "Suggestion completed",
-      other: "Activity",
-    };
-    return actionLabels[actionType] || actionType.replace(/_/g, " ");
   };
 
   if (household === undefined) {
@@ -152,7 +79,7 @@ export default function HouseholdDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="font-crimson text-3xl font-semibold">{household.household.name}</h1>
-          {getTierBadge(household.household.subscriptionTier)}
+          <AdminStatusBadge type="tier" value={household.household.subscriptionTier} />
         </div>
       </div>
 
@@ -186,11 +113,11 @@ export default function HouseholdDetailPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Created</p>
-              <p className="font-medium">{formatDate(household.household._creationTime)}</p>
+              <p className="font-medium">{formatDateLong(household.household._creationTime)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Last Updated</p>
-              <p className="font-medium">{formatDate(household.household.updatedAt)}</p>
+              <p className="font-medium">{formatDateLong(household.household.updatedAt)}</p>
             </div>
           </div>
 
@@ -207,18 +134,23 @@ export default function HouseholdDetailPage() {
                   )}
                 </p>
                 <div className="mt-1 flex items-center gap-2">
-                  {getTierBadge(household.household.subscriptionTier)}
+                  <AdminStatusBadge type="tier" value={household.household.subscriptionTier} />
                   {household.household.tierOverride && (
                     <>
                       <span className="text-muted-foreground">/</span>
-                      {getTierBadge(household.household.tierOverride)}
+                      <AdminStatusBadge type="tier" value={household.household.tierOverride} />
                     </>
                   )}
                 </div>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Subscription Status</p>
-                <div className="mt-1">{getStatusBadge(household.household.subscriptionStatus)}</div>
+                <div className="mt-1">
+                  <AdminStatusBadge
+                    type="subscriptionStatus"
+                    value={household.household.subscriptionStatus}
+                  />
+                </div>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Storage Used</p>
@@ -283,9 +215,11 @@ export default function HouseholdDetailPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{member.email}</TableCell>
                     <TableCell>{getRoleBadge(member.role)}</TableCell>
-                    <TableCell>{getMemberStatusBadge(member.status)}</TableCell>
+                    <TableCell>
+                      <AdminStatusBadge type="memberStatus" value={member.status} />
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(member.joinedAt)}
+                      {formatDateLong(member.joinedAt)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -318,7 +252,7 @@ export default function HouseholdDetailPage() {
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    {formatDate(activity._creationTime)}
+                    {formatDateLong(activity._creationTime)}
                   </span>
                 </div>
               ))}

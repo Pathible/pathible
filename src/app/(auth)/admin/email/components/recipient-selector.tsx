@@ -148,7 +148,7 @@ export function RecipientSelector({
           {selectedUsers.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {selectedUsers.map((user) => (
-                <Badge key={user._id} variant="secondary" className="gap-1 pr-1">
+                <Badge key={user._id} variant="outline" className="gap-1 pr-1">
                   {user.firstName} {user.lastName}
                   <button
                     type="button"
