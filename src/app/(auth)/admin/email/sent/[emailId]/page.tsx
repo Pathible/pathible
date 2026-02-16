@@ -4,12 +4,13 @@ import { useQuery } from "convex/react";
 import { ArrowLeft, Calendar, Loader2, Mail, User, Users } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { formatDateTimeFull } from "@/lib/date-utils";
 
 const RECIPIENT_TYPE_LABELS: Record<string, string> = {
   individual: "Individual",
@@ -18,28 +19,11 @@ const RECIPIENT_TYPE_LABELS: Record<string, string> = {
   household_owners: "Household Owners",
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  sent: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  partial: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-  failed: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-};
-
 export default function SentEmailDetailPage() {
   const params = useParams();
   const emailId = params.emailId as Id<"sentEmails">;
 
   const email = useQuery(api.adminEmail.getSentEmail, { emailId });
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
 
   if (email === undefined) {
     return (
@@ -96,9 +80,9 @@ export default function SentEmailDetailPage() {
 
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Status</p>
-                <Badge variant="secondary" className={`mt-1 ${STATUS_STYLES[email.status]}`}>
+                <AdminStatusBadge type="emailStatus" value={email.status} className="mt-1">
                   {email.status.charAt(0).toUpperCase() + email.status.slice(1)}
-                </Badge>
+                </AdminStatusBadge>
                 {email.errorMessage && (
                   <p className="mt-1 text-sm text-destructive">{email.errorMessage}</p>
                 )}
@@ -108,7 +92,7 @@ export default function SentEmailDetailPage() {
                 <Calendar className="h-4 w-4 mt-0.5 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Sent At</p>
-                  <p className="mt-1 text-sm">{formatDate(email._creationTime)}</p>
+                  <p className="mt-1 text-sm">{formatDateTimeFull(email._creationTime)}</p>
                 </div>
               </div>
 

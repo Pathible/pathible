@@ -4,6 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { Loader2, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { ContactInformationCard } from "./contact-information-card";
 import { DangerZoneCard } from "./danger-zone-card";
@@ -69,17 +70,29 @@ export function ProfileSettingsContent() {
         </div>
       </div>
 
-      {/* Settings Cards */}
-      <PersonalInformationCard
-        profile={profile}
-        email={user.emailAddresses[0]?.emailAddress ?? ""}
-      />
+      <Tabs defaultValue="profile">
+        <TabsList>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="subscription">Subscription</TabsTrigger>
+          <TabsTrigger value="account">Account</TabsTrigger>
+        </TabsList>
 
-      <ContactInformationCard profile={profile} />
+        <TabsContent value="profile" className="space-y-6 mt-6">
+          <PersonalInformationCard
+            profile={profile}
+            email={user.emailAddresses[0]?.emailAddress ?? ""}
+          />
+          <ContactInformationCard profile={profile} />
+        </TabsContent>
 
-      <SubscriptionCard />
+        <TabsContent value="subscription" className="mt-6">
+          <SubscriptionCard />
+        </TabsContent>
 
-      <DangerZoneCard profileName={`${profile.firstName} ${profile.lastName}`} />
+        <TabsContent value="account" className="mt-6">
+          <DangerZoneCard profileName={`${profile.firstName} ${profile.lastName}`} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

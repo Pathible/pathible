@@ -10,7 +10,7 @@ export function FAQSection() {
   return (
     <section
       id="faq"
-      className="relative py-24 sm:py-32 bg-linear-to-b from-pathible-sand to-card/30 overflow-hidden"
+      className="relative py-16 sm:py-20 bg-linear-to-b from-pathible-sand to-card/30 overflow-hidden"
     >
       <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-16">

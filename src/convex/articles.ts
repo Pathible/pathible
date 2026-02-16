@@ -192,51 +192,6 @@ export const listPublicArticles = query({
 });
 
 /**
- * List subscriber-only article previews for the /learn page (no auth required)
- * Returns metadata only (no content) for subscriber articles to show as teasers
- */
-export const listSubscriberArticlePreviews = query({
-  args: {
-    limit: v.optional(v.number()),
-  },
-  returns: v.array(
-    v.object({
-      _id: v.id("educationalArticles"),
-      title: v.string(),
-      slug: v.string(),
-      excerpt: v.string(),
-      category: v.string(),
-      readTimeMinutes: v.number(),
-      featuredImageUrl: v.optional(v.string()),
-    }),
-  ),
-  handler: async (ctx, args) => {
-    // Enforce maximum limit to prevent abuse
-    const MAX_LIMIT = 50;
-    const limit = Math.min(args.limit ?? 10, MAX_LIMIT);
-
-    // Get subscriber-only published articles
-    const articles = await ctx.db
-      .query("educationalArticles")
-      .withIndex("by_status_and_visibility", (q) =>
-        q.eq("status", "published").eq("visibility", "subscribers"),
-      )
-      .order("desc")
-      .take(limit);
-
-    return articles.map((article) => ({
-      _id: article._id,
-      title: article.title,
-      slug: article.slug,
-      excerpt: article.excerpt,
-      category: article.category,
-      readTimeMinutes: article.readTimeMinutes,
-      featuredImageUrl: article.featuredImageUrl,
-    }));
-  },
-});
-
-/**
  * Get a single article by ID (admin view - includes all fields)
  */
 export const get = query({
@@ -337,8 +292,7 @@ export const getBySlug = query({
 
 /**
  * Get article by slug for public /learn pages (no auth required)
- * - Public articles: Returns full content
- * - Subscriber articles: Returns first ~200 words as teaser with truncation flag
+ * Returns full content for all published articles
  */
 export const getPublicBySlug = query({
   args: {
@@ -349,14 +303,12 @@ export const getPublicBySlug = query({
       _id: v.id("educationalArticles"),
       title: v.string(),
       slug: v.string(),
-      content: v.string(), // Full content for public, teaser for subscribers
+      content: v.string(),
       excerpt: v.string(),
       category: v.string(),
-      visibility: v.union(v.literal("public"), v.literal("subscribers")),
       readTimeMinutes: v.number(),
       featuredImageUrl: v.optional(v.string()),
       publishedAt: v.optional(v.number()),
-      isTruncated: v.boolean(), // True if content is truncated (subscriber-only)
     }),
     v.null(),
   ),
@@ -368,35 +320,16 @@ export const getPublicBySlug = query({
 
     if (!article || article.status !== "published") return null;
 
-    const visibility = article.visibility ?? "subscribers";
-    const isPublic = visibility === "public";
-
-    // For public articles, return full content
-    // For subscriber articles, return first ~200 words as teaser
-    let content = article.content;
-    let isTruncated = false;
-
-    if (!isPublic) {
-      // Extract first ~200 words for teaser
-      const words = article.content.split(/\s+/);
-      if (words.length > 200) {
-        content = `${words.slice(0, 200).join(" ")}...`;
-        isTruncated = true;
-      }
-    }
-
     return {
       _id: article._id,
       title: article.title,
       slug: article.slug,
-      content,
+      content: article.content,
       excerpt: article.excerpt,
       category: article.category,
-      visibility,
       readTimeMinutes: article.readTimeMinutes,
       featuredImageUrl: article.featuredImageUrl,
       publishedAt: article.publishedAt,
-      isTruncated,
     };
   },
 });

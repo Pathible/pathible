@@ -9,8 +9,8 @@ import {
   Eye,
   FileText,
   Heart,
-  Info,
   Landmark,
+  Lightbulb,
   Loader2,
   Pencil,
   Plus,
@@ -38,6 +38,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { flattenResponsesForPDF } from "@/lib/person-utils";
 import { US_STATES } from "@/lib/state-legal-requirements";
+import { TipCard } from "../../dashboard/components/tip-card";
 import { LegalDisclaimerModal } from "./legal-disclaimer-modal";
 import type { LegalDocumentPDFData } from "./legal-document-pdf";
 import { PDFPreviewModal } from "./pdf-preview-modal";
@@ -385,26 +386,13 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
         })}
       </div>
 
-      {/* Quick Info Card */}
-      <Card
-        className="bg-amber-50 border-amber-200 text-amber-900"
-        data-tour="legal-docs-getting-started"
-      >
-        <CardContent>
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-muted-foreground mt-0.5" />
-            <div className="text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-2">Getting Started</p>
-              <ul className="space-y-1 list-disc list-inside">
-                <li>Each document guides you through the required information step by step</li>
-                <li>Your progress is saved automatically as you go</li>
-                <li>State-specific requirements are shown based on your location</li>
-                <li>Download PDFs to review with an attorney or store in the Heritage Vault</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Contextual Tip */}
+      <TipCard
+        icon={Lightbulb}
+        text="You don't need to do all of these at once. Start with a will — it's the foundation everything else builds on."
+        route="/legacy?tab=legal-documents"
+        linkText="Start your will"
+      />
 
       {/* Disclaimer Modal */}
       <LegalDisclaimerModal

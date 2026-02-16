@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { Clock, Code2, Eye, Loader2, Pencil, Zap } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -46,7 +46,9 @@ export function SystemTemplatesList() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-amber-500" />
+            <div className="rounded-lg bg-accent/10 p-1.5">
+              <Zap className="h-4 w-4 text-accent" />
+            </div>
             <CardTitle className="font-crimson text-xl">Automated Email Templates</CardTitle>
           </div>
           <CardDescription>
@@ -62,7 +64,9 @@ export function SystemTemplatesList() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-amber-500" />
+            <div className="rounded-lg bg-accent/10 p-1.5">
+              <Zap className="h-4 w-4 text-accent" />
+            </div>
             <CardTitle className="font-crimson text-xl">Automated Email Templates</CardTitle>
           </div>
           <CardDescription>
@@ -87,10 +91,10 @@ export function SystemTemplatesList() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{template.name}</span>
-                      <Badge variant="outline" className="text-xs">
+                      <AdminStatusBadge type="emailCategory" value="system" className="text-xs">
                         <Code2 className="mr-1 h-3 w-3" />
                         System
-                      </Badge>
+                      </AdminStatusBadge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
                   </TableCell>
@@ -104,18 +108,12 @@ export function SystemTemplatesList() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {template.enabled ? (
-                      <Badge
-                        variant="default"
-                        className="bg-green-500/10 text-green-700 hover:bg-green-500/20"
-                      >
-                        Enabled
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-muted-foreground">
-                        Disabled
-                      </Badge>
-                    )}
+                    <AdminStatusBadge
+                      type="enabled"
+                      value={template.enabled ? "enabled" : "disabled"}
+                    >
+                      {template.enabled ? "Enabled" : "Disabled"}
+                    </AdminStatusBadge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">

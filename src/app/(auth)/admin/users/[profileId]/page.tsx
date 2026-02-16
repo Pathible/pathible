@@ -5,6 +5,8 @@ import { ArrowLeft, Loader2, UserMinus, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
+import { formatActionType } from "@/app/(auth)/admin/components/admin-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +30,7 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { formatDateLong } from "@/lib/date-utils";
 
 export default function UserDetailPage() {
   const params = useParams();
@@ -67,64 +70,8 @@ export default function UserDetailPage() {
     }
   };
 
-  const formatDate = (timestamp: number | undefined) => {
-    if (!timestamp) return "N/A";
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatActionType = (actionType: string): string => {
-    const actionLabels: Record<string, string> = {
-      document_uploaded: "Document uploaded",
-      document_viewed: "Document viewed",
-      document_updated: "Document updated",
-      document_deleted: "Document deleted",
-      wisdom_created: "Wisdom entry created",
-      wisdom_updated: "Wisdom entry updated",
-      wisdom_deleted: "Wisdom entry deleted",
-      letter_created: "Letter created",
-      household_created: "Household created",
-      household_updated: "Household updated",
-      member_invited: "Member invited",
-      member_joined: "Member joined",
-      member_removed: "Member removed",
-      member_role_updated: "Member role updated",
-      plan_updated: "Legacy plan updated",
-      asset_created: "Financial asset added",
-      asset_updated: "Financial asset updated",
-      asset_deleted: "Financial asset deleted",
-      policy_created: "Insurance policy added",
-      policy_updated: "Insurance policy updated",
-      policy_deleted: "Insurance policy deleted",
-      category_created: "Category created",
-      category_updated: "Category updated",
-      category_deleted: "Category deleted",
-      family_unit_created: "Family unit created",
-      family_unit_updated: "Family unit updated",
-      family_unit_deleted: "Family unit deleted",
-      family_member_created: "Family member added",
-      family_member_updated: "Family member updated",
-      family_member_deleted: "Family member removed",
-      suggestion_completed: "Suggestion completed",
-      other: "Activity",
-    };
-    return actionLabels[actionType] || actionType.replace(/_/g, " ");
-  };
-
   const getRoleBadge = (role: string) => {
     return <Badge variant="outline">{role}</Badge>;
-  };
-
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      active: "bg-primary/10 text-primary border-primary/20",
-      pending: "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400",
-      inactive: "bg-muted text-muted-foreground border-muted",
-    };
-    return <Badge className={styles[status as keyof typeof styles] || ""}>{status}</Badge>;
   };
 
   if (user === undefined) {
@@ -173,11 +120,9 @@ export default function UserDetailPage() {
           <h1 className="font-crimson text-3xl font-semibold">
             {user.profile.firstName} {user.profile.lastName}
           </h1>
-          {isActive ? (
-            <Badge className="bg-primary/10 text-primary border-primary/20">active</Badge>
-          ) : (
-            <Badge className="bg-muted text-muted-foreground">inactive</Badge>
-          )}
+          <AdminStatusBadge type="memberStatus" value={isActive ? "active" : "inactive"}>
+            {isActive ? "active" : "inactive"}
+          </AdminStatusBadge>
         </div>
       </div>
 
@@ -207,7 +152,7 @@ export default function UserDetailPage() {
             {user.profile.dateOfBirth && (
               <div>
                 <p className="text-sm text-muted-foreground">Date of Birth</p>
-                <p className="font-medium">{formatDate(user.profile.dateOfBirth)}</p>
+                <p className="font-medium">{formatDateLong(user.profile.dateOfBirth)}</p>
               </div>
             )}
             {user.profile.address && (
@@ -228,11 +173,11 @@ export default function UserDetailPage() {
             )}
             <div>
               <p className="text-sm text-muted-foreground">Member Since</p>
-              <p className="font-medium">{formatDate(user.profile._creationTime)}</p>
+              <p className="font-medium">{formatDateLong(user.profile._creationTime)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Last Updated</p>
-              <p className="font-medium">{formatDate(user.profile.updatedAt)}</p>
+              <p className="font-medium">{formatDateLong(user.profile.updatedAt)}</p>
             </div>
             {user.profile.onboardingStatus && (
               <div>
@@ -277,9 +222,11 @@ export default function UserDetailPage() {
                       </Link>
                     </TableCell>
                     <TableCell>{getRoleBadge(membership.role)}</TableCell>
-                    <TableCell>{getStatusBadge(membership.status)}</TableCell>
+                    <TableCell>
+                      <AdminStatusBadge type="memberStatus" value={membership.status} />
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(membership.joinedAt)}
+                      {formatDateLong(membership.joinedAt)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -310,7 +257,7 @@ export default function UserDetailPage() {
                     <p className="text-sm text-muted-foreground">{activity.description}</p>
                   </div>
                   <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    {formatDate(activity._creationTime)}
+                    {formatDateLong(activity._creationTime)}
                   </span>
                 </div>
               ))}

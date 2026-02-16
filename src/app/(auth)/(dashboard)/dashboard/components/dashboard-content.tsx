@@ -3,18 +3,18 @@
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import {
-  ArrowRight,
+  BookOpen,
   FileText,
-  Heart,
+  Lightbulb,
   Loader2,
   Shield,
   Sparkles,
   TrendingUp,
   Users,
 } from "lucide-react";
-import Link from "next/link";
-import { DashboardStatCard } from "@/app/(auth)/(dashboard)/dashboard/components/dashboard-stat-card";
-import { Card, CardContent } from "@/components/ui/card";
+import { QuickActionCard } from "@/app/(auth)/(dashboard)/dashboard/components/quick-action-card";
+import { TipCard } from "@/app/(auth)/(dashboard)/dashboard/components/tip-card";
+import { StatCard } from "@/components/stat-card";
 import { api } from "@/convex/_generated/api";
 import {
   FEATURE_SLUGS,
@@ -59,14 +59,6 @@ export function DashboardContent() {
     householdId && hasLegacyAccess ? { householdId } : "skip",
   );
 
-  // Daily devotional/quote
-  const dailyQuote = {
-    text: "A good person leaves an inheritance for their children's children, but a sinner's wealth is stored up for the righteous.",
-    reference: "Proverbs 13:22",
-    reflection:
-      "The best things we leave behind can't be measured. They can only be felt by those who receive them.",
-  };
-
   // Stats with real data
   const wisdomEntriesCount = wisdomStats?.totalEntries ?? 0;
   const coreBeliefsCount = coreBeliefsData?.beliefs?.length ?? 0;
@@ -83,59 +75,126 @@ export function DashboardContent() {
   // Check if profile already exists
   const profile = useQuery(api.profiles.get, isUserLoaded && user ? {} : "skip");
 
-  // Determine next step based on progress (only suggest features user has access to)
-  const getNextStep = () => {
-    // Wisdom is only suggested if user has access (Heritage+)
-    if (hasWisdomAccess && stats.wisdomEntriesCount === 0) {
-      return {
-        title: "Share your first piece of wisdom",
-        description: "Pass down what matters most to those who matter most",
-        route: "/wisdom/create-entry",
-        icon: Sparkles,
-      };
-    }
+  // Build quick actions based on user progress (cap at 4)
+  const getQuickActions = () => {
+    const actions: {
+      title: string;
+      description: string;
+      route: string;
+      icon: typeof Shield;
+      ctaLabel: string;
+    }[] = [];
 
-    // Vault is available to all tiers
-    if (stats.vaultItemsCount < 5) {
-      return {
-        title: "Organize important documents",
-        description: "Add the documents your family will need someday",
+    if (stats.vaultItemsCount === 0) {
+      actions.push({
+        title: "Heritage Vault",
+        description: "Upload your most important documents so your family can find them someday",
         route: "/vault",
         icon: Shield,
-      };
+        ctaLabel: "Upload first document",
+      });
+    } else if (stats.vaultItemsCount < 5) {
+      actions.push({
+        title: "Heritage Vault",
+        description: "You have a good start -- keep adding documents your family will need",
+        route: "/vault",
+        icon: Shield,
+        ctaLabel: "Add more documents",
+      });
     }
 
-    // Financial is available to all tiers
     if (stats.netWorth === 0) {
-      return {
-        title: "Add your financial picture",
+      actions.push({
+        title: "Financial Clarity",
         description: "Help your family understand what you have and where it is",
         route: "/financial",
         icon: TrendingUp,
-      };
+        ctaLabel: "Add account",
+      });
     }
 
-    // Legacy is only suggested if user has access (Legacy+)
+    if (hasWisdomAccess && stats.wisdomEntriesCount === 0) {
+      actions.push({
+        title: "Wisdom & Stories",
+        description: "Pass down what matters most to those who matter most",
+        route: "/wisdom/create-entry",
+        icon: Sparkles,
+        ctaLabel: "Start writing",
+      });
+    }
+
     if (hasLegacyAccess && stats.legacyPlanCompletion < 50) {
-      return {
-        title: "Continue your Legacy Plan",
+      actions.push({
+        title: "Legacy Plan",
         description: "Give your family clarity, not confusion",
         route: "/legacy",
         icon: FileText,
-      };
+        ctaLabel:
+          stats.legacyPlanCompletion > 0
+            ? `${stats.legacyPlanCompletion}% complete`
+            : "Start planning",
+      });
     }
 
-    // Default: family is available to all
-    return {
-      title: "Check on your family",
-      description: "Make sure the right people have access when it matters",
-      route: "/family",
-      icon: Users,
-    };
+    // Fallback if nothing else
+    if (actions.length === 0) {
+      actions.push({
+        title: "Your Family",
+        description: "Make sure the right people have access when it matters",
+        route: "/family",
+        icon: Users,
+        ctaLabel: "View family",
+      });
+    }
+
+    return actions.slice(0, 4);
   };
 
-  const nextStep = getNextStep();
-  const NextStepIcon = nextStep.icon;
+  // Build contextual tips based on empty areas (cap at 3)
+  const getContextualTips = () => {
+    const tips: {
+      text: string;
+      icon: typeof Lightbulb;
+      route?: string;
+      linkText?: string;
+    }[] = [];
+
+    if (stats.vaultItemsCount === 0) {
+      tips.push({
+        text: "Start with your most important document -- a will, trust, or insurance policy.",
+        icon: Lightbulb,
+        route: "/vault",
+        linkText: "Go to Vault",
+      });
+    }
+
+    if (stats.netWorth === 0) {
+      tips.push({
+        text: "Even a simple list of accounts helps your family avoid months of searching.",
+        icon: Lightbulb,
+        route: "/financial",
+        linkText: "Add accounts",
+      });
+    }
+
+    if (hasWisdomAccess && stats.wisdomEntriesCount === 0) {
+      tips.push({
+        text: "What's one piece of advice you'd want your grandchildren to know?",
+        icon: Lightbulb,
+        route: "/wisdom/create-entry",
+        linkText: "Write it down",
+      });
+    }
+
+    if (tips.length === 0) {
+      tips.push({
+        text: "You're doing great. Keep your information up to date as things change.",
+        icon: Lightbulb,
+      });
+    }
+
+    return tips.slice(0, 3);
+  };
 
   // Loading state - wait for access checks and data before rendering
   const isAccessLoading = wisdomAccessLoading || legacyAccessLoading;
@@ -156,111 +215,104 @@ export function DashboardContent() {
     );
   }
 
+  const quickActions = getQuickActions();
+  const tips = getContextualTips();
+
   // Count visible stat cards for dynamic grid (Vault + Financial always visible)
   const visibleCardCount = 2 + (hasWisdomAccess ? 1 : 0) + (hasLegacyAccess ? 1 : 0);
 
   return (
     <>
-      {/* Greeting */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Welcome back, {profile?.firstName}!</h1>
-        <p className="text-muted-foreground text-lg">Here&apos;s how your legacy is taking shape</p>
-      </div>
+      {/* Compact greeting */}
+      <h2 className="text-4xl font-bold mb-6">Welcome back, {profile?.firstName}!</h2>
 
-      {/* Progress Cards - dynamically sized grid based on accessible features */}
+      {/* Stats */}
       <div
-        className={`grid grid-cols-1 gap-6 mb-8 ${
-          visibleCardCount === 1
-            ? "md:grid-cols-1 max-w-md"
-            : visibleCardCount === 2
-              ? "md:grid-cols-2"
-              : visibleCardCount === 3
-                ? "md:grid-cols-3"
-                : "md:grid-cols-2 lg:grid-cols-4"
+        className={`grid grid-cols-1 gap-4 mb-8 ${
+          visibleCardCount <= 2
+            ? "sm:grid-cols-2"
+            : visibleCardCount === 3
+              ? "sm:grid-cols-3"
+              : "sm:grid-cols-2 lg:grid-cols-4"
         }`}
         data-testid="dashboard-stats"
         data-tour="dashboard-stats"
       >
-        {/* Heritage Vault - available to all tiers */}
-        <DashboardStatCard
+        <StatCard
           href="/vault"
-          icon="shield"
+          icon={Shield}
+          iconColor="text-primary"
           value={stats.vaultItemsCount}
           title="Heritage Vault"
-          description="Safe and ready for your family someday"
+          description="Safe for your family"
+          data-testid="shield"
         />
-
-        {/* Financial Clarity - available to all tiers */}
-        <DashboardStatCard
+        <StatCard
           href="/financial"
-          icon="trendingUp"
-          value={stats.netWorth > 0 ? `$${stats.netWorth.toLocaleString()}` : "—"}
+          icon={TrendingUp}
+          iconColor="text-accent"
+          value={stats.netWorth > 0 ? `$${stats.netWorth.toLocaleString()}` : "\u2014"}
           title="Financial Clarity"
           description="Your family's financial picture"
+          data-testid="trendingUp"
         />
-
-        {/* Wisdom & Stories - Heritage+ only */}
         {hasWisdomAccess && (
-          <DashboardStatCard
+          <StatCard
             href="/wisdom"
-            icon="bookOpen"
+            icon={BookOpen}
+            iconColor="text-secondary"
             value={stats.wisdomEntriesCount}
             title="Wisdom & Stories"
-            description="Passed down to future generations"
+            description="Passed down for generations"
+            data-testid="bookOpen"
           />
         )}
-
-        {/* Legacy Plan - Legacy+ only */}
         {hasLegacyAccess && (
-          <DashboardStatCard
+          <StatCard
             href="/legacy"
-            icon="fileText"
+            icon={FileText}
+            iconColor="text-muted-foreground"
             value={`${stats.legacyPlanCompletion}%`}
             title="Legacy Plan"
-            description="Your story, your heart, your intentions"
+            description="Your story, your intentions"
+            progressValue={stats.legacyPlanCompletion}
+            data-testid="fileText"
           />
         )}
       </div>
 
-      {/* Next Step CTA */}
-      <Link href={nextStep.route} className="block mb-8" data-tour="next-step-cta">
-        <Card className="bg-primary/5 border-primary/20 cursor-pointer hover:shadow-lg transition-all hover:bg-primary/10">
-          <CardContent>
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <NextStepIcon className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-xl font-semibold">Next Step</h3>
-                  <ArrowRight className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-lg font-medium text-foreground mb-1">{nextStep.title}</p>
-                <p className="text-muted-foreground">{nextStep.description}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </Link>
+      {/* Quick Actions */}
+      <div data-tour="quick-actions">
+        <h3 className="text-lg font-semibold mb-3">Get Started</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {quickActions.map((action) => (
+            <QuickActionCard
+              key={action.route}
+              title={action.title}
+              description={action.description}
+              route={action.route}
+              icon={action.icon}
+              ctaLabel={action.ctaLabel}
+            />
+          ))}
+        </div>
+      </div>
 
-      {/* Daily Devotional/Quote */}
-      <Card className="mb-8 border-l-4 border-l-primary" data-tour="daily-reflection">
-        <CardContent>
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-lg bg-primary/10">
-              <Heart className="h-6 w-6 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-2">Daily Reflection</h3>
-              <blockquote className="text-lg italic text-foreground mb-2">
-                &quot;{dailyQuote.text}&quot;
-              </blockquote>
-              <p className="text-sm font-medium text-primary mb-3">- {dailyQuote.reference}</p>
-              <p className="text-muted-foreground">{dailyQuote.reflection}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Contextual Tips */}
+      <div data-tour="dashboard-tips">
+        <h3 className="text-lg font-semibold mb-3">Tips for You</h3>
+        <div className="space-y-3">
+          {tips.map((tip) => (
+            <TipCard
+              key={tip.text}
+              text={tip.text}
+              icon={tip.icon}
+              route={tip.route}
+              linkText={tip.linkText}
+            />
+          ))}
+        </div>
+      </div>
     </>
   );
 }

@@ -191,7 +191,7 @@ describe("Legacy Planning - E2E Test Suite", () => {
       });
     });
 
-    it("should display Document Access Map section on summary page", () => {
+    it("should display key contacts section on summary page", () => {
       cy.visit("/legacy", { failOnStatusCode: false });
 
       // Handle potential onboarding redirect
@@ -205,11 +205,8 @@ describe("Legacy Planning - E2E Test Suite", () => {
 
         cy.get("body").then(($body) => {
           if ($body.text().includes("Your Legacy is Taking Shape")) {
-            // Check for Document Access Map
-            cy.contains("Document Access Map").should("be.visible");
-            cy.contains("Will & Testament").should("be.visible");
-            cy.contains("Insurance Documents").should("be.visible");
-            cy.contains("Financial Accounts").should("be.visible");
+            // Check for Key Contacts section
+            cy.contains("Key Contacts").should("be.visible");
           }
         });
       });

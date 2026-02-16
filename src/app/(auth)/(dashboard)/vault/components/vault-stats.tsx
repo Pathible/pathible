@@ -1,7 +1,7 @@
 "use client";
 
 import { Clock, FileText, FolderOpen, HardDrive } from "lucide-react";
-import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/stat-card";
 
 interface VaultStatsProps {
   stats: {
@@ -23,61 +23,34 @@ function formatBytes(bytes: number): string {
 export function VaultStats({ stats }: VaultStatsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Total Documents */}
-      <Card className="py-2">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-3">
-            <FileText className="h-6 w-6 text-primary shrink-0" />
-            <div className="text-2xl font-bold">{stats.totalDocuments}</div>
-          </div>
-          <div className="mt-1">
-            <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
-            <CardDescription className="text-xs">Safe for your family</CardDescription>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Total Storage */}
-      <Card className="py-2">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-3">
-            <HardDrive className="h-6 w-6 text-accent shrink-0" />
-            <div className="text-2xl font-bold">{formatBytes(stats.totalSize)}</div>
-          </div>
-          <div className="mt-1">
-            <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
-            <CardDescription className="text-xs">Your documents at a glance</CardDescription>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Categories */}
-      <Card className="py-2">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-3">
-            <FolderOpen className="h-6 w-6 text-secondary shrink-0" />
-            <div className="text-2xl font-bold">{stats.totalCategories}</div>
-          </div>
-          <div className="mt-1">
-            <CardTitle className="text-sm font-medium">Categories</CardTitle>
-            <CardDescription className="text-xs">Keeping things organized</CardDescription>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Uploads */}
-      <Card className="py-2">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-3">
-            <Clock className="h-6 w-6 text-muted-foreground shrink-0" />
-            <div className="text-2xl font-bold">{stats.recentUploads}</div>
-          </div>
-          <div className="mt-1">
-            <CardTitle className="text-sm font-medium">Recent Uploads</CardTitle>
-            <CardDescription className="text-xs">Added this month</CardDescription>
-          </div>
-        </CardContent>
-      </Card>
+      <StatCard
+        icon={FileText}
+        iconColor="text-primary"
+        value={stats.totalDocuments}
+        title="Total Documents"
+        description="Safe for your family"
+      />
+      <StatCard
+        icon={HardDrive}
+        iconColor="text-accent"
+        value={formatBytes(stats.totalSize)}
+        title="Storage Used"
+        description="Your documents at a glance"
+      />
+      <StatCard
+        icon={FolderOpen}
+        iconColor="text-secondary"
+        value={stats.totalCategories}
+        title="Categories"
+        description="Keeping things organized"
+      />
+      <StatCard
+        icon={Clock}
+        iconColor="text-muted-foreground"
+        value={stats.recentUploads}
+        title="Recent Uploads"
+        description="Added this month"
+      />
     </div>
   );
 }

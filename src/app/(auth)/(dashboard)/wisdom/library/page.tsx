@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { formatDate } from "@/lib/date-utils";
 import { FEATURES } from "@/lib/feature-access";
 
 const CATEGORIES = [
@@ -57,14 +58,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   advice: "Advice",
   traditions: "Traditions",
 };
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
@@ -102,9 +95,6 @@ export default function WisdomLibraryPage() {
       : "skip",
   );
 
-  // Get stats
-  const stats = useQuery(api.wisdom.getStats, householdId ? { householdId } : "skip");
-
   // Mutations
   const removeEntry = useMutation(api.wisdom.remove);
 
@@ -131,10 +121,6 @@ export default function WisdomLibraryPage() {
       </div>
     );
   }
-
-  const totalEntries = stats?.totalEntries ?? 0;
-  const wisdomEntries = stats?.totalEntries ?? 0;
-  const lettersCount = 0; // Letters deferred to post-MVP
 
   return (
     <FeatureGate feature={FEATURES.WISDOM_ENTRIES}>
@@ -165,28 +151,6 @@ export default function WisdomLibraryPage() {
               Add New
             </Link>
           </Button>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-muted-foreground text-sm">Total Entries</p>
-              <p className="text-2xl font-bold">{totalEntries}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-muted-foreground text-sm">Wisdom Entries</p>
-              <p className="text-2xl font-bold">{wisdomEntries}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-muted-foreground text-sm">Letters</p>
-              <p className="text-2xl font-bold">{lettersCount}</p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Filters */}
@@ -227,12 +191,14 @@ export default function WisdomLibraryPage() {
           <Card>
             <CardContent className="p-12 text-center">
               <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Your library is waiting</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Your family is waiting to hear from you
+              </h3>
               <p className="text-muted-foreground mb-4">
-                Start sharing the lessons and stories that matter most.
+                The stories only you can tell, start with one, it doesn&apos;t have to be perfect.
               </p>
               <Button asChild>
-                <Link href="/wisdom/create-entry">Create Your First Entry</Link>
+                <Link href="/wisdom/create-entry">Write Your First Story</Link>
               </Button>
             </CardContent>
           </Card>

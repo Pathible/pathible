@@ -451,54 +451,23 @@ export function markdownToEmailHtml(
 // TEMPLATE CATEGORIES
 // ============================================================================
 
+import { EMAIL_CATEGORY_STYLES } from "@/app/(auth)/admin/components/admin-utils";
+
 export const TEMPLATE_CATEGORIES = [
-  {
-    value: "onboarding",
-    label: "Onboarding",
-    color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  },
-  {
-    value: "retargeting",
-    label: "Retargeting",
-    color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
-  },
-  {
-    value: "announcements",
-    label: "Announcements",
-    color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400",
-  },
-  {
-    value: "legacy",
-    label: "Legacy",
-    color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
-  },
-  {
-    value: "invitations",
-    label: "Invitations",
-    color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  },
-  {
-    value: "digest",
-    label: "Digest",
-    color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-  },
-  {
-    value: "system",
-    label: "System",
-    color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
-  },
-  {
-    value: "other",
-    label: "Other",
-    color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
-  },
+  { value: "onboarding", label: "Onboarding" },
+  { value: "retargeting", label: "Retargeting" },
+  { value: "announcements", label: "Announcements" },
+  { value: "legacy", label: "Legacy" },
+  { value: "invitations", label: "Invitations" },
+  { value: "digest", label: "Digest" },
+  { value: "system", label: "System" },
+  { value: "other", label: "Other" },
 ] as const;
 
 export type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number]["value"];
 
 export function getCategoryStyle(category: string | undefined): string {
-  const found = TEMPLATE_CATEGORIES.find((c) => c.value === category);
-  return found?.color ?? TEMPLATE_CATEGORIES[5].color;
+  return EMAIL_CATEGORY_STYLES[category ?? "other"] ?? EMAIL_CATEGORY_STYLES.other;
 }
 
 export function getCategoryLabel(category: string | undefined): string {

@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { Archive, Compass, MoreHorizontal, Plus, Sparkles } from "lucide-react";
+import { Archive, Compass, Loader2, MoreHorizontal, Plus, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { AdminPageHeader } from "@/app/(auth)/admin/components/admin-page-header";
+import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -35,36 +36,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-
-function formatDate(timestamp: number) {
-  return new Date(timestamp).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function getStatusBadgeVariant(status: "draft" | "published" | "archived") {
-  switch (status) {
-    case "published":
-      return "default";
-    case "draft":
-      return "secondary";
-    case "archived":
-      return "outline";
-    default:
-      return "secondary";
-  }
-}
+import { formatDate } from "@/lib/date-utils";
 
 function generateKeyFromName(name: string): string {
   return name
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s-]/g, "") // Remove special chars except spaces and hyphens
-    .replace(/\s+/g, "-") // Replace spaces with hyphens
-    .replace(/-+/g, "-") // Replace multiple hyphens with single
-    .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 export function ToursList() {
@@ -83,7 +64,6 @@ export function ToursList() {
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form state for create dialog
   const [newTourKey, setNewTourKey] = useState("");
   const [newTourName, setNewTourName] = useState("");
   const [newTourDescription, setNewTourDescription] = useState("");
@@ -188,55 +168,54 @@ export function ToursList() {
   if (tours === undefined) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-crimson text-3xl font-semibold">Guided Tours</h1>
-          <p className="text-muted-foreground">
-            Manage onboarding tours that guide users through the app
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSeedWelcomeTour} disabled={isSubmitting}>
-            <Sparkles className="mr-2 h-4 w-4" />
-            Seed Welcome Tour
-          </Button>
-          <Button variant="outline" onClick={handleSeedFeatureTours} disabled={isSubmitting}>
-            <Sparkles className="mr-2 h-4 w-4" />
-            Seed Feature Tours
-          </Button>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Tour
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <AdminPageHeader
+        title="Guided Tours"
+        subtitle="Guiding families through their first steps"
+        actions={
+          <>
+            <Button variant="outline" onClick={handleSeedWelcomeTour} disabled={isSubmitting}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Seed Welcome
+            </Button>
+            <Button variant="outline" onClick={handleSeedFeatureTours} disabled={isSubmitting}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Seed Features
+            </Button>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Tour
+            </Button>
+          </>
+        }
+      />
 
       {/* Tours Table */}
       <Card className="border-border">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Compass className="h-5 w-5 text-primary" />
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="rounded-lg bg-primary/10 p-1.5">
+              <Compass className="h-4 w-4 text-primary" />
+            </div>
             <CardTitle className="font-crimson text-xl">All Tours</CardTitle>
           </div>
           <CardDescription>
-            {tours.length} tour{tours.length !== 1 ? "s" : ""} total
+            {tours.length} tour{tours.length !== 1 ? "s" : ""} helping families find their way
           </CardDescription>
         </CardHeader>
         <CardContent>
           {tours.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Compass className="h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 font-crimson text-lg font-medium">No tours yet</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Create your first tour to guide users through the app.
+              <Compass className="h-8 w-8 text-muted-foreground/30 mb-2" />
+              <h3 className="font-crimson text-lg font-medium">No tours yet</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Create your first tour to guide families through the app.
               </p>
               <Button className="mt-4" onClick={() => setCreateDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -260,21 +239,25 @@ export function ToursList() {
                 {tours.map((tour) => (
                   <TableRow
                     key={tour._id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer hover:bg-muted/30"
                     onClick={() => router.push(`/admin/tours/${tour._id}`)}
                   >
                     <TableCell className="font-medium">{tour.name}</TableCell>
                     <TableCell>
-                      <code className="rounded bg-zinc-200 px-1.5 py-0.5 text-sm text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                      <code className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-mono">
                         {tour.key}
                       </code>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getStatusBadgeVariant(tour.status)}>{tour.status}</Badge>
+                      <AdminStatusBadge type="contentStatus" value={tour.status}>
+                        {tour.status}
+                      </AdminStatusBadge>
                     </TableCell>
-                    <TableCell>v{tour.version}</TableCell>
-                    <TableCell>{tour.priority}</TableCell>
-                    <TableCell>{formatDate(tour.updatedAt)}</TableCell>
+                    <TableCell className="tabular-nums">v{tour.version}</TableCell>
+                    <TableCell className="tabular-nums">{tour.priority}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(tour.updatedAt)}
+                    </TableCell>
                     <TableCell>
                       {tour.status !== "archived" && (
                         <DropdownMenu>
@@ -316,7 +299,7 @@ export function ToursList() {
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Tour</DialogTitle>
+            <DialogTitle className="font-crimson">Create New Tour</DialogTitle>
             <DialogDescription>
               Create a new guided tour. It will start as a draft and can be published when ready.
             </DialogDescription>
@@ -374,10 +357,10 @@ export function ToursList() {
       <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Archive Tour</DialogTitle>
+            <DialogTitle className="font-crimson">Archive Tour</DialogTitle>
             <DialogDescription>
-              Are you sure you want to archive &quot;{tourToArchive?.name}&quot;? Archived tours
-              will no longer appear to users.
+              Are you sure you want to archive &quot;{tourToArchive?.name}
+              &quot;? Archived tours will no longer appear to users.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

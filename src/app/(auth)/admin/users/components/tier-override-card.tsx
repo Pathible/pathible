@@ -3,6 +3,7 @@
 import { useMutation } from "convex/react";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { formatDateLong } from "@/lib/date-utils";
 
 interface TierOverrideCardProps {
   householdId: Id<"households">;
@@ -51,24 +53,6 @@ export function TierOverrideCard({
   const [reason, setReason] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const getTierBadge = (tier: string) => {
-    const styles = {
-      foundations: "bg-pathible-forest/10 text-pathible-forest border-pathible-forest/20",
-      heritage: "bg-pathible-sage/20 text-pathible-sage border-pathible-sage/30",
-      legacy: "bg-pathible-gold/20 text-pathible-gold border-pathible-gold/30",
-      founders: "bg-primary text-primary-foreground border-primary",
-    };
-    return <Badge className={styles[tier as keyof typeof styles] || ""}>{tier}</Badge>;
-  };
 
   const handleApplyOverride = async () => {
     if (!reason.trim()) {
@@ -138,13 +122,13 @@ export function TierOverrideCard({
               <>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Override Tier:</span>
-                  {getTierBadge(tierOverride)}
+                  <AdminStatusBadge type="tier" value={tierOverride} />
                 </div>
                 {tierOverrideExpiresAt && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Expires:</span>
                     <span className={`text-sm ${isOverrideExpired ? "text-destructive" : ""}`}>
-                      {formatDate(tierOverrideExpiresAt)}
+                      {formatDateLong(tierOverrideExpiresAt)}
                       {isOverrideExpired && " (Expired)"}
                     </span>
                   </div>
@@ -160,7 +144,10 @@ export function TierOverrideCard({
 
             {!hasActiveOverride && (
               <p className="text-sm text-muted-foreground">
-                This household is using its standard subscription tier: {getTierBadge(currentTier)}
+                This household is using its standard subscription tier:
+                <span className="ml-2">
+                  <AdminStatusBadge type="tier" value={currentTier} />
+                </span>
               </p>
             )}
           </div>

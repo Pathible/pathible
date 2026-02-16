@@ -336,6 +336,7 @@ export const create = mutation({
         v.literal("founders"),
       ),
     ),
+    referralSource: v.optional(v.string()),
   },
   returns: v.id("households"),
   handler: async (ctx, args) => {
@@ -362,6 +363,7 @@ export const create = mutation({
       storageUsedBytes: 0,
       memberCount: 0,
       familyUnitCount: 0,
+      referralSource: args.referralSource?.trim() || undefined,
       updatedAt: Date.now(),
     });
 

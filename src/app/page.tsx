@@ -2,11 +2,11 @@ import { CTASection } from "@/components/marketing/cta-section";
 import { FAQSection } from "@/components/marketing/faq";
 import { ForWhoSection } from "@/components/marketing/for-who";
 import { HeroSection } from "@/components/marketing/hero";
-import { HowItWorks } from "@/components/marketing/how-it-works";
-import { Manifesto } from "@/components/marketing/manifesto";
+import { ThePlan } from "@/components/marketing/how-it-works";
+import { TheStakes } from "@/components/marketing/manifesto";
 import { ModulesPreview } from "@/components/marketing/modules-preview";
-import { ValuePillars } from "@/components/marketing/value-pillars";
-import { WhyPathible } from "@/components/marketing/whypathible";
+import { GuideSection } from "@/components/marketing/value-pillars";
+import { PainSection } from "@/components/marketing/whypathible";
 import { PublicPageLayout } from "@/components/PublicPageLayout";
 import { JsonLd } from "@/components/seo/JsonLd";
 import {
@@ -24,14 +24,23 @@ export default function Index() {
         data={[organizationSchema, websiteSchema, softwareApplicationSchema, faqPageSchema]}
       />
 
+      {/* StoryBrand PEACE Narrative Flow */}
+      {/* P - Problem: The question that stops them */}
       <HeroSection />
-      <WhyPathible />
-      <ValuePillars />
-      <HowItWorks />
-      <ForWhoSection />
+      {/* E - Empathy: Make them feel the chaos */}
+      <PainSection />
+      {/* A - Answer: The guide shows up */}
+      <GuideSection />
+      {/* C - Change: The plan + what you get */}
+      <ThePlan />
       <ModulesPreview />
-      <Manifesto />
+      {/* Identity: Who this is for */}
+      <ForWhoSection />
+      {/* Stakes: What happens if you don't vs if you do */}
+      <TheStakes />
+      {/* Authority: Answer objections */}
       <FAQSection />
+      {/* E - End Result: The emotional close */}
       <CTASection />
     </PublicPageLayout>
   );

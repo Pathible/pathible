@@ -1,11 +1,10 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, MessageCircle, Plus, Share2 } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { ComingSoonBadge } from "@/components/coming-soon";
 import { FeatureGate } from "@/components/feature-gate";
 import {
   AlertDialog,
@@ -20,9 +19,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { formatDateForInput } from "@/lib/date-utils";
 import { FEATURES } from "@/lib/feature-access";
 import { MemberCard } from "./member-card";
 import { INITIAL_FORM_STATE, MemberFormDialog, type MemberFormState } from "./member-form-dialog";
@@ -31,18 +30,10 @@ interface FamilyUnitDetailProps {
   unitId: string;
 }
 
-// Format timestamp to YYYY-MM-DD in local timezone (not UTC)
-// Using toISOString() would shift dates backward for US timezones
-function formatDateForInput(timestamp: number): string {
-  const date = new Date(timestamp);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-// Helper to build mutation args from form state
-// Converts empty strings to undefined for optional fields
+/**
+ * Helper to build mutation args from form state
+ * Converts empty strings to undefined for optional fields
+ */
 function buildMutationArgs(formState: MemberFormState) {
   // Helper to convert empty strings to undefined (for union types that include "")
   const toUndefinedIfEmpty = <T extends string>(val: T | ""): Exclude<T, ""> | undefined =>
@@ -231,92 +222,43 @@ export function FamilyUnitDetail({ unitId }: FamilyUnitDetailProps) {
                 <Badge className="bg-green-600 hover:bg-green-700">Primary</Badge>
               )}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" disabled className="opacity-60">
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Message
-                <ComingSoonBadge size="sm" className="ml-2" />
-              </Button>
-              <Button variant="outline" disabled className="opacity-60">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-                <ComingSoonBadge size="sm" className="ml-2" />
-              </Button>
-            </div>
           </div>
           {familyUnit.relationshipToHousehold && (
             <p className="text-muted-foreground text-lg">{familyUnit.relationshipToHousehold}</p>
           )}
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="members" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="members">Members</TabsTrigger>
-            <TabsTrigger value="shared">Shared Items</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="members" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Family Members</CardTitle>
-                  <Button onClick={openAddDialog}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Member
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {!familyMembers || familyMembers.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No members yet. Add your first family member to get started.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {familyMembers.map((member) => (
-                      <MemberCard
-                        key={member._id}
-                        member={member}
-                        onEdit={() => openEditDialog(member)}
-                        onRemove={() =>
-                          openDeleteConfirm(member._id, `${member.firstName} ${member.lastName}`)
-                        }
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="shared">
-            <Card className="border-dashed border-amber-300">
-              <CardContent className="py-12 text-center">
-                <Share2 className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Shared Items</h3>
-                <p className="text-muted-foreground mb-4">
-                  Share documents and photos with this family unit.
-                </p>
-                <ComingSoonBadge />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activity">
-            <Card className="border-dashed border-amber-300">
-              <CardContent className="py-12 text-center">
-                <MessageCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Activity Feed</h3>
-                <p className="text-muted-foreground mb-4">
-                  See recent activity and updates from this family unit.
-                </p>
-                <ComingSoonBadge />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Family Members</CardTitle>
+              <Button onClick={openAddDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Member
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {!familyMembers || familyMembers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No members yet. Add your first family member to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {familyMembers.map((member) => (
+                  <MemberCard
+                    key={member._id}
+                    member={member}
+                    onEdit={() => openEditDialog(member)}
+                    onRemove={() =>
+                      openDeleteConfirm(member._id, `${member.firstName} ${member.lastName}`)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Shared Member Form Dialog - handles both add and edit */}

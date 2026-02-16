@@ -407,6 +407,102 @@ export const getActionTypeCounts = query({
 });
 
 // ============================================================================
+// PARTNER REPORTING
+// ============================================================================
+
+/**
+ * Get stats for households referred by a specific partner
+ * Used to report engagement back to B2B partners like CFR
+ */
+export const getPartnerStats = query({
+  args: {
+    referralSource: v.string(),
+  },
+  returns: v.object({
+    totalHouseholds: v.number(),
+    activeHouseholds: v.number(),
+    totalWisdomEntries: v.number(),
+    totalVaultDocuments: v.number(),
+    totalLegalDocuments: v.number(),
+    households: v.array(
+      v.object({
+        _id: v.id("households"),
+        name: v.string(),
+        createdAt: v.number(),
+        subscriptionTier: v.string(),
+        memberCount: v.number(),
+        vaultDocumentCount: v.number(),
+        lastActivity: v.optional(v.number()),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const households = await ctx.db
+      .query("households")
+      .withIndex("by_referralSource", (q) => q.eq("referralSource", args.referralSource))
+      .collect();
+
+    let totalWisdomEntries = 0;
+    let totalVaultDocuments = 0;
+    let totalLegalDocuments = 0;
+    let activeHouseholds = 0;
+
+    const householdDetails = await Promise.all(
+      households.map(async (h) => {
+        const wisdomEntries = await ctx.db
+          .query("wisdomEntries")
+          .withIndex("by_household_and_category", (q) => q.eq("householdId", h._id))
+          .collect();
+        totalWisdomEntries += wisdomEntries.length;
+
+        const vaultDocs = h.vaultDocumentCount ?? 0;
+        totalVaultDocuments += vaultDocs;
+
+        const legalDocs = await ctx.db
+          .query("legalDocuments")
+          .withIndex("by_household_and_type", (q) => q.eq("householdId", h._id))
+          .collect();
+        totalLegalDocuments += legalDocs.length;
+
+        // Get most recent activity for this household
+        const recentActivity = await ctx.db
+          .query("activityLog")
+          .withIndex("by_household", (q) => q.eq("householdId", h._id))
+          .order("desc")
+          .first();
+
+        // Active = any activity in the last 30 days
+        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        if (recentActivity && recentActivity._creationTime > thirtyDaysAgo) {
+          activeHouseholds++;
+        }
+
+        return {
+          _id: h._id,
+          name: h.name,
+          createdAt: h._creationTime,
+          subscriptionTier: h.subscriptionTier,
+          memberCount: h.memberCount ?? 0,
+          vaultDocumentCount: vaultDocs,
+          lastActivity: recentActivity?._creationTime,
+        };
+      }),
+    );
+
+    return {
+      totalHouseholds: households.length,
+      activeHouseholds,
+      totalWisdomEntries,
+      totalVaultDocuments,
+      totalLegalDocuments,
+      households: householdDetails,
+    };
+  },
+});
+
+// ============================================================================
 // MUTATIONS
 // ============================================================================
 

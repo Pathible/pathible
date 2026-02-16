@@ -1,12 +1,12 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -17,32 +17,35 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
+import { formatDate } from "@/lib/date-utils";
 
 export function UsersList() {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const users = useQuery(api.admin.users.listUsers, { search: search || undefined });
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
+  const users = useQuery(api.admin.users.listUsers, {
+    search: search || undefined,
+  });
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-border">
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="font-crimson text-xl">All Users</CardTitle>
+          <div className="flex items-center gap-2.5">
+            <div className="rounded-lg bg-primary/10 p-1.5">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="font-crimson text-xl">All Users</CardTitle>
+              <CardDescription>People who trust Pathible with what matters</CardDescription>
+            </div>
+          </div>
           <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search users..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
+              className="pl-9"
             />
           </div>
         </div>
@@ -53,8 +56,11 @@ export function UsersList() {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : users.users.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            {search ? "No users match your search" : "No users found"}
+          <div className="text-center py-8">
+            <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              {search ? "No users match your search" : "No users found"}
+            </p>
           </div>
         ) : (
           <Table>
@@ -71,7 +77,7 @@ export function UsersList() {
               {users.users.map((user) => (
                 <TableRow
                   key={user._id}
-                  className="cursor-pointer hover:bg-muted/50"
+                  className="cursor-pointer hover:bg-muted/30"
                   onClick={() => {
                     router.push(`/admin/users/${user._id}`);
                   }}
@@ -79,7 +85,7 @@ export function UsersList() {
                   <TableCell className="font-medium">
                     <Link
                       href={`/admin/users/${user._id}`}
-                      className="hover:underline"
+                      className="hover:text-primary hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {user.firstName} {user.lastName}
@@ -87,13 +93,9 @@ export function UsersList() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{user.email}</TableCell>
                   <TableCell>
-                    {user.status === "active" ? (
-                      <Badge className="bg-primary/10 text-primary border-primary/20">active</Badge>
-                    ) : (
-                      <Badge className="bg-muted text-muted-foreground">inactive</Badge>
-                    )}
+                    <AdminStatusBadge type="memberStatus" value={user.status} />
                   </TableCell>
-                  <TableCell>{user.householdCount}</TableCell>
+                  <TableCell className="tabular-nums">{user.householdCount}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDate(user._creationTime)}
                   </TableCell>

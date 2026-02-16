@@ -13,7 +13,6 @@ import { STRING_LIMITS, validateOptionalString, validateRequiredString } from ".
  * - Properties and real estate
  * - Insurance policies
  * - Net worth calculation
- * - Smart suggestions for financial planning
  * - Activity logging
  */
 

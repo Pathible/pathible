@@ -7,7 +7,6 @@ import Link from "next/link";
 import posthog from "posthog-js";
 import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { ArticleUpgradeCTA } from "@/components/learning/public";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
@@ -57,8 +56,6 @@ export function ArticleContent({ slug }: ArticleContentProps) {
           article_slug: slug,
           article_title: article.title,
           article_category: article.category,
-          is_public: article.visibility === "public",
-          is_truncated: article.isTruncated,
           read_time_minutes: article.readTimeMinutes,
         });
       } catch {
@@ -151,26 +148,21 @@ export function ArticleContent({ slug }: ArticleContentProps) {
           </ReactMarkdown>
         </div>
 
-        {/* Upgrade CTA for truncated subscriber content */}
-        {article.isTruncated && <ArticleUpgradeCTA />}
-
-        {/* Footer CTA for public articles */}
-        {!article.isTruncated && (
-          <div className="mt-16 pt-8 border-t border-pathible-sage/20 text-center">
-            <p className="text-muted-foreground mb-4">Want more resources like this?</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button asChild variant="outline" className="rounded-xl">
-                <Link href="/learn">Explore More Articles</Link>
-              </Button>
-              <Button
-                asChild
-                className="bg-pathible-forest hover:bg-pathible-green-hover text-white rounded-xl"
-              >
-                <Link href="/signup">Start Your Journey</Link>
-              </Button>
-            </div>
+        {/* Footer CTA */}
+        <div className="mt-16 pt-8 border-t border-pathible-sage/20 text-center">
+          <p className="text-muted-foreground mb-4">Want more resources like this?</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link href="/learn">Explore More Articles</Link>
+            </Button>
+            <Button
+              asChild
+              className="bg-pathible-forest hover:bg-pathible-green-hover text-white rounded-xl"
+            >
+              <Link href="/signup">Start Your Journey</Link>
+            </Button>
           </div>
-        )}
+        </div>
       </div>
     </article>
   );

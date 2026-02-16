@@ -1,43 +1,21 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { Lightbulb, TrendingUp, Wallet } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Wallet } from "lucide-react";
 import {
   AuthLoadingSpinner,
   ConnectionErrorCard,
   SetupRequiredCard,
   SignInRequiredCard,
 } from "@/components/auth-states";
-import { ComingSoonBadge } from "@/components/coming-soon";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { useAuthenticatedHousehold } from "@/hooks/use-authenticated-household";
 import { AccountManager } from "./account-manager";
 import { FinancialStats } from "./financial-stats";
 import { InsuranceManager } from "./insurance-manager";
-import { LearningCenter } from "./learning-center";
 import { PropertyManager } from "./property-manager";
-import { SuggestionsList } from "./suggestions-list";
 
 export function FinancialContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // URL-controlled tabs for tour navigation
-  const activeTab = searchParams.get("tab") || "overview";
-
-  const handleTabChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value === "overview") {
-      params.delete("tab");
-    } else {
-      params.set("tab", value);
-    }
-    const query = params.toString();
-    router.push(query ? `/financial?${query}` : "/financial", { scroll: false });
-  };
-
   // Use consolidated auth + household hook
   const { householdId, isLoading: isAuthLoading, error } = useAuthenticatedHousehold();
 
@@ -47,10 +25,6 @@ export function FinancialContent() {
   const properties = useQuery(api.financial.listProperties, householdId ? { householdId } : "skip");
   const insurance = useQuery(
     api.financial.listInsurancePolicies,
-    householdId ? { householdId } : "skip",
-  );
-  const suggestions = useQuery(
-    api.financial.getSuggestions,
     householdId ? { householdId } : "skip",
   );
 
@@ -75,8 +49,7 @@ export function FinancialContent() {
     stats === undefined ||
     accounts === undefined ||
     properties === undefined ||
-    insurance === undefined ||
-    suggestions === undefined;
+    insurance === undefined;
 
   return (
     <div className="space-y-6">
@@ -96,49 +69,17 @@ export function FinancialContent() {
       {/* Stats Cards */}
       {stats && <FinancialStats stats={stats} />}
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">
-            <TrendingUp className="h-4 w-4 mr-2" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="suggestions" className="gap-2">
-            <Lightbulb className="h-4 w-4" />
-            Smart Suggestions
-            <ComingSoonBadge size="sm" />
-          </TabsTrigger>
-          <TabsTrigger value="learning" data-tour="faith-finances-tab">
-            Faith & Finances
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          <AccountManager
-            accounts={accounts || []}
-            householdId={householdId}
-            isLoading={isLoading}
-          />
-          <PropertyManager
-            properties={properties || []}
-            householdId={householdId}
-            isLoading={isLoading}
-          />
-          <InsuranceManager
-            insurance={insurance || []}
-            householdId={householdId}
-            isLoading={isLoading}
-          />
-        </TabsContent>
-
-        <TabsContent value="suggestions">
-          <SuggestionsList suggestions={suggestions || []} isLoading={isLoading} />
-        </TabsContent>
-
-        <TabsContent value="learning">
-          <LearningCenter />
-        </TabsContent>
-      </Tabs>
+      <AccountManager accounts={accounts || []} householdId={householdId} isLoading={isLoading} />
+      <PropertyManager
+        properties={properties || []}
+        householdId={householdId}
+        isLoading={isLoading}
+      />
+      <InsuranceManager
+        insurance={insurance || []}
+        householdId={householdId}
+        isLoading={isLoading}
+      />
     </div>
   );
 }

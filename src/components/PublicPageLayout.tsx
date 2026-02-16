@@ -33,6 +33,14 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
                 size="sm"
                 className="text-foreground/80 hover:text-foreground hover:bg-pathible-forest/5 px-2 sm:px-4"
               >
+                <Link href="/learn">Learn</Link>
+              </Button>
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="text-foreground/80 hover:text-foreground hover:bg-pathible-forest/5 px-2 sm:px-4"
+              >
                 <Link href="/login">Sign in</Link>
               </Button>
 

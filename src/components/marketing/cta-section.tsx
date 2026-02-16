@@ -4,24 +4,23 @@ import { Button } from "../ui/button";
 
 export function CTASection() {
   return (
-    <section className="relative py-24 sm:py-32 overflow-hidden">
+    <section className="relative py-20 sm:py-28 overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-linear-to-br from-pathible-forest via-pathible-green-hover to-pathible-forest" />
-
-      {/* Subtle pattern overlay */}
       <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.04]" />
 
       <div className="relative mx-auto max-w-4xl text-center px-4 sm:px-6 lg:px-8">
-        <p className="text-pathible-sage font-medium tracking-wide text-sm uppercase mb-6">
-          Break the cycle
-        </p>
-        <h3 className="font-crimson text-4xl sm:text-5xl lg:text-6xl mb-8 leading-tight text-white">
-          Get everything in one place.{" "}
-          <span className="text-pathible-gold">So they never have to.</span>
+        <h3 className="font-crimson text-4xl sm:text-5xl lg:text-6xl mb-4 leading-tight text-white">
+          Get everything in one place.
         </h3>
-        <p className="text-xl text-white/80 mb-12 max-w-2xl mx-auto leading-relaxed">
-          You know how hard it was. Don't pass that on. Start today.
+        <p className="font-crimson text-3xl sm:text-4xl lg:text-5xl text-pathible-gold mb-12">
+          So they never have to.
         </p>
+
+        <p className="text-lg sm:text-xl text-white/70 mb-12 max-w-xl mx-auto leading-relaxed">
+          You know how hard it was. Don&apos;t pass that on.
+        </p>
+
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Button
             asChild

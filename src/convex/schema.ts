@@ -143,8 +143,13 @@ export default defineSchema({
     // Vault document count counter (updated atomically on document create/delete)
     // Avoids O(n) full table scans for stats queries
     vaultDocumentCount: v.optional(v.number()),
+    // Partner referral tracking - identifies which partner referred this household
+    // e.g., "cfr" for Christian Financial Resources, "attorney-smith" for a specific lawyer
+    referralSource: v.optional(v.string()),
     updatedAt: v.number(),
-  }).index("by_primaryContactId", ["primaryContactId"]),
+  })
+    .index("by_primaryContactId", ["primaryContactId"])
+    .index("by_referralSource", ["referralSource"]),
 
   /**
    * Household memberships - join table linking users to households

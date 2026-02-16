@@ -10,7 +10,7 @@ import type { ArticleCardCompactProps } from "./types";
 export function ArticleCardCompact({ article, isRead }: ArticleCardCompactProps) {
   return (
     <Link
-      href={`/financial/articles/${article.slug}`}
+      href={`/learn/${article.slug}`}
       className={`
         flex items-center justify-between
         p-3 rounded-lg border

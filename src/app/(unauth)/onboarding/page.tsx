@@ -4,9 +4,10 @@ import { useAuth } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
+import { FullPageLoader } from "@/components/full-page-loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,12 +30,26 @@ import { checkHasActivePlan, getCurrentPlanTier } from "@/lib/feature-access";
  * - Users WITHOUT a subscription → /select-plan
  *
  * Family invitations can be done later from the dashboard.
+ *
+ * Supports ?ref=<partner> URL parameter for partner referral tracking.
  */
 export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<FullPageLoader />}>
+      <OnboardingContent />
+    </Suspense>
+  );
+}
+
+function OnboardingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { has } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3; // Reduced from 4 - invitations moved to dashboard
+
+  // Capture partner referral from URL (e.g., ?ref=cfr)
+  const referralSource = searchParams.get("ref") || undefined;
 
   // Check if user already has an active subscription (e.g., subscribed from /pricing)
   const hasActivePlan = checkHasActivePlan(has);
@@ -121,6 +136,7 @@ export default function OnboardingPage() {
           name: householdName,
           description: householdDescription || undefined,
           subscriptionTier: clerkTier || undefined,
+          referralSource,
         });
 
         toast.success("Household created!");

@@ -3,7 +3,7 @@
 import { usePaginatedQuery } from "convex/react";
 import { Loader2, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import { AdminStatusBadge } from "@/app/(auth)/admin/components/admin-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,18 +15,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { api } from "@/convex/_generated/api";
+import { formatDateTime } from "@/lib/date-utils";
+import { QUEUE_STATUS_ICONS } from "./status-icons";
 
 const RECIPIENT_TYPE_LABELS: Record<string, string> = {
   individual: "Individual",
   all_users: "All Users",
   by_tier: "By Tier",
   household_owners: "Household Owners",
-};
-
-const STATUS_STYLES: Record<string, string> = {
-  sent: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  partial: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-  failed: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 };
 
 export function SentEmailsList() {
@@ -37,16 +33,6 @@ export function SentEmailsList() {
     { initialNumItems: 15 },
   );
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
-
   const formatRecipients = (type: string, count: number) => {
     const label = RECIPIENT_TYPE_LABELS[type] || type;
     return `${label} (${count})`;
@@ -54,7 +40,7 @@ export function SentEmailsList() {
 
   if (status === "LoadingFirstPage") {
     return (
-      <Card>
+      <Card className="border-border">
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </CardContent>
@@ -64,11 +50,11 @@ export function SentEmailsList() {
 
   if (results.length === 0) {
     return (
-      <Card>
+      <Card className="border-border">
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <Mail className="h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-semibold">No emails sent yet</h3>
-          <p className="mt-2 text-center text-muted-foreground">
+          <Mail className="h-8 w-8 text-muted-foreground/30 mb-2" />
+          <h3 className="font-crimson text-lg font-medium">No emails sent yet</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             When you send emails, they will appear here.
           </p>
         </CardContent>
@@ -77,10 +63,15 @@ export function SentEmailsList() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-crimson text-xl">Sent Emails</CardTitle>
-        <CardDescription>History of all emails sent through the admin system</CardDescription>
+    <Card className="border-border">
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="rounded-lg bg-secondary/10 p-1.5">
+            <Mail className="h-4 w-4 text-secondary" />
+          </div>
+          <CardTitle className="font-crimson text-xl">Sent Emails</CardTitle>
+        </div>
+        <CardDescription>Every message that reached a family</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -98,7 +89,7 @@ export function SentEmailsList() {
             {results.map((email) => (
               <TableRow
                 key={email._id}
-                className="cursor-pointer hover:bg-muted/50"
+                className="cursor-pointer hover:bg-muted/30"
                 onClick={() => router.push(`/admin/email/sent/${email._id}`)}
               >
                 <TableCell className="font-medium">{email.subject}</TableCell>
@@ -110,12 +101,13 @@ export function SentEmailsList() {
                 </TableCell>
                 <TableCell className="text-muted-foreground">{email.sentByName}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {formatDate(email._creationTime)}
+                  {formatDateTime(email._creationTime)}
                 </TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className={STATUS_STYLES[email.status]}>
+                  <AdminStatusBadge type="emailStatus" value={email.status}>
+                    {QUEUE_STATUS_ICONS[email.status]}
                     {email.status.charAt(0).toUpperCase() + email.status.slice(1)}
-                  </Badge>
+                  </AdminStatusBadge>
                 </TableCell>
               </TableRow>
             ))}

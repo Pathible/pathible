@@ -1503,10 +1503,6 @@ Don't leave them a mess. Leave them a blessing.
       "A comprehensive estate planning checklist covering the 25 essential documents your family needs. Organized by category with actionable steps to protect your loved ones from chaos during difficult times.",
     content: `# Estate Planning Checklist: 25 Essential Documents Your Family Needs
 
-<!--
-Meta Description: Complete estate planning checklist with 25 essential documents organized by category. Protect your family from chaos with this actionable guide to getting your affairs in order.
--->
-
 Have you ever spent weeks searching through boxes, drawers, and filing cabinets while your heart was breaking? We have. The hunting. The guessing. The arguments with siblings about what Mom or Dad actually wanted.
 
 It's a pain no one should have to experience. And yet, millions of families go through this every year because the people they loved never took time to organize their essential documents.
@@ -1906,6 +1902,111 @@ Get everything in one place. So they never have to search.
     visibility: "public",
     authorName: "Pathible Team",
     readTimeMinutes: 12,
+    viewCount: 0,
+  },
+
+  // ============================================================================
+  // FAMILY LEGACY - Stewardship-focused article for CFR partnership alignment
+  // ============================================================================
+  {
+    title: "Leaving a Legacy That Matters: A Christian Family's Guide",
+    slug: "leaving-a-legacy-that-matters-christian-family-guide",
+    excerpt:
+      "Your legacy isn't just what you leave behind financially. It's the values, wisdom, and faith you pass down. Here's how to be intentional about all of it.",
+    content: `# Leaving a Legacy That Matters: A Christian Family's Guide
+
+*"The memory of the righteous is a blessing."* — Proverbs 10:7
+
+Most people think of legacy as something that happens after they're gone. An inheritance. A will. A life insurance payout.
+
+But legacy is something you build every single day. It's the conversations you have at the dinner table. The way you handle adversity. The faith you model when life gets hard. The stories you tell your grandchildren about where your family came from.
+
+The financial part matters — of course it does. But it's only one piece of a much larger picture.
+
+## The Four Pillars of a Faithful Legacy
+
+### 1. Stewardship of Resources
+
+*"Whoever can be trusted with very little can also be trusted with much."* — Luke 16:10
+
+Financial stewardship isn't just about having money. It's about managing what God has given you — whether that's a little or a lot — with wisdom and intention.
+
+**Practical steps:**
+- Know where your accounts are and who has access
+- Have a will that reflects your values, not just your assets
+- Set up your family so they're not scrambling if something happens to you
+- Document your insurance policies, investments, and debts in one place
+- Talk openly with your spouse about finances (no secrets)
+
+### 2. Stewardship of Wisdom
+
+*"The teaching of the wise is a fountain of life."* — Proverbs 13:14
+
+You've learned things that can't be Googled. Lessons from failure. Wisdom from decades of marriage. Insights about faith that only come from walking through fire.
+
+**Practical steps:**
+- Write down the 5 most important lessons you've learned
+- Record the stories your grandchildren need to hear
+- Document your family traditions and why they matter
+- Share the mistakes you made so others don't repeat them
+- Capture your values — what does your family stand for?
+
+### 3. Stewardship of Relationships
+
+*"A friend loves at all times, and a brother is born for a time of adversity."* — Proverbs 17:17
+
+Your family relationships are a gift. Investing in them — nurturing them, repairing them, strengthening them — is an act of stewardship.
+
+**Practical steps:**
+- Write letters to your children and grandchildren (even if you plan to be around for decades)
+- Have the hard conversations now, not later
+- Forgive generously — grudges are the opposite of legacy
+- Make time for the people who matter most, not just the things that feel urgent
+
+### 4. Stewardship of Faith
+
+*"These commandments that I give you today are to be on your hearts. Impress them on your children."* — Deuteronomy 6:6-7
+
+Your faith story is uniquely yours. How you came to believe. What sustained you in dark seasons. Why you trust God with your family's future. This is perhaps the most valuable thing you can pass down.
+
+**Practical steps:**
+- Write your testimony — when did faith become real to you?
+- Document the prayers God has answered in your family
+- Record the Scripture passages that have carried you through hard seasons
+- Share how your faith shaped major life decisions
+
+## Why Most Families Never Do This
+
+Here's the uncomfortable truth: most Christian families believe in legacy but never act on it.
+
+Not because they don't care. Because it feels overwhelming.
+
+Where do you even start? What do you write down first? How do you organize decades of documents, stories, and wisdom?
+
+That's exactly why tools like Pathible exist. Not to do the hard work for you — the reflection, the writing, the conversations — but to give you a place to put it all. A Heritage Vault for your documents. A Wisdom section for your stories and values. Legal document wizards that walk you through wills and directives state by state.
+
+## Start With One Thing
+
+Don't try to build your entire legacy in a weekend. Pick one thing:
+
+- **This week:** Write down where all your important documents are
+- **This month:** Record one story your grandchildren should know
+- **This quarter:** Complete a will or review the one you have
+
+Legacy is built in small, faithful steps. Not grand gestures.
+
+*"Well done, good and faithful servant! You have been faithful with a few things; I will put you in charge of many things."* — Matthew 25:21
+
+---
+
+Your family deserves more than a filing cabinet of documents. They deserve your wisdom, your stories, your values, and your faith — organized and accessible for generations to come.
+
+That's a legacy that matters.`,
+    category: "family_legacy",
+    status: "published",
+    visibility: "public",
+    authorName: "Pathible Team",
+    readTimeMinutes: 7,
     viewCount: 0,
   },
 ];
