@@ -309,10 +309,28 @@ export const seed = internalMutation({
       accountsCreated++;
     }
 
-    // Update counters
+    // Update household counters
     await ctx.db.patch(householdId, {
       memberCount: familyMembersCreated,
       familyUnitCount: 1,
+      updatedAt: now,
+    });
+
+    // Mark profile as fully onboarded so the auth layout doesn't redirect
+    await ctx.db.patch(args.profileId, {
+      onboardingStatus: "complete" as const,
+      onboardingStep: 3,
+      onboardingCompletedAt: now,
+      updatedAt: now,
+    });
+
+    // Create user preferences (normally created during onboarding step 3)
+    await ctx.db.insert("userPreferences", {
+      profileId: args.profileId,
+      goals: ["legacy_planning", "family_heritage", "financial_clarity"],
+      emailNotifications: true,
+      interestedFeatures: [],
+      shareDataWithHousehold: true,
       updatedAt: now,
     });
 
@@ -421,12 +439,32 @@ export const cleanup = internalMutation({
         deleted.familyUnits++;
       }
 
-      // Delete memberships
+      // Delete memberships and reset associated profiles
       const memberships = await ctx.db
         .query("householdMemberships")
         .withIndex("by_household_and_status", (q) => q.eq("householdId", household._id))
         .collect();
       for (const membership of memberships) {
+        // Reset the profile's onboarding status
+        const profile = await ctx.db.get(membership.userId);
+        if (profile && profile.onboardingCompletedAt) {
+          await ctx.db.patch(membership.userId, {
+            onboardingStatus: "not_started" as const,
+            onboardingStep: undefined,
+            onboardingCompletedAt: undefined,
+            updatedAt: Date.now(),
+          });
+        }
+
+        // Delete user preferences created by the seed
+        const prefs = await ctx.db
+          .query("userPreferences")
+          .withIndex("by_profile", (q) => q.eq("profileId", membership.userId))
+          .first();
+        if (prefs) {
+          await ctx.db.delete(prefs._id);
+        }
+
         await ctx.db.delete(membership._id);
         deleted.memberships++;
       }

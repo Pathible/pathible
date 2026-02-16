@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { getIsAdmin, getOnboardingStatus } from "@/lib/auth-session";
+import { getHasTierOverride, getIsAdmin, getOnboardingStatus } from "@/lib/auth-session";
 import { checkHasActivePlan } from "@/lib/feature-access";
 
 /**
@@ -49,10 +49,15 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
   }
 
   // Check 4: Subscription status (backup to middleware)
+  // First check Clerk billing, then fall back to Convex tierOverride
+  // This allows demo/partner accounts to bypass Clerk billing via tierOverride
   const hasActivePlan = checkHasActivePlan(has);
 
   if (!hasActivePlan) {
-    redirect("/select-plan");
+    const hasTierOverride = await getHasTierOverride();
+    if (!hasTierOverride) {
+      redirect("/select-plan");
+    }
   }
 
   // All checks passed - render the protected content

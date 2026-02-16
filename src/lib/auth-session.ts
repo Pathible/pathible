@@ -67,10 +67,52 @@ export async function requireServerAuth() {
 }
 
 /**
- * Check if the current user has admin role
+ * Check if the user's household has a tier override (bypasses Clerk billing)
  *
- * This function queries Convex to check the user's role in the userRoles table.
- * Used by server-side code (layouts) to determine if admin-specific bypass logic applies.
+ * This is used in the auth layout to allow demo/partner accounts to access
+ * the app without a Clerk subscription. The tierOverride on the household
+ * already unlocks all backend feature gates — this extends that bypass
+ * to the frontend routing check.
+ *
+ * Returns true if the user's household has:
+ * - An active subscription status in Convex
+ * - A non-expired tierOverride set
+ *
+ * Returns false (fail-closed) if:
+ * - User is not authenticated
+ * - No household found
+ * - No tierOverride set
+ * - Query fails
+ */
+export async function getHasTierOverride(): Promise<boolean> {
+  try {
+    const { getToken, userId } = await auth();
+
+    if (!userId) {
+      return false;
+    }
+
+    const token = await getToken({ template: "convex" });
+    if (!token) {
+      return false;
+    }
+
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!convexUrl) {
+      return false;
+    }
+
+    const convexClient = new ConvexHttpClient(convexUrl);
+    convexClient.setAuth(token);
+
+    const subscription = await convexClient.query(api.auth.getEffectiveSubscription);
+
+    return subscription !== null && subscription.hasOverride;
+  } catch (error) {
+    console.error("[Auth] Failed to check tier override:", error);
+    return false;
+  }
+}
  *
  * Returns false if:
  * - User is not authenticated
