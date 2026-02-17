@@ -10,9 +10,9 @@
 export const SEO_CONFIG = {
   baseUrl: "https://pathible.com",
   siteName: "Pathible",
-  tagline: "Don't leave them a mess. Leave them a blessing.",
+  tagline: "Get everything in one place for your family. So they never have to.",
   description:
-    "Faith-based family legacy platform helping families preserve documents, stories, and values for generations.",
+    "Have you ever had to sort through a loved one's mess while grieving? We have. Pathible gets everything in one place for your family, so they never have to.",
 } as const;
 
 // =============================================================================

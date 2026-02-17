@@ -29,29 +29,29 @@ export function LegalPageLayout({
           <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-linear-to-tr from-pathible-sage/10 to-transparent rounded-full blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
           {/* Back link */}
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-pathible-forest transition-colors mb-8 group"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-pathible-forest transition-colors mb-6 group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             <span className="text-sm font-medium">Back to Home</span>
           </Link>
 
-          {/* Document icon */}
-          <div className="w-16 h-16 rounded-2xl bg-pathible-forest/10 flex items-center justify-center mb-8">
-            {type === "privacy" ? (
-              <FileText className="w-8 h-8 text-pathible-forest" />
-            ) : (
-              <Scale className="w-8 h-8 text-pathible-forest" />
-            )}
+          {/* Title with inline icon */}
+          <div className="flex items-center gap-4 sm:gap-5 mb-6">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-pathible-forest/10 flex items-center justify-center shrink-0">
+              {type === "privacy" ? (
+                <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-pathible-forest" />
+              ) : (
+                <Scale className="w-6 h-6 sm:w-7 sm:h-7 text-pathible-forest" />
+              )}
+            </div>
+            <h1 className="font-crimson text-4xl sm:text-5xl lg:text-6xl leading-tight text-foreground">
+              {title}
+            </h1>
           </div>
-
-          {/* Title */}
-          <h1 className="font-crimson text-4xl sm:text-5xl lg:text-6xl leading-tight text-foreground mb-6">
-            {title}
-          </h1>
 
           {/* Metadata */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-muted-foreground">
@@ -75,7 +75,7 @@ export function LegalPageLayout({
 
       {/* Main content */}
       <section className="relative bg-background">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-12 sm:pb-16">
           {/* Document container with paper-like styling */}
           <article className="relative bg-white rounded-3xl shadow-xl shadow-pathible-charcoal/5 border border-pathible-sage/10 overflow-hidden">
             {/* Subtle paper texture effect */}
