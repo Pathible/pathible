@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
 
 // Image metadata
-export const alt = "Pathible - Faith-Based Family Legacy Platform";
+export const alt =
+  "Pathible - Get everything in one place for your family, so they never have to sort through the mess.";
 export const size = {
   width: 1200,
   height: 630,
@@ -67,57 +68,63 @@ export default async function Image() {
         </span>
       </div>
 
-      {/* Main headline */}
+      {/* Main headline - StoryBrand problem question */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          maxWidth: 900,
+          textAlign: "center",
         }}
       >
         <div
           style={{
-            fontSize: 64,
+            fontSize: 52,
             fontWeight: 600,
             color: "#2C2C2C",
-            lineHeight: 1.2,
+            lineHeight: 1.25,
             display: "flex",
           }}
         >
-          Don't leave them a mess.
+          Have you ever had to sort through
         </div>
         <div
           style={{
-            fontSize: 64,
+            fontSize: 52,
             fontWeight: 600,
             color: "#2C2C2C",
-            lineHeight: 1.2,
+            lineHeight: 1.25,
             display: "flex",
           }}
         >
-          Leave them a{" "}
-          <span
-            style={{
-              color: "#D4AF37",
-              marginLeft: 16,
-            }}
-          >
-            blessing
-          </span>
-          .
+          a loved one&apos;s <span style={{ color: "#D4AF37", marginLeft: 14 }}>mess</span>?
         </div>
       </div>
 
-      {/* Tagline */}
+      {/* Empathy beat */}
       <div
         style={{
-          fontSize: 24,
-          color: "#8B8680",
+          fontSize: 32,
+          fontWeight: 600,
+          color: "#4B7F52",
           marginTop: 30,
           display: "flex",
         }}
       >
-        Faith-based family legacy platform for documents, stories, and values.
+        We have. So we built Pathible.
+      </div>
+
+      {/* Supporting tagline */}
+      <div
+        style={{
+          fontSize: 22,
+          color: "#8B8680",
+          marginTop: 16,
+          display: "flex",
+        }}
+      >
+        Get everything in one place for your family. So they never have to.
       </div>
 
       {/* Footer */}

@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     template: "%s | Pathible",
   },
   description:
-    "Don't leave them a mess. Leave them a blessing. Pathible helps faith-driven families preserve documents, stories, and values for generations.",
+    "Have you ever had to sort through a loved one's mess while grieving? We have. Pathible gets everything in one place for your family, so they never have to.",
   keywords: [
     "family legacy planning",
     "faith-based estate planning",
@@ -65,16 +65,16 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: baseUrl,
     siteName: "Pathible",
-    title: "Pathible - Don't Leave Them a Mess. Leave Them a Blessing.",
+    title: "Pathible - Get Everything in One Place for Your Family",
     description:
-      "The secure home for your family's most important documents, life stories, and final wishes. Built for families of faith.",
+      "Have you ever had to sort through a loved one's mess while grieving? We have. Pathible gets everything in one place, so they never have to.",
     // Images auto-injected from opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pathible - Faith-Based Family Legacy Platform",
+    title: "Pathible - Get Everything in One Place for Your Family",
     description:
-      "Don't leave them a mess. Leave them a blessing. Preserve your family's documents, stories, and values.",
+      "Have you ever had to sort through a loved one's mess while grieving? We have. Pathible gets everything in one place, so they never have to.",
     // Images auto-injected from opengraph-image.tsx
   },
   robots: {
