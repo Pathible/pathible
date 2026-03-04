@@ -16,6 +16,16 @@ const MODULE_ENTITY_MAP: Record<
   legacy: ["plan", "letter", "legal_document", "legal_document_contact"],
   household: ["household"],
   suggestion: ["suggestion"],
+  estate: [
+    "estate_activation",
+    "estate_checklist_item",
+    "estate_asset",
+    "estate_asset_status_change",
+    "estate_document",
+    "estate_document_share",
+    "estate_communication",
+    "estate_distribution",
+  ],
 };
 
 /**

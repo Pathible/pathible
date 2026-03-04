@@ -146,6 +146,10 @@ export default defineSchema({
     // Partner referral tracking - identifies which partner referred this household
     // e.g., "cfr" for Christian Financial Resources, "attorney-smith" for a specific lawyer
     referralSource: v.optional(v.string()),
+    // Estate administration fields
+    estateMode: v.optional(v.boolean()),
+    estateActivationId: v.optional(v.id("estateActivations")),
+    estateGraceUntil: v.optional(v.number()), // 90-day subscription grace period
     updatedAt: v.number(),
   })
     .index("by_primaryContactId", ["primaryContactId"])
@@ -957,6 +961,303 @@ export default defineSchema({
   }).index("by_user_and_tour", ["userId", "tourId"]),
 
   // ============================================================================
+  // ESTATE ADMINISTRATION
+  // ============================================================================
+
+  /**
+   * Estate activations - central record for estate administration activation
+   * Tracks the full lifecycle: pending -> active -> completed/cancelled
+   * Includes 48-hour cooldown safety mechanism and contest support
+   */
+  estateActivations: defineTable({
+    householdId: v.id("households"),
+    activatedBy: v.id("profiles"),
+    deceasedName: v.string(),
+    deceasedProfileId: v.optional(v.id("profiles")),
+    dateOfDeath: v.optional(v.number()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("active"),
+      v.literal("contested"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+    ),
+    deathCertificateDocId: v.optional(v.id("vaultDocuments")),
+    cooldownEndsAt: v.number(),
+    contestedBy: v.optional(v.id("profiles")),
+    contestedAt: v.optional(v.number()),
+    activatedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    cancelledAt: v.optional(v.number()),
+    cancelReason: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    cooldownJobId: v.optional(v.id("_scheduled_functions")),
+    updatedAt: v.number(),
+  })
+    .index("by_household", ["householdId"])
+    .index("by_activatedBy", ["activatedBy"])
+    .index("by_household_and_status", ["householdId", "status"]),
+
+  /**
+   * Estate checklist items - guided task list for executors
+   * Seeded from templates when estate is activated, with custom items supported
+   */
+  estateChecklistItems: defineTable({
+    householdId: v.id("households"),
+    activationId: v.id("estateActivations"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    category: v.union(
+      v.literal("first_things_first"),
+      v.literal("legal_and_financial"),
+      v.literal("property_and_assets"),
+      v.literal("notifications"),
+      v.literal("ongoing"),
+      v.literal("when_ready"),
+      v.literal("custom"),
+    ),
+    sortOrder: v.number(),
+    isCompleted: v.boolean(),
+    completedAt: v.optional(v.number()),
+    completedBy: v.optional(v.id("profiles")),
+    notes: v.optional(v.string()),
+    isCustom: v.boolean(),
+    createdBy: v.optional(v.id("profiles")),
+    dueDate: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_household", ["householdId"])
+    .index("by_activation", ["activationId"])
+    .index("by_activation_and_category", ["activationId", "category"]),
+
+  /**
+   * Estate assets - inventory of assets being administered
+   * Status pipeline: identified → verified → institution_contacted → in_transfer → closed → distributed
+   */
+  estateAssets: defineTable({
+    householdId: v.id("households"),
+    activationId: v.id("estateActivations"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    category: v.union(
+      v.literal("financial_account"),
+      v.literal("real_estate"),
+      v.literal("vehicle"),
+      v.literal("insurance_policy"),
+      v.literal("retirement_account"),
+      v.literal("business_interest"),
+      v.literal("personal_property"),
+      v.literal("digital_asset"),
+      v.literal("other"),
+    ),
+    status: v.union(
+      v.literal("identified"),
+      v.literal("verified"),
+      v.literal("institution_contacted"),
+      v.literal("in_transfer"),
+      v.literal("closed"),
+      v.literal("distributed"),
+    ),
+    estimatedValue: v.optional(v.number()),
+    institution: v.optional(v.string()),
+    accountNumber: v.optional(v.string()),
+    beneficiary: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    sourceType: v.optional(v.string()),
+    sourceId: v.optional(v.string()),
+    createdBy: v.id("profiles"),
+    updatedAt: v.number(),
+  })
+    .index("by_household", ["householdId"])
+    .index("by_activation", ["activationId"])
+    .index("by_activation_and_status", ["activationId", "status"])
+    .index("by_activation_and_category", ["activationId", "category"]),
+
+  /**
+   * Estate asset status changes - audit trail for asset pipeline progression
+   * Each status change is a separate record for full history
+   */
+  estateAssetStatusChanges: defineTable({
+    assetId: v.id("estateAssets"),
+    householdId: v.id("households"),
+    previousStatus: v.union(
+      v.literal("identified"),
+      v.literal("verified"),
+      v.literal("institution_contacted"),
+      v.literal("in_transfer"),
+      v.literal("closed"),
+      v.literal("distributed"),
+    ),
+    newStatus: v.union(
+      v.literal("identified"),
+      v.literal("verified"),
+      v.literal("institution_contacted"),
+      v.literal("in_transfer"),
+      v.literal("closed"),
+      v.literal("distributed"),
+    ),
+    changedBy: v.id("profiles"),
+    notes: v.optional(v.string()),
+    changedAt: v.number(),
+  })
+    .index("by_asset", ["assetId"])
+    .index("by_household", ["householdId"]),
+
+  /**
+   * Estate documents - overlay on vault documents for estate-specific categorization.
+   * Links vault documents to estate categories, tracks court submission status and verification.
+   */
+  estateDocuments: defineTable({
+    householdId: v.id("households"),
+    estateActivationId: v.id("estateActivations"),
+    vaultDocumentId: v.id("vaultDocuments"),
+    estateCategory: v.union(
+      v.literal("will"),
+      v.literal("trust"),
+      v.literal("death_certificate"),
+      v.literal("insurance_claim"),
+      v.literal("deed"),
+      v.literal("tax_return"),
+      v.literal("bank_statement"),
+      v.literal("court_filing"),
+      v.literal("correspondence"),
+      v.literal("beneficiary_designation"),
+      v.literal("other"),
+    ),
+    submittedTo: v.optional(v.string()),
+    submittedAt: v.optional(v.number()),
+    sharedWithAttorney: v.optional(v.boolean()),
+    verificationStatus: v.union(
+      v.literal("unverified"),
+      v.literal("verified"),
+      v.literal("needs_update"),
+    ),
+    notes: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_estate", ["estateActivationId"])
+    .index("by_estate_and_category", ["estateActivationId", "estateCategory"])
+    .index("by_vault_document", ["vaultDocumentId"]),
+
+  /**
+   * Document shares - time-limited secure links for sharing vault documents
+   * with external parties (attorneys, beneficiaries, institutions).
+   */
+  documentShares: defineTable({
+    householdId: v.id("households"),
+    estateActivationId: v.id("estateActivations"),
+    vaultDocumentId: v.id("vaultDocuments"),
+    sharedBy: v.id("profiles"),
+    recipientName: v.string(),
+    recipientEmail: v.string(),
+    recipientRole: v.optional(v.string()),
+    shareToken: v.string(),
+    expiresAt: v.number(),
+    maxDownloads: v.number(),
+    downloadCount: v.number(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("expired"),
+      v.literal("revoked"),
+      v.literal("exhausted"),
+    ),
+    lastAccessedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+    revokedBy: v.optional(v.id("profiles")),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["shareToken"])
+    .index("by_estate", ["estateActivationId"])
+    .index("by_document", ["vaultDocumentId"])
+    .index("by_estate_and_status", ["estateActivationId", "status"]),
+
+  /**
+   * Document share access log - audit trail for share link access.
+   * Tracks when shares are viewed or downloaded. No IP/user-agent storage for privacy.
+   */
+  documentShareAccessLog: defineTable({
+    documentShareId: v.id("documentShares"),
+    accessedAt: v.number(),
+    action: v.union(v.literal("viewed"), v.literal("downloaded")),
+  }).index("by_share", ["documentShareId"]),
+
+  /**
+   * Estate communications - log of notifications sent to institutions, beneficiaries, etc.
+   * Tracks who was contacted, when, via what method, and any follow-up needed.
+   */
+  estateCommunications: defineTable({
+    householdId: v.id("households"),
+    activationId: v.id("estateActivations"),
+    recipientName: v.string(),
+    recipientOrganization: v.optional(v.string()),
+    recipientEmail: v.optional(v.string()),
+    recipientPhone: v.optional(v.string()),
+    method: v.union(
+      v.literal("phone"),
+      v.literal("email"),
+      v.literal("mail"),
+      v.literal("in_person"),
+      v.literal("online_portal"),
+      v.literal("fax"),
+      v.literal("other"),
+    ),
+    subject: v.string(),
+    summary: v.string(),
+    category: v.union(
+      v.literal("financial_institution"),
+      v.literal("government_agency"),
+      v.literal("insurance_company"),
+      v.literal("legal"),
+      v.literal("beneficiary"),
+      v.literal("utility"),
+      v.literal("employer"),
+      v.literal("other"),
+    ),
+    relatedAssetId: v.optional(v.id("estateAssets")),
+    followUpDate: v.optional(v.number()),
+    followUpNotes: v.optional(v.string()),
+    followUpCompleted: v.optional(v.boolean()),
+    followUpCompletedAt: v.optional(v.number()),
+    attachmentDocIds: v.optional(v.array(v.id("vaultDocuments"))),
+    loggedBy: v.id("profiles"),
+    communicationDate: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_household", ["householdId"])
+    .index("by_activation", ["activationId"])
+    .index("by_activation_and_category", ["activationId", "category"]),
+
+  /**
+   * Estate distributions - tracking asset distribution to beneficiaries
+   * Records what was distributed, to whom, when, and supporting documentation
+   */
+  estateDistributions: defineTable({
+    householdId: v.id("households"),
+    activationId: v.id("estateActivations"),
+    assetId: v.id("estateAssets"),
+    beneficiaryName: v.string(),
+    beneficiaryRelationship: v.optional(v.string()),
+    description: v.optional(v.string()),
+    value: v.optional(v.number()),
+    distributionDate: v.number(),
+    method: v.union(
+      v.literal("direct_transfer"),
+      v.literal("wire_transfer"),
+      v.literal("check"),
+      v.literal("title_transfer"),
+      v.literal("in_kind"),
+      v.literal("other"),
+    ),
+    receiptDocId: v.optional(v.id("vaultDocuments")),
+    notes: v.optional(v.string()),
+    distributedBy: v.id("profiles"),
+    updatedAt: v.number(),
+  })
+    .index("by_household", ["householdId"])
+    .index("by_activation", ["activationId"])
+    .index("by_asset", ["assetId"]),
+
+  // ============================================================================
   // ACTIVITY & NOTIFICATIONS
   // ============================================================================
 
@@ -977,6 +1278,7 @@ export default defineSchema({
         v.literal("legacy"),
         v.literal("household"),
         v.literal("suggestion"),
+        v.literal("estate"),
       ),
     ),
     actionType: v.union(
@@ -1026,6 +1328,17 @@ export default defineSchema({
       v.literal("legal_document_completed"),
       v.literal("legal_document_generated"),
       v.literal("legal_document_deleted"),
+      // Estate actions
+      v.literal("estate_activated"),
+      v.literal("estate_contested"),
+      v.literal("estate_cooldown_complete"),
+      v.literal("estate_completed"),
+      v.literal("estate_cancelled"),
+      v.literal("estate_task_completed"),
+      v.literal("estate_document_shared"),
+      v.literal("estate_notification_sent"),
+      v.literal("estate_asset_status_updated"),
+      v.literal("estate_distribution_recorded"),
       // Fallback
       v.literal("other"),
     ),
@@ -1053,6 +1366,15 @@ export default defineSchema({
         // Legal document entities
         v.literal("legal_document"),
         v.literal("legal_document_contact"),
+        // Estate entities
+        v.literal("estate_activation"),
+        v.literal("estate_checklist_item"),
+        v.literal("estate_asset"),
+        v.literal("estate_asset_status_change"),
+        v.literal("estate_document"),
+        v.literal("estate_document_share"),
+        v.literal("estate_communication"),
+        v.literal("estate_distribution"),
         // Other
         v.literal("suggestion"),
         v.literal("other"),
@@ -1076,6 +1398,10 @@ export default defineSchema({
       v.literal("letter_delivered"),
       v.literal("reminder"),
       v.literal("system"),
+      v.literal("estate_activation"),
+      v.literal("estate_contested"),
+      v.literal("estate_task_due"),
+      v.literal("estate_update"),
       v.literal("other"),
     ),
     title: v.string(),

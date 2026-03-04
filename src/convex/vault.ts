@@ -12,6 +12,7 @@ import {
   requireHouseholdAccess,
   requireHouseholdAdmin,
 } from "./auth";
+import { requireNotInEstateMode } from "./estateHelpers";
 import { logActivity } from "./shared/activity";
 import { trackAnalytics } from "./shared/analyticsHelpers";
 import { accessLevelValidator } from "./shared/commonValidators";
@@ -225,9 +226,13 @@ export const list = query({
       cursor: args.cursor ?? null,
     });
 
+    // Check if household is in estate mode for elevated executor access
+    const household = await ctx.db.get(args.householdId);
+    const isEstateMode = household?.estateMode === true;
+
     // Filter by access permissions
     const accessibleDocs = paginatedResult.page.filter((doc) =>
-      checkDocumentAccess(doc, profile._id, membership.role),
+      checkDocumentAccess(doc, profile._id, membership.role, { isEstateMode }),
     );
 
     // Apply category filter
@@ -289,8 +294,12 @@ export const get = query({
     const membership = await requireHouseholdAccess(ctx, document.householdId);
     const { profile } = await requireAuth(ctx);
 
+    // Check if household is in estate mode for elevated executor access
+    const household = await ctx.db.get(document.householdId);
+    const isEstateMode = household?.estateMode === true;
+
     // Check document-level access
-    const hasAccess = checkDocumentAccess(document, profile._id, membership.role);
+    const hasAccess = checkDocumentAccess(document, profile._id, membership.role, { isEstateMode });
 
     if (!hasAccess) {
       throw new Error("Access denied: You do not have permission to view this document");
@@ -469,6 +478,12 @@ export const create = mutation({
     // SECURITY: Verify active subscription and storage quota (defense in depth)
     await checkStorageQuota(ctx, args.householdId, args.fileSize);
 
+    // SECURITY: Block writes during estate administration
+    const createHousehold = await ctx.db.get(args.householdId);
+    if (createHousehold) {
+      requireNotInEstateMode(createHousehold);
+    }
+
     // Validate inputs using shared helpers
     const validatedName = validateDocumentName(args.name, true);
     const validatedDescription = validateDocumentDescription(args.description);
@@ -573,7 +588,10 @@ export const update = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription for modifications
-    await requireActiveSubscription(ctx, document.householdId);
+    const updateHousehold = await requireActiveSubscription(ctx, document.householdId);
+
+    // SECURITY: Block writes during estate administration
+    requireNotInEstateMode(updateHousehold);
 
     // Only admins or the uploader can edit
     requireAdminOrResourceOwner(membership, profile._id, document.uploadedBy, "edit this document");
@@ -679,7 +697,10 @@ export const remove = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription for modifications
-    await requireActiveSubscription(ctx, document.householdId);
+    const removeHousehold = await requireActiveSubscription(ctx, document.householdId);
+
+    // SECURITY: Block writes during estate administration
+    requireNotInEstateMode(removeHousehold);
 
     // Only admins or the uploader can delete
     requireAdminOrResourceOwner(
@@ -740,8 +761,9 @@ export const createCategory = mutation({
     await requireHouseholdAccess(ctx, args.householdId);
     const { profile } = await requireAuth(ctx);
 
-    // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, args.householdId);
+    // SECURITY: Require active subscription + estate mode check
+    const createCatHousehold = await requireActiveSubscription(ctx, args.householdId);
+    requireNotInEstateMode(createCatHousehold);
 
     // SECURITY: Require Heritage tier for tags/collections feature
     await requireFeatureAccess(ctx, args.householdId, "vault_tags_collections");
@@ -814,7 +836,8 @@ export const updateCategory = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, category.householdId);
+    const updateCatHousehold = await requireActiveSubscription(ctx, category.householdId);
+    requireNotInEstateMode(updateCatHousehold);
 
     // SECURITY: Require Heritage tier for tags/collections feature
     await requireFeatureAccess(ctx, category.householdId, "vault_tags_collections");
@@ -910,7 +933,8 @@ export const deleteCategory = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, category.householdId);
+    const deleteCatHousehold = await requireActiveSubscription(ctx, category.householdId);
+    requireNotInEstateMode(deleteCatHousehold);
 
     // SECURITY: Require Heritage tier for tags/collections feature
     await requireFeatureAccess(ctx, category.householdId, "vault_tags_collections");

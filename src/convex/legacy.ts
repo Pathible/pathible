@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAuth, requireHouseholdAccess, requireSubscriptionTier } from "./auth";
+import { requireNotInEstateMode } from "./estateHelpers";
 import { logActivity } from "./shared/activity";
 import { EMAIL_REGEX } from "./shared/validators";
 
@@ -264,7 +265,8 @@ export const updateSection = mutation({
     await requireHouseholdAccess(ctx, args.householdId);
 
     // SECURITY: Require Legacy tier subscription
-    await requireSubscriptionTier(ctx, args.householdId, "legacy");
+    const updateSectionHousehold = await requireSubscriptionTier(ctx, args.householdId, "legacy");
+    requireNotInEstateMode(updateSectionHousehold);
 
     // Validate content length (50KB max)
     if (args.content.length > 50000) {
@@ -456,7 +458,8 @@ export const addKeyContact = mutation({
     await requireHouseholdAccess(ctx, args.householdId);
 
     // SECURITY: Require Legacy tier subscription
-    await requireSubscriptionTier(ctx, args.householdId, "legacy");
+    const addContactHousehold = await requireSubscriptionTier(ctx, args.householdId, "legacy");
+    requireNotInEstateMode(addContactHousehold);
 
     // Verify the legacy plan exists and belongs to this household
     const plan = await ctx.db.get(args.legacyPlanId);
@@ -528,7 +531,8 @@ export const updateKeyContact = mutation({
     await requireHouseholdAccess(ctx, args.householdId);
 
     // SECURITY: Require Legacy tier subscription
-    await requireSubscriptionTier(ctx, args.householdId, "legacy");
+    const updateContactHousehold = await requireSubscriptionTier(ctx, args.householdId, "legacy");
+    requireNotInEstateMode(updateContactHousehold);
 
     // Get the contact
     const contact = await ctx.db.get(args.contactId);
@@ -617,7 +621,8 @@ export const deleteKeyContact = mutation({
     await requireHouseholdAccess(ctx, args.householdId);
 
     // SECURITY: Require Legacy tier subscription
-    await requireSubscriptionTier(ctx, args.householdId, "legacy");
+    const deleteContactHousehold = await requireSubscriptionTier(ctx, args.householdId, "legacy");
+    requireNotInEstateMode(deleteContactHousehold);
 
     // Get the contact
     const contact = await ctx.db.get(args.contactId);

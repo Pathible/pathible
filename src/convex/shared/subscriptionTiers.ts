@@ -216,6 +216,9 @@ export const FEATURE_SLUGS = {
 
   // Early Access
   EARLY_ACCESS_FEATURES: "early_access_features",
+
+  // Estate Administration
+  ESTATE_ADMINISTRATION: "estate_administration",
 } as const;
 
 /**
@@ -267,6 +270,9 @@ export const FEATURE_TIERS: Record<FeatureSlug, SubscriptionTier> = {
 
   // Early Access
   early_access_features: "heritage",
+
+  // Estate Administration
+  estate_administration: "legacy",
 } as const;
 
 /**
@@ -519,6 +525,12 @@ export const FEATURE_DISPLAY: Record<
   early_access_features: {
     name: "Early Feature Access",
     description: "Get new features before general release",
+  },
+
+  // Estate Administration
+  estate_administration: {
+    name: "Estate Administration",
+    description: "Guided estate administration workspace for executors",
   },
 } as const;
 
