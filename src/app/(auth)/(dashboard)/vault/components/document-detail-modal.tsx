@@ -65,6 +65,7 @@ interface DocumentDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDownload: () => void;
+  isReadOnly?: boolean;
 }
 
 function formatFileSize(bytes: number): string {
@@ -81,6 +82,7 @@ export function DocumentDetailModal({
   open,
   onOpenChange,
   onDownload,
+  isReadOnly,
 }: DocumentDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -314,15 +316,17 @@ export function DocumentDetailModal({
               </>
             ) : (
               <>
-                <Button
-                  variant="destructive"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  className="sm:mr-auto"
-                  data-testid="document-delete-button"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="sm:mr-auto"
+                    data-testid="document-delete-button"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={onDownload}
@@ -331,10 +335,12 @@ export function DocumentDetailModal({
                   <Download className="h-4 w-4" />
                   Download
                 </Button>
-                <Button onClick={() => setIsEditing(true)} data-testid="document-edit-button">
-                  <Pencil className="h-4 w-4" />
-                  Edit
-                </Button>
+                {!isReadOnly && (
+                  <Button onClick={() => setIsEditing(true)} data-testid="document-edit-button">
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </Button>
+                )}
               </>
             )}
           </DialogFooter>

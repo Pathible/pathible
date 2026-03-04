@@ -57,9 +57,15 @@ interface PropertyManagerProps {
   properties: Property[];
   householdId: Id<"households">;
   isLoading: boolean;
+  isReadOnly?: boolean;
 }
 
-export function PropertyManager({ properties, householdId, isLoading }: PropertyManagerProps) {
+export function PropertyManager({
+  properties,
+  householdId,
+  isLoading,
+  isReadOnly,
+}: PropertyManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -185,12 +191,14 @@ export function PropertyManager({ properties, householdId, isLoading }: Property
             Properties
           </CardTitle>
           <CardDescription>Track your real estate holdings</CardDescription>
-          <CardAction>
-            <Button onClick={() => handleOpenDialog()} data-tour="financial-add-property">
-              <Plus className="h-4 w-4" />
-              Add Property
-            </Button>
-          </CardAction>
+          {!isReadOnly && (
+            <CardAction>
+              <Button onClick={() => handleOpenDialog()} data-tour="financial-add-property">
+                <Plus className="h-4 w-4" />
+                Add Property
+              </Button>
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? null : properties.length === 0 ? (
@@ -198,12 +206,16 @@ export function PropertyManager({ properties, householdId, isLoading }: Property
               <Home className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No properties yet</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Start by adding your first property
+                {isReadOnly
+                  ? "No properties have been added yet"
+                  : "Start by adding your first property"}
               </p>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Property
-              </Button>
+              {!isReadOnly && (
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Property
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -233,28 +245,30 @@ export function PropertyManager({ properties, householdId, isLoading }: Property
                         <p className="font-semibold">{formatCurrency(property.estimatedValue)}</p>
                       </div>
                     )}
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleOpenDialog(property)}
-                        title="Edit property"
-                      >
-                        <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => openDeleteConfirm(property._id, property.name)}
-                        title="Delete property"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
+                    {!isReadOnly && (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => handleOpenDialog(property)}
+                          title="Edit property"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => openDeleteConfirm(property._id, property.name)}
+                          title="Delete property"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

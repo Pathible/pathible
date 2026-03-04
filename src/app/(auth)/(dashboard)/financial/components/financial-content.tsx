@@ -10,6 +10,7 @@ import {
 } from "@/components/auth-states";
 import { api } from "@/convex/_generated/api";
 import { useAuthenticatedHousehold } from "@/hooks/use-authenticated-household";
+import { useEstateMode } from "@/hooks/use-estate-mode";
 import { AccountManager } from "./account-manager";
 import { FinancialStats } from "./financial-stats";
 import { InsuranceManager } from "./insurance-manager";
@@ -18,6 +19,7 @@ import { PropertyManager } from "./property-manager";
 export function FinancialContent() {
   // Use consolidated auth + household hook
   const { householdId, isLoading: isAuthLoading, error } = useAuthenticatedHousehold();
+  const { isEstateMode } = useEstateMode();
 
   // Fetch financial data
   const stats = useQuery(api.financial.getStats, householdId ? { householdId } : "skip");
@@ -69,16 +71,23 @@ export function FinancialContent() {
       {/* Stats Cards */}
       {stats && <FinancialStats stats={stats} />}
 
-      <AccountManager accounts={accounts || []} householdId={householdId} isLoading={isLoading} />
+      <AccountManager
+        accounts={accounts || []}
+        householdId={householdId}
+        isLoading={isLoading}
+        isReadOnly={isEstateMode}
+      />
       <PropertyManager
         properties={properties || []}
         householdId={householdId}
         isLoading={isLoading}
+        isReadOnly={isEstateMode}
       />
       <InsuranceManager
         insurance={insurance || []}
         householdId={householdId}
         isLoading={isLoading}
+        isReadOnly={isEstateMode}
       />
     </div>
   );

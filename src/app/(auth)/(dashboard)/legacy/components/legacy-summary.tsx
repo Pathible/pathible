@@ -46,6 +46,7 @@ interface LegacySummaryProps {
   userName: string;
   legacyPlan: LegacyPlan;
   stats: LegacyStats | null;
+  isReadOnly?: boolean;
 }
 
 export function LegacySummary({
@@ -54,6 +55,7 @@ export function LegacySummary({
   userName,
   legacyPlan,
   stats,
+  isReadOnly,
 }: LegacySummaryProps) {
   const [isExporting, setIsExporting] = useState(false);
   const resetCompletion = useMutation(api.legacy.resetCompletion);
@@ -219,6 +221,7 @@ export function LegacySummary({
           householdId={householdId}
           legacyPlanId={legacyPlan._id}
           contacts={keyContacts || []}
+          isReadOnly={isReadOnly}
         />
       </div>
 
@@ -232,10 +235,12 @@ export function LegacySummary({
           )}
           {isExporting ? "Generating PDF..." : "Export Legacy Summary PDF"}
         </Button>
-        <Button onClick={handleEditResponses} variant="outline" size="lg">
-          <Pencil className="mr-2 h-5 w-5" />
-          Edit Responses
-        </Button>
+        {!isReadOnly && (
+          <Button onClick={handleEditResponses} variant="outline" size="lg">
+            <Pencil className="mr-2 h-5 w-5" />
+            Edit Responses
+          </Button>
+        )}
       </div>
 
       {/* Disclaimer */}

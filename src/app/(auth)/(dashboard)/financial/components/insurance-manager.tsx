@@ -65,9 +65,15 @@ interface InsuranceManagerProps {
   insurance: Insurance[];
   householdId: Id<"households">;
   isLoading: boolean;
+  isReadOnly?: boolean;
 }
 
-export function InsuranceManager({ insurance, householdId, isLoading }: InsuranceManagerProps) {
+export function InsuranceManager({
+  insurance,
+  householdId,
+  isLoading,
+  isReadOnly,
+}: InsuranceManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingInsurance, setEditingInsurance] = useState<Insurance | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -211,12 +217,14 @@ export function InsuranceManager({ insurance, householdId, isLoading }: Insuranc
             Insurance Policies
           </CardTitle>
           <CardDescription>Manage your insurance coverage</CardDescription>
-          <CardAction>
-            <Button onClick={() => handleOpenDialog()} data-tour="financial-add-policy">
-              <Plus className="h-4 w-4" />
-              Add Policy
-            </Button>
-          </CardAction>
+          {!isReadOnly && (
+            <CardAction>
+              <Button onClick={() => handleOpenDialog()} data-tour="financial-add-policy">
+                <Plus className="h-4 w-4" />
+                Add Policy
+              </Button>
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? null : insurance.length === 0 ? (
@@ -224,12 +232,16 @@ export function InsuranceManager({ insurance, householdId, isLoading }: Insuranc
               <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No insurance policies yet</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Start by adding your first insurance policy
+                {isReadOnly
+                  ? "No insurance policies have been added yet"
+                  : "Start by adding your first insurance policy"}
               </p>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Policy
-              </Button>
+              {!isReadOnly && (
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Policy
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -269,28 +281,30 @@ export function InsuranceManager({ insurance, householdId, isLoading }: Insuranc
                         </div>
                       )}
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleOpenDialog(ins)}
-                        title="Edit policy"
-                      >
-                        <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => openDeleteConfirm(ins._id, ins.type)}
-                        title="Delete policy"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
+                    {!isReadOnly && (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => handleOpenDialog(ins)}
+                          title="Edit policy"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => openDeleteConfirm(ins._id, ins.type)}
+                          title="Delete policy"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

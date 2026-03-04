@@ -64,9 +64,15 @@ interface AccountManagerProps {
   accounts: Account[];
   householdId: Id<"households">;
   isLoading: boolean;
+  isReadOnly?: boolean;
 }
 
-export function AccountManager({ accounts, householdId, isLoading }: AccountManagerProps) {
+export function AccountManager({
+  accounts,
+  householdId,
+  isLoading,
+  isReadOnly,
+}: AccountManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -191,12 +197,14 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
             Financial Accounts
           </CardTitle>
           <CardDescription>The accounts your family should know about</CardDescription>
-          <CardAction>
-            <Button onClick={() => handleOpenDialog()} data-tour="financial-add-account">
-              <Plus className="h-4 w-4" />
-              Add Account
-            </Button>
-          </CardAction>
+          {!isReadOnly && (
+            <CardAction>
+              <Button onClick={() => handleOpenDialog()} data-tour="financial-add-account">
+                <Plus className="h-4 w-4" />
+                Add Account
+              </Button>
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? null : accounts.length === 0 ? (
@@ -204,12 +212,16 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
               <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">Nothing here yet</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Add the accounts your family will need to know about someday
+                {isReadOnly
+                  ? "No accounts have been added yet"
+                  : "Add the accounts your family will need to know about someday"}
               </p>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Account
-              </Button>
+              {!isReadOnly && (
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Account
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -238,28 +250,30 @@ export function AccountManager({ accounts, householdId, isLoading }: AccountMana
                         <p className="font-semibold">{formatCurrency(account.balance)}</p>
                       </div>
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleOpenDialog(account)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => openDeleteConfirm(account._id, account.name)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {!isReadOnly && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleOpenDialog(account)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => openDeleteConfirm(account._id, account.name)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
               ))}

@@ -8,11 +8,13 @@ import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
+import { useEstateMode } from "@/hooks/use-estate-mode";
 import { QuickActionCard } from "../../dashboard/components/quick-action-card";
 import { TipCard } from "../../dashboard/components/tip-card";
 
 export function WisdomHubContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
+  const { isEstateMode } = useEstateMode();
 
   const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
   const householdId = households?.[0]?._id;
@@ -67,14 +69,18 @@ export function WisdomHubContent() {
 
       {/* Journey Progress - top position so users see where they stand */}
       <div className="mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <QuickActionCard
-            title="Write Something Today"
-            description="A story, a lesson, a piece of advice - whatever is on your heart."
-            route="/wisdom/create-entry"
-            icon={PenLine}
-            ctaLabel="Start writing"
-          />
+        <div
+          className={`grid grid-cols-1 ${isEstateMode ? "md:grid-cols-2" : "md:grid-cols-3"} gap-4`}
+        >
+          {!isEstateMode && (
+            <QuickActionCard
+              title="Write Something Today"
+              description="A story, a lesson, a piece of advice - whatever is on your heart."
+              route="/wisdom/create-entry"
+              icon={PenLine}
+              ctaLabel="Start writing"
+            />
+          )}
           <StatCard
             icon={BookOpen}
             iconColor="text-primary"
@@ -133,13 +139,21 @@ export function WisdomHubContent() {
           <Card className="border-dashed">
             <CardContent className="p-8 text-center">
               <BookOpen className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="font-medium mb-1">Your family is waiting to hear from you</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                The stories only you can tell &mdash; start with one.
+              <p className="font-medium mb-1">
+                {isEstateMode
+                  ? "No stories have been shared yet"
+                  : "Your family is waiting to hear from you"}
               </p>
-              <Button asChild>
-                <Link href="/wisdom/create-entry">Write Your First Story</Link>
-              </Button>
+              {!isEstateMode && (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    The stories only you can tell &mdash; start with one.
+                  </p>
+                  <Button asChild>
+                    <Link href="/wisdom/create-entry">Write Your First Story</Link>
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -187,13 +201,19 @@ export function WisdomHubContent() {
           <Card className="border-dashed">
             <CardContent className="p-8 text-center">
               <Heart className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="font-medium mb-1">What do you stand for?</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                The convictions that shaped your life, written down for generations.
+              <p className="font-medium mb-1">
+                {isEstateMode ? "No core beliefs have been defined yet" : "What do you stand for?"}
               </p>
-              <Button asChild>
-                <Link href="/wisdom/core-beliefs">Define Your First Belief</Link>
-              </Button>
+              {!isEstateMode && (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    The convictions that shaped your life, written down for generations.
+                  </p>
+                  <Button asChild>
+                    <Link href="/wisdom/core-beliefs">Define Your First Belief</Link>
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -211,8 +231,8 @@ export function WisdomHubContent() {
         )}
       </div>
 
-      {/* Contextual tip - only when no entries */}
-      {stats.wisdomEntries === 0 && (
+      {/* Contextual tip - only when no entries and not in estate mode */}
+      {stats.wisdomEntries === 0 && !isEstateMode && (
         <TipCard
           icon={Lightbulb}
           text="Start with something simple. What's one piece of advice you'd want your grandchildren to know?"
