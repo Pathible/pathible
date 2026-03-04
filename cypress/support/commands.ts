@@ -160,6 +160,32 @@ declare global {
       }>;
 
       /**
+       * Activate estate mode for the test user's household (skips cooldown)
+       * Gets the household ID automatically and creates an active estate activation.
+       * Must be called AFTER signing in with Clerk and completing onboarding.
+       * SECURITY: Only works for test user emails (+clerk_test, +e2e_test, etc.)
+       * @example cy.activateEstateMode()
+       */
+      activateEstateMode(): Chainable<{
+        success: boolean;
+        message: string;
+        activationId?: string;
+      }>;
+
+      /**
+       * Clean up all estate data for the test user's household
+       * Removes activations, checklist items, assets, communications, and distributions.
+       * Must be called AFTER signing in with Clerk and completing onboarding.
+       * SECURITY: Only works for test user emails (+clerk_test, +e2e_test, etc.)
+       * @example cy.cleanupEstateData()
+       */
+      cleanupEstateData(): Chainable<{
+        success: boolean;
+        message: string;
+        deletedCount: number;
+      }>;
+
+      /**
        * Clean up test financial data (accounts, properties, insurance policies)
        * Deletes all financial data created during E2E tests for the test user
        * Must be called AFTER signing in with Clerk.
@@ -526,6 +552,17 @@ interface ConvexTestHelpers {
     success: boolean;
     message: string;
   }>;
+  getTestHouseholdId: () => Promise<string | null>;
+  activateEstateForTesting: (householdId: string) => Promise<{
+    success: boolean;
+    message: string;
+    activationId?: string;
+  }>;
+  cleanupEstateData: (householdId: string) => Promise<{
+    success: boolean;
+    message: string;
+    deletedCount: number;
+  }>;
 }
 
 // Result types for test commands
@@ -886,3 +923,101 @@ Cypress.Commands.add(
       }) as Cypress.Chainable<CleanupTestWisdomDataResult>;
   },
 );
+
+// Result type for activateEstateMode
+type ActivateEstateModeResult = {
+  success: boolean;
+  message: string;
+  activationId?: string;
+};
+
+/**
+ * Activate estate mode for testing
+ * Gets the test user's household ID, then calls activateEstateForTesting.
+ * Must be signed in first and have completed onboarding.
+ */
+Cypress.Commands.add("activateEstateMode", (): Cypress.Chainable<ActivateEstateModeResult> => {
+  cy.log("**Activating estate mode for testing**");
+
+  return cy
+    .window({ timeout: 30000 })
+    .then((win): ActivateEstateModeResult | Cypress.Chainable<ActivateEstateModeResult> => {
+      const testHelpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+        .__CONVEX_TEST_HELPERS__;
+
+      if (!testHelpers) {
+        console.error("Convex test helpers not found on window.");
+        return {
+          success: false,
+          message: "Convex test helpers not available",
+        };
+      }
+
+      // First get the household ID, then activate estate mode
+      return cy.wrap(testHelpers.getTestHouseholdId(), { timeout: 30000 }).then((householdId) => {
+        if (!householdId) {
+          return {
+            success: false,
+            message: "No household found. Complete onboarding first.",
+          } as ActivateEstateModeResult;
+        }
+
+        return cy
+          .wrap(testHelpers.activateEstateForTesting(householdId as string), { timeout: 30000 })
+          .then((result) => {
+            console.log("Activate estate mode result:", result);
+            return result as ActivateEstateModeResult;
+          }) as unknown as ActivateEstateModeResult;
+      }) as unknown as ActivateEstateModeResult;
+    }) as unknown as Cypress.Chainable<ActivateEstateModeResult>;
+});
+
+// Result type for cleanupEstateData
+type CleanupEstateDataResult = {
+  success: boolean;
+  message: string;
+  deletedCount: number;
+};
+
+/**
+ * Clean up all estate data for test user's household
+ * Gets the test user's household ID, then calls cleanupEstateData.
+ * Must be signed in first and have completed onboarding.
+ */
+Cypress.Commands.add("cleanupEstateData", (): Cypress.Chainable<CleanupEstateDataResult> => {
+  cy.log("**Cleaning up estate data**");
+
+  return cy
+    .window({ timeout: 30000 })
+    .then((win): CleanupEstateDataResult | Cypress.Chainable<CleanupEstateDataResult> => {
+      const testHelpers = (win as unknown as { __CONVEX_TEST_HELPERS__?: ConvexTestHelpers })
+        .__CONVEX_TEST_HELPERS__;
+
+      if (!testHelpers) {
+        console.error("Convex test helpers not found on window.");
+        return {
+          success: false,
+          message: "Convex test helpers not available",
+          deletedCount: 0,
+        };
+      }
+
+      // First get the household ID, then clean up estate data
+      return cy.wrap(testHelpers.getTestHouseholdId(), { timeout: 30000 }).then((householdId) => {
+        if (!householdId) {
+          return {
+            success: false,
+            message: "No household found. Complete onboarding first.",
+            deletedCount: 0,
+          } as CleanupEstateDataResult;
+        }
+
+        return cy
+          .wrap(testHelpers.cleanupEstateData(householdId as string), { timeout: 30000 })
+          .then((result) => {
+            console.log("Cleanup estate data result:", result);
+            return result as CleanupEstateDataResult;
+          }) as unknown as CleanupEstateDataResult;
+      }) as unknown as CleanupEstateDataResult;
+    }) as unknown as Cypress.Chainable<CleanupEstateDataResult>;
+});
