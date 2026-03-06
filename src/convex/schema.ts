@@ -1416,4 +1416,14 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_isRead", ["userId", "isRead"]),
+
+  // ============================================================================
+  // WAITLIST
+  // ============================================================================
+
+  waitlist: defineTable({
+    email: v.string(),
+    product: v.string(), // e.g. "executor"
+    createdAt: v.number(), // Unix timestamp
+  }).index("by_email_and_product", ["email", "product"]),
 });

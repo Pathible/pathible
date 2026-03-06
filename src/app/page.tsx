@@ -1,4 +1,5 @@
 import { CTASection } from "@/components/marketing/cta-section";
+import { ExecutorIntroSection } from "@/components/marketing/executor-intro";
 import { FAQSection } from "@/components/marketing/faq";
 import { ForWhoSection } from "@/components/marketing/for-who";
 import { HeroSection } from "@/components/marketing/hero";
@@ -38,6 +39,8 @@ export default function Index() {
       <ForWhoSection />
       {/* Stakes: What happens if you don't vs if you do */}
       <TheStakes />
+      {/* Executor cross-sell */}
+      <ExecutorIntroSection />
       {/* Authority: Answer objections */}
       <FAQSection />
       {/* E - End Result: The emotional close */}

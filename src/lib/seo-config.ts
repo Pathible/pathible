@@ -140,6 +140,82 @@ export const FAQ_ITEMS = [
 ] as const;
 
 // =============================================================================
+// Executor FAQ Content - Used for both UI and FAQPage schema
+// =============================================================================
+export const EXECUTOR_FAQ_ITEMS = [
+  {
+    question: "What is estate administration?",
+    answer:
+      "Estate administration is the process of settling someone's affairs after they pass away. This includes gathering assets, paying debts and taxes, distributing property to beneficiaries, and filing required court documents. As executor, you're responsible for managing this process — Pathible gives you a clear path to follow.",
+  },
+  {
+    question: "Do I need a lawyer to settle an estate?",
+    answer:
+      "It depends on the complexity of the estate. Simple estates with clear wills may not require an attorney. Complex estates with disputes, business interests, or multi-state property often do. Pathible helps you organize everything regardless — and makes working with an attorney more efficient if you need one.",
+  },
+  {
+    question: "How is Pathible different from hiring a probate attorney?",
+    answer:
+      "Pathible doesn't replace legal counsel. It's the organizational backbone that keeps you on track. Think of it this way: your attorney handles the legal strategy, Pathible handles the day-to-day tracking of tasks, assets, documents, and communications.",
+  },
+  {
+    question: "What if there's no will?",
+    answer:
+      "When someone dies without a will (called 'dying intestate'), state laws determine how assets are distributed. The process is more complex but still manageable. Pathible's checklist adapts to intestate situations and helps you navigate the additional court requirements.",
+  },
+  {
+    question: "How long does estate administration take?",
+    answer:
+      "Most estates take 6 to 18 months to fully settle, though simple estates can close faster and complex ones may take longer. Pathible helps you track progress across every phase so nothing falls through the cracks.",
+  },
+  {
+    question: "Is my data secure?",
+    answer:
+      "Yes. Pathible uses bank-level encryption to protect all your documents and data. Estate records are especially sensitive — we treat security as a core feature, not an afterthought. You own your data completely and can export or delete it anytime.",
+  },
+] as const;
+
+// =============================================================================
+// Executor SoftwareApplication Schema
+// =============================================================================
+export const executorSoftwareApplicationSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "@id": `${SEO_CONFIG.baseUrl}/#executor-software`,
+  name: "Pathible Estate Administration",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "Estate administration guidance with 48 expert-curated steps. Track assets, manage documents, and settle an estate with confidence.",
+  url: `${SEO_CONFIG.baseUrl}/for-executors`,
+  provider: { "@id": `${SEO_CONFIG.baseUrl}/#organization` },
+  featureList: [
+    "48-step expert-curated estate checklist",
+    "Asset and property tracker",
+    "Secure document vault for estate records",
+    "Distribution tracking and documentation",
+    "Communications log for attorneys, banks, and family",
+    "Complete estate export and reporting",
+  ],
+};
+
+// =============================================================================
+// Executor FAQPage Schema - Generated from EXECUTOR_FAQ_ITEMS
+// =============================================================================
+export const executorFaqPageSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: EXECUTOR_FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.answer,
+    },
+  })),
+};
+
+// =============================================================================
 // FAQPage Schema - Generated from FAQ_ITEMS
 // =============================================================================
 export const faqPageSchema = {
@@ -237,5 +313,14 @@ export const TARGET_KEYWORDS = {
     "family traditions to start",
     "digital baby journal",
     "young family estate planning",
+  ],
+  executors: [
+    "estate administration checklist",
+    "executor checklist after death",
+    "how to settle an estate",
+    "estate executor guide",
+    "probate checklist",
+    "estate administration software",
+    "executor responsibilities",
   ],
 } as const;
