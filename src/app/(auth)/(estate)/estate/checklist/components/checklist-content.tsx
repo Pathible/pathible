@@ -35,7 +35,7 @@ export function ChecklistContent() {
     return (
       <div className="text-center py-12 space-y-4">
         <p className="text-muted-foreground">
-          Estate administration must be active to view the checklist.
+          Activate estate administration to access the checklist.
         </p>
         <Button variant="outline" asChild>
           <Link href="/estate">Go to Estate Overview</Link>
@@ -67,7 +67,7 @@ export function ChecklistContent() {
     <div className="space-y-6" data-testid="checklist-content">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Checklist</h2>
+          <h2 className="text-4xl font-bold">Checklist</h2>
           <p className="mt-1 text-muted-foreground">
             A guided list to help you through the process, one step at a time.
           </p>

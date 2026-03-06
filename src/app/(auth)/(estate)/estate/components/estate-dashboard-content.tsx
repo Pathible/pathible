@@ -11,14 +11,19 @@ import { api } from "@/convex/_generated/api";
 /**
  * Estate Dashboard Content
  *
- * Shows estate status when activated, or redirects to activation when not.
- * Phase 1 shows a minimal overview; future phases add checklist stats,
- * asset counts, and activity feeds.
+ * Handles all estate states:
+ * - No activation: prompt to activate
+ * - Pending cooldown: show countdown
+ * - Contested: show contested status
+ * - Active: show estate overview
  */
 export function EstateDashboardContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
   const household = households?.[0];
+  const householdId = household?._id;
+
+  const activation = useQuery(api.estate.getActivation, householdId ? { householdId } : "skip");
 
   if (!isUserLoaded || households === undefined) {
     return (
@@ -36,21 +41,37 @@ export function EstateDashboardContent() {
     );
   }
 
-  // If estate mode is not active, prompt to activate
-  if (!household.estateMode) {
-    return <NotActivatedView />;
+  // Active estate mode
+  if (household.estateMode && activation?.status === "active") {
+    return <ActiveEstateView deceasedName={activation.deceasedName} />;
   }
 
-  return <ActiveEstateView />;
+  // Pending cooldown
+  if (activation?.status === "pending") {
+    return (
+      <PendingCooldownView
+        deceasedName={activation.deceasedName}
+        cooldownEndsAt={activation.cooldownEndsAt}
+      />
+    );
+  }
+
+  // Contested
+  if (activation?.status === "contested") {
+    return <ContestedView deceasedName={activation.deceasedName} />;
+  }
+
+  // No activation yet
+  return <NotActivatedView />;
 }
 
 function NotActivatedView() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Estate Administration</h2>
+        <h2 className="text-4xl font-bold">Estate Administration</h2>
         <p className="mt-2 text-muted-foreground">
-          Estate administration has not been activated for this household.
+          Estate administration hasn't been activated yet.
         </p>
       </div>
 
@@ -61,8 +82,8 @@ function NotActivatedView() {
             <CardTitle>Begin Estate Administration</CardTitle>
           </div>
           <CardDescription>
-            If you are the designated executor and the time has come, you can activate estate
-            administration to begin managing the estate.
+            If you're the designated executor and it's time, you can start the estate administration
+            process here.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -75,14 +96,90 @@ function NotActivatedView() {
   );
 }
 
-function ActiveEstateView() {
+function PendingCooldownView({
+  deceasedName,
+  cooldownEndsAt,
+}: {
+  deceasedName: string;
+  cooldownEndsAt: number;
+}) {
+  const cooldownEnd = new Date(cooldownEndsAt);
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Estate Overview</h2>
+        <h2 className="text-4xl font-bold">Estate Administration</h2>
         <p className="mt-2 text-muted-foreground">
-          Manage and track estate administration progress.
+          The activation for {deceasedName} is in the review period.
         </p>
+      </div>
+
+      <Card>
+        <CardContent className="flex items-center gap-4 p-6">
+          <Clock className="h-8 w-8 text-amber-500" />
+          <div>
+            <p className="font-semibold">48-hour review period</p>
+            <p className="text-sm text-muted-foreground">
+              Estate mode will activate on{" "}
+              <strong>
+                {cooldownEnd.toLocaleDateString()} at {cooldownEnd.toLocaleTimeString()}
+              </strong>
+              . During this time, household members can review the activation and raise concerns if
+              needed.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>What happens next</CardTitle>
+          <CardDescription>
+            Once the review period ends, estate mode will activate automatically. Your planning
+            features will become read-only, and the estate tools will be ready to use.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" asChild>
+            <Link href="/dashboard">View Planning Dashboard</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ContestedView({ deceasedName }: { deceasedName: string }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-4xl font-bold">Estate Administration</h2>
+        <p className="mt-2 text-muted-foreground">
+          The activation for {deceasedName} has been contested.
+        </p>
+      </div>
+
+      <Card>
+        <CardContent className="flex items-center gap-4 p-6">
+          <ShieldAlert className="h-8 w-8 text-destructive" />
+          <div>
+            <p className="font-semibold">Activation contested</p>
+            <p className="text-sm text-muted-foreground">
+              A household member has raised a concern about this activation. Our team will review it
+              and follow up with you.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ActiveEstateView({ deceasedName }: { deceasedName: string }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-4xl font-bold">Estate Overview</h2>
+        <p className="mt-2 text-muted-foreground">Estate administration for {deceasedName}.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-testid="estate-stats-grid">
@@ -111,13 +208,12 @@ function ActiveEstateView() {
         <CardHeader>
           <CardTitle>What to do next</CardTitle>
           <CardDescription>
-            The checklist and asset tracking features will be available in upcoming updates. For
-            now, review the household documents and financial information in the planning view.
+            Start with the checklist and work through each section at your own pace.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button variant="outline" asChild>
-            <Link href="/dashboard">View Planning Dashboard</Link>
+            <Link href="/estate/checklist">View Checklist</Link>
           </Button>
         </CardContent>
       </Card>

@@ -80,7 +80,7 @@ export function DocumentsContent() {
     return (
       <div className="text-center py-12 space-y-4">
         <p className="text-muted-foreground">
-          Estate administration must be active to view documents.
+          Activate estate administration to organize documents.
         </p>
         <Button variant="outline" asChild>
           <Link href="/estate">Go to Estate Overview</Link>
@@ -101,9 +101,9 @@ export function DocumentsContent() {
     <div className="space-y-6" data-testid="documents-content">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Documents</h2>
+          <h2 className="text-4xl font-bold">Documents</h2>
           <p className="mt-1 text-muted-foreground">
-            Categorize and track vault documents for estate administration.
+            Tag and organize your vault documents for the estate process.
           </p>
         </div>
         <Button
@@ -180,7 +180,7 @@ export function DocumentsContent() {
               : "No documents have been categorized yet."}
           </p>
           <p className="text-sm text-muted-foreground">
-            Use "Categorize Document" to tag vault documents for estate use.
+            Use "Categorize Document" to tag your vault documents for the estate process.
           </p>
         </div>
       ) : (

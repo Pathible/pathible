@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowLeft,
   Briefcase,
   CheckSquare,
   Download,
@@ -18,11 +17,11 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useEstateMode } from "@/hooks/use-estate-mode";
 
 const estateNavItems = [
   {
@@ -77,6 +76,7 @@ const estateNavItems = [
 
 export function EstateSidebar() {
   const pathname = usePathname();
+  const { hasPlanningAccess } = useEstateMode();
 
   return (
     <Sidebar
@@ -85,23 +85,7 @@ export function EstateSidebar() {
       data-testid="estate-sidebar"
     >
       <SidebarContent className="gap-0">
-        <SidebarGroup className="py-3">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className="px-2 text-muted-foreground">
-                  <Link href="/dashboard">
-                    <ArrowLeft className="h-4 w-4" />
-                    <span>Back to Planning</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup className="py-2">
-          <SidebarGroupLabel>Estate Administration</SidebarGroupLabel>
+        <SidebarGroup className="py-4">
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
               {estateNavItems.map((item) => {
@@ -119,6 +103,16 @@ export function EstateSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+              {hasPlanningAccess && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild className="px-2">
+                    <Link href="/dashboard">
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span>Legacy Planning</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

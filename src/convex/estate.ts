@@ -2,8 +2,12 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query } from "./_generated/server";
-import { requireAuth, requireFeatureAccess, requireHouseholdAccess } from "./auth";
-import { requireActiveEstate, requireExecutorAccess } from "./estateHelpers";
+import { requireAuth, requireHouseholdAccess } from "./auth";
+import {
+  requireActiveEstate,
+  requireExecutorAccess,
+  requireExecutorPurchase,
+} from "./estateHelpers";
 import { estateChecklistTemplates } from "./seeds/estateChecklistTemplates";
 import { logActivity } from "./shared/activity";
 
@@ -153,7 +157,7 @@ export const activateEstate = mutation({
     // for this sensitive, hard-to-reverse action. Clerk supports step-up auth
     // via session.verify() on the client before calling this mutation.
     const { profile } = await requireExecutorAccess(ctx, args.householdId);
-    await requireFeatureAccess(ctx, args.householdId, "estate_administration");
+    await requireExecutorPurchase(ctx, args.householdId);
 
     // Validate deceased name
     const deceasedName = args.deceasedName.trim();
@@ -195,6 +199,7 @@ export const activateEstate = mutation({
     const now = Date.now();
 
     // Rate limit: prevent activation spam after cancellation (24-hour cooldown)
+    // Admin cancellations are exempt — they prefix cancelReason with "Admin:"
     const cancelledActivations = await ctx.db
       .query("estateActivations")
       .withIndex("by_household_and_status", (q) =>
@@ -202,7 +207,10 @@ export const activateEstate = mutation({
       )
       .collect();
     const recentCancel = cancelledActivations.find(
-      (a) => a.cancelledAt && now - a.cancelledAt < 24 * 60 * 60 * 1000,
+      (a) =>
+        a.cancelledAt &&
+        now - a.cancelledAt < 24 * 60 * 60 * 1000 &&
+        !a.cancelReason?.startsWith("Admin:"),
     );
     if (recentCancel) {
       throw new Error("Please wait 24 hours after cancellation before activating again");

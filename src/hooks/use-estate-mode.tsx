@@ -9,6 +9,8 @@ interface EstateMode {
   isEstateMode: boolean;
   executorName: string | null;
   isExecutor: boolean;
+  hasExecutorPurchase: boolean;
+  hasPlanningAccess: boolean;
   isLoading: boolean;
 }
 
@@ -69,7 +71,14 @@ function useEstateModeQuery(skip = false): EstateMode {
 
   return useMemo(() => {
     if (skip) {
-      return { isEstateMode: false, executorName: null, isExecutor: false, isLoading: true };
+      return {
+        isEstateMode: false,
+        executorName: null,
+        isExecutor: false,
+        hasExecutorPurchase: false,
+        hasPlanningAccess: false,
+        isLoading: true,
+      };
     }
 
     // Find current user's membership to check executor role
@@ -82,13 +91,26 @@ function useEstateModeQuery(skip = false): EstateMode {
       ? `${executorMember.profile.firstName} ${executorMember.profile.lastName}`
       : null;
 
+    const hasExecutorPurchase = household?.executorPurchased === true;
+    const hasPlanningAccess = household?.subscriptionStatus === "active";
     const isLoading = !isUserLoaded || households === undefined || members === undefined;
 
     return {
       isEstateMode,
       executorName,
       isExecutor,
+      hasExecutorPurchase,
+      hasPlanningAccess,
       isLoading: Boolean(isLoading),
     };
-  }, [skip, isEstateMode, members, profile?._id, isUserLoaded, households]);
+  }, [
+    skip,
+    isEstateMode,
+    members,
+    profile?._id,
+    isUserLoaded,
+    households,
+    household?.executorPurchased,
+    household?.subscriptionStatus,
+  ]);
 }

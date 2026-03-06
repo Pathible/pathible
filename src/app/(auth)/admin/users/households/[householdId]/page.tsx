@@ -19,6 +19,7 @@ import {
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDateLong } from "@/lib/date-utils";
+import { EstateAdminCard } from "../../components/estate-admin-card";
 import { TierOverrideCard } from "../../components/tier-override-card";
 
 export default function HouseholdDetailPage() {
@@ -180,6 +181,15 @@ export default function HouseholdDetailPage() {
         tierOverride={household.household.tierOverride}
         tierOverrideExpiresAt={household.household.tierOverrideExpiresAt}
         tierOverrideReason={household.household.tierOverrideReason}
+      />
+
+      {/* Estate Administration */}
+      <EstateAdminCard
+        householdId={household.household._id}
+        estateMode={household.household.estateMode}
+        executorPurchased={household.household.executorPurchased}
+        executorPurchasedAt={household.household.executorPurchasedAt}
+        activation={household.activation}
       />
 
       {/* Household Members */}

@@ -2,8 +2,8 @@
 
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { Clock, Info, Loader2, LogIn, Scale } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { CheckCircle, Clock, Info, Loader2, LogIn, Scale, ShieldAlert } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -16,17 +16,15 @@ import { api } from "@/convex/_generated/api";
 /**
  * Activation page content - single confirmation page.
  *
- * Minimizes cognitive burden during grief with a simple, clear layout:
- * - Deceased's name input
- * - Optional date of death
- * - Acknowledgment checkbox
- * - Explanation of 48-hour cooldown
- * - One "Begin Estate Administration" button
+ * Handles all activation states:
+ * - No activation: shows the activation form
+ * - Pending: shows cooldown countdown
+ * - Active: redirects to /estate
+ * - Contested: shows contested status
  */
 export function ActivateEstateContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const { openSignIn } = useClerk();
-  const router = useRouter();
 
   const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
   const household = households?.[0];
@@ -34,6 +32,7 @@ export function ActivateEstateContent() {
 
   const members = useQuery(api.households.listMembers, householdId ? { householdId } : "skip");
   const profile = useQuery(api.profiles.get, isUserLoaded && user ? {} : "skip");
+  const activation = useQuery(api.estate.getActivation, householdId ? { householdId } : "skip");
 
   const activateEstate = useMutation(api.estate.activateEstate);
 
@@ -59,23 +58,111 @@ export function ActivateEstateContent() {
   if (!isExecutor) {
     return (
       <div className="space-y-6">
-        <h2 className="text-3xl font-bold">Estate Administration</h2>
+        <h2 className="text-4xl font-bold">Estate Administration</h2>
         <Alert>
           <Info className="h-4 w-4" />
           <AlertTitle>Executor role required</AlertTitle>
           <AlertDescription>
-            Only the designated executor can activate estate administration. If you believe this is
-            an error, please contact the household owner.
+            Only the designated executor can activate estate administration. If this doesn't seem
+            right, reach out to the household owner.
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  // Already in estate mode
+  // Handle existing activation states
+  if (activation) {
+    if (activation.status === "active") {
+      return (
+        <div className="space-y-6">
+          <h2 className="text-4xl font-bold">Estate Administration</h2>
+          <Card>
+            <CardContent className="flex items-center gap-4 p-6">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+              <div>
+                <p className="font-semibold">Estate administration is active</p>
+                <p className="text-sm text-muted-foreground">
+                  Estate administration for {activation.deceasedName} is active.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Button asChild>
+            <Link href="/estate">Go to Estate Dashboard</Link>
+          </Button>
+        </div>
+      );
+    }
+
+    if (activation.status === "pending") {
+      const cooldownEnd = new Date(activation.cooldownEndsAt);
+      return (
+        <div className="space-y-6">
+          <h2 className="text-4xl font-bold">Estate Administration</h2>
+          <Alert>
+            <Clock className="h-4 w-4" />
+            <AlertTitle>Activation pending</AlertTitle>
+            <AlertDescription>
+              Activation for {activation.deceasedName} has started. The 48-hour review period ends
+              on{" "}
+              <strong>
+                {cooldownEnd.toLocaleDateString()} at {cooldownEnd.toLocaleTimeString()}
+              </strong>
+              . All household members have been notified.
+            </AlertDescription>
+          </Alert>
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm text-muted-foreground">
+                During this time, household owners or stewards can raise concerns if the activation
+                was made in error. Once the review period ends, estate mode will activate and
+                planning features will become read-only.
+              </p>
+            </CardContent>
+          </Card>
+          <Button variant="outline" asChild>
+            <Link href="/estate">Go to Estate Dashboard</Link>
+          </Button>
+        </div>
+      );
+    }
+
+    if (activation.status === "contested") {
+      return (
+        <div className="space-y-6">
+          <h2 className="text-4xl font-bold">Estate Administration</h2>
+          <Alert variant="destructive">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertTitle>Activation contested</AlertTitle>
+            <AlertDescription>
+              A household member has raised a concern about the activation for{" "}
+              {activation.deceasedName}. Our team will review it and follow up with you.
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
+    }
+  }
+
+  // Already in estate mode (fallback check)
   if (household?.estateMode) {
-    router.replace("/estate");
-    return null;
+    return (
+      <div className="space-y-6">
+        <h2 className="text-4xl font-bold">Estate Administration</h2>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <CheckCircle className="h-8 w-8 text-green-600" />
+            <div>
+              <p className="font-semibold">Estate administration is active</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Button asChild>
+          <Link href="/estate">Go to Estate Dashboard</Link>
+        </Button>
+      </div>
+    );
   }
 
   const canSubmit = deceasedName.trim().length > 0 && acknowledged && !isSubmitting;
@@ -95,8 +182,6 @@ export function ActivateEstateContent() {
         deceasedName: deceasedName.trim(),
         dateOfDeath: dateOfDeathTimestamp,
       });
-
-      router.push("/estate");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Something went wrong. Please try again.";
@@ -112,10 +197,10 @@ export function ActivateEstateContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Begin Estate Administration</h2>
+        <h2 className="text-4xl font-bold">Begin Estate Administration</h2>
         <p className="mt-2 text-muted-foreground">
-          We are sorry for your loss. This process will help you organize and manage the estate with
-          care and clarity.
+          We're sorry for your loss. This process will help you stay organized and work through
+          things one step at a time.
         </p>
       </div>
 
@@ -123,9 +208,9 @@ export function ActivateEstateContent() {
         <Clock className="h-4 w-4" />
         <AlertTitle>48-hour safety period</AlertTitle>
         <AlertDescription>
-          After activation, there is a 48-hour waiting period before estate administration fully
-          takes effect. During this time, all household members will be notified and can review the
-          activation. This helps protect everyone involved.
+          After activation, there's a 48-hour waiting period before estate administration takes
+          effect. During this time, all household members will be notified and can review the
+          activation. This is here to protect everyone involved.
         </AlertDescription>
       </Alert>
 
@@ -136,8 +221,8 @@ export function ActivateEstateContent() {
             <CardTitle>Activation Details</CardTitle>
           </div>
           <CardDescription>
-            Provide the information below to begin estate administration. You can upload a death
-            certificate later as part of the administration checklist.
+            Fill in the details below to get started. You can upload a death certificate later as
+            part of the checklist.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -191,8 +276,8 @@ export function ActivateEstateContent() {
                   {needsReauth ? (
                     <div className="space-y-2">
                       <p>
-                        For security, you must verify your identity before activating estate
-                        administration. Please sign in again to proceed.
+                        For security, please verify your identity before activating estate
+                        administration. Sign in again to continue.
                       </p>
                       <Button
                         type="button"

@@ -93,7 +93,9 @@ export function ChecklistItem({
           </button>
 
           {expanded && description && (
-            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{description}</p>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              <LinkifiedText text={description} />
+            </p>
           )}
 
           {expanded && (
@@ -147,5 +149,38 @@ export function ChecklistItem({
         </div>
       </div>
     </div>
+  );
+}
+
+const URL_REGEX = /(https?:\/\/[^\s)]+)/g;
+
+function LinkifiedText({ text }: { text: string }) {
+  const parts = text.split(URL_REGEX);
+
+  return (
+    <>
+      {parts.map((part) => {
+        if (part.match(URL_REGEX)) {
+          try {
+            const url = new URL(part);
+            const display = url.hostname.replace("www.", "");
+            return (
+              <a
+                key={part}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline underline-offset-2"
+              >
+                {display}
+              </a>
+            );
+          } catch {
+            return part;
+          }
+        }
+        return part;
+      })}
+    </>
   );
 }

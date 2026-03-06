@@ -403,7 +403,7 @@ export function AssetDetailDialog({
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-0.5">
                                   {new Date(change.changedAt).toLocaleDateString()}
-                                  {change.notes && ` — ${change.notes}`}
+                                  {change.notes && `: ${change.notes}`}
                                 </p>
                               </div>
                             </div>

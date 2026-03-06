@@ -150,6 +150,10 @@ export default defineSchema({
     estateMode: v.optional(v.boolean()),
     estateActivationId: v.optional(v.id("estateActivations")),
     estateGraceUntil: v.optional(v.number()), // 90-day subscription grace period
+    // Executor product (separate from planning subscription)
+    executorPurchased: v.optional(v.boolean()),
+    executorPurchasedAt: v.optional(v.number()),
+    executorPurchasedBy: v.optional(v.id("profiles")),
     updatedAt: v.number(),
   })
     .index("by_primaryContactId", ["primaryContactId"])

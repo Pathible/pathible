@@ -49,9 +49,7 @@ export function SharesContent() {
   if (!household || !household.estateMode) {
     return (
       <div className="text-center py-12 space-y-4">
-        <p className="text-muted-foreground">
-          Estate administration must be active to manage document sharing.
-        </p>
+        <p className="text-muted-foreground">Activate estate administration to share documents.</p>
         <Button variant="outline" asChild>
           <Link href="/estate">Go to Estate Overview</Link>
         </Button>
@@ -73,9 +71,10 @@ export function SharesContent() {
     <div className="space-y-6" data-testid="shares-content">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Document Sharing</h2>
+          <h2 className="text-4xl font-bold">Document Sharing</h2>
           <p className="mt-1 text-muted-foreground">
-            Create secure, time-limited links to share documents with attorneys and beneficiaries.
+            Create secure, time-limited links to share documents with attorneys, family, and
+            institutions.
           </p>
         </div>
         <Button
@@ -134,7 +133,7 @@ export function SharesContent() {
               : "No documents have been shared yet."}
           </p>
           <p className="text-sm text-muted-foreground">
-            Share documents securely with attorneys, beneficiaries, and institutions.
+            Share documents securely with attorneys, family, and institutions.
           </p>
         </div>
       ) : (

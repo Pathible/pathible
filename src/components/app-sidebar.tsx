@@ -145,14 +145,12 @@ export function AppSidebar() {
     effectiveTier,
   } = useEffectiveMultipleFeatureAccess(navFeatureRequirements);
   const accessReady = !isLoading && effectiveTier !== null;
-  const { isEstateMode, isExecutor } = useEstateMode();
+  const { isEstateMode, hasExecutorPurchase } = useEstateMode();
 
   // Estate Administration is visible when:
   // - Estate mode is active (visible to ALL household members), OR
-  // - User has executor role AND household has Legacy tier
-  const showEstateNav =
-    isEstateMode ||
-    (isExecutor && accessReady && effectiveTier !== null && tierHasAccess(effectiveTier, "legacy"));
+  // - Household has purchased the executor product
+  const showEstateNav = isEstateMode || hasExecutorPurchase;
 
   return (
     <Sidebar collapsible="icon" className="border-r bg-sidebar border-border">

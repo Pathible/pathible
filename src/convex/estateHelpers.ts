@@ -9,6 +9,22 @@ import { requireAuth, requireHouseholdAccess } from "./auth";
  */
 
 /**
+ * Require that the executor product has been purchased for a household.
+ * Throws if not purchased. Returns the household document.
+ */
+export async function requireExecutorPurchase(
+  ctx: QueryCtx | MutationCtx,
+  householdId: Id<"households">,
+): Promise<Doc<"households">> {
+  const household = await ctx.db.get(householdId);
+  if (!household) throw new Error("Household not found");
+  if (household.executorPurchased !== true) {
+    throw new Error("Executor product purchase required");
+  }
+  return household;
+}
+
+/**
  * Require executor access to a household.
  *
  * Verifies the current user has the "executor" role in the household,

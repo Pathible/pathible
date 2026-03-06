@@ -61,7 +61,7 @@ export function CommunicationsContent() {
     return (
       <div className="text-center py-12 space-y-4">
         <p className="text-muted-foreground">
-          Estate administration must be active to view communications.
+          Activate estate administration to start logging communications.
         </p>
         <Button variant="outline" asChild>
           <Link href="/estate">Go to Estate Overview</Link>
@@ -82,9 +82,9 @@ export function CommunicationsContent() {
     <div className="space-y-6" data-testid="communications-content">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Communications</h2>
+          <h2 className="text-4xl font-bold">Communications</h2>
           <p className="mt-1 text-muted-foreground">
-            Track all estate-related communications and follow-ups.
+            Keep a record of your communications and follow-ups.
           </p>
         </div>
         <Button
