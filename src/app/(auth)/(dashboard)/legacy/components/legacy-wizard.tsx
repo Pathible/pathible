@@ -28,6 +28,7 @@ interface LegacyWizardProps {
   householdId: Id<"households">;
   legacyPlan: LegacyPlan | null;
   onCreatePlan: () => Promise<Id<"legacyPlans">>;
+  isReadOnly?: boolean;
 }
 
 const questions = [
@@ -67,7 +68,12 @@ const questions = [
 
 type SectionType = "trustedContacts" | "guardians" | "memorial" | "finalMessage";
 
-export function LegacyWizard({ householdId, legacyPlan, onCreatePlan }: LegacyWizardProps) {
+export function LegacyWizard({
+  householdId,
+  legacyPlan,
+  onCreatePlan,
+  isReadOnly,
+}: LegacyWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Record<SectionType, string>>({
     trustedContacts: "",
@@ -218,30 +224,39 @@ export function LegacyWizard({ householdId, legacyPlan, onCreatePlan }: LegacyWi
               value={formData[currentQuestion.id]}
               onChange={(e) => handleInputChange(e.target.value)}
               className="min-h-[200px] resize-none"
+              readOnly={isReadOnly}
             />
-            <p className="text-xs text-muted-foreground">
-              No rush. You can come back to this anytime. Your words here are a gift.
-            </p>
+            {!isReadOnly && (
+              <p className="text-xs text-muted-foreground">
+                No rush. You can come back to this anytime. Your words here are a gift.
+              </p>
+            )}
           </div>
 
-          <div className="flex justify-between pt-4">
-            <Button onClick={handleBack} variant="outline" disabled={currentStep === 0 || isSaving}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-            <Button onClick={handleNext} disabled={isSaving}>
-              {isSaving ? (
-                "Saving..."
-              ) : currentStep === questions.length - 1 ? (
-                "Complete"
-              ) : (
-                <>
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </div>
+          {!isReadOnly && (
+            <div className="flex justify-between pt-4">
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                disabled={currentStep === 0 || isSaving}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+              <Button onClick={handleNext} disabled={isSaving}>
+                {isSaving ? (
+                  "Saving..."
+                ) : currentStep === questions.length - 1 ? (
+                  "Complete"
+                ) : (
+                  <>
+                    Next
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

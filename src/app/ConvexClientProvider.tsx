@@ -5,6 +5,7 @@ import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { type ReactNode, useEffect } from "react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
 if (!convexUrl) {
@@ -26,6 +27,17 @@ interface ConvexTestHelpers {
   setTestSubscriptionTier: (tier: "foundations" | "heritage" | "legacy" | "founders") => Promise<{
     success: boolean;
     message: string;
+  }>;
+  getTestHouseholdId: () => Promise<string | null>;
+  activateEstateForTesting: (householdId: string) => Promise<{
+    success: boolean;
+    message: string;
+    activationId?: string;
+  }>;
+  cleanupEstateData: (householdId: string) => Promise<{
+    success: boolean;
+    message: string;
+    deletedCount: number;
   }>;
 }
 
@@ -49,6 +61,15 @@ function exposeTestHelpers() {
         cleanupTestArticles: () => convex.mutation(api.testing.cleanupTestArticles, {}),
         setTestSubscriptionTier: (tier: "foundations" | "heritage" | "legacy" | "founders") =>
           convex.mutation(api.testing.setTestSubscriptionTier, { tier }),
+        getTestHouseholdId: () => convex.mutation(api.testing.getTestHouseholdId, {}),
+        activateEstateForTesting: (householdId: string) =>
+          convex.mutation(api.testing.activateEstateForTesting, {
+            householdId: householdId as Id<"households">,
+          }),
+        cleanupEstateData: (householdId: string) =>
+          convex.mutation(api.testing.cleanupEstateData, {
+            householdId: householdId as Id<"households">,
+          }),
       };
   }
 }

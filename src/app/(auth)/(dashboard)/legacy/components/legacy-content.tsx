@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
+import { useEstateMode } from "@/hooks/use-estate-mode";
 import { LegacySummary } from "./legacy-summary";
 import { LegacyWizard } from "./legacy-wizard";
 import { LegalDocumentsSection } from "./legal-documents-section";
@@ -38,6 +39,7 @@ export function LegacyContent() {
 
   // Check Clerk session status
   const { user, isLoaded: isUserLoaded } = useUser();
+  const { isEstateMode } = useEstateMode();
 
   // Get user's households
   const households = useQuery(api.households.list, isUserLoaded && user ? {} : "skip");
@@ -198,19 +200,21 @@ export function LegacyContent() {
               userName={user.firstName ?? user.fullName ?? "User"}
               legacyPlan={legacyPlan}
               stats={stats}
+              isReadOnly={isEstateMode}
             />
           ) : (
             <LegacyWizard
               householdId={householdId}
               legacyPlan={legacyPlan}
               onCreatePlan={() => createPlan({ householdId })}
+              isReadOnly={isEstateMode}
             />
           )}
         </TabsContent>
 
         {/* Tab 2: Legal Documents */}
         <TabsContent value="legal-documents" className="space-y-6">
-          <LegalDocumentsSection householdId={householdId} />
+          <LegalDocumentsSection householdId={householdId} isReadOnly={isEstateMode} />
         </TabsContent>
       </Tabs>
     </div>

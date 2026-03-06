@@ -349,6 +349,16 @@ export async function requireActiveSubscription(
 ): Promise<Doc<"households">> {
   const household = await getHouseholdWithSubscription(ctx, householdId);
 
+  // Estate grace period: if estate mode is active and grace period hasn't expired,
+  // skip subscription enforcement (deceased owner's payment may have lapsed)
+  if (
+    household.estateGraceUntil &&
+    household.estateGraceUntil > Date.now() &&
+    household.estateMode === true
+  ) {
+    return household;
+  }
+
   if (household.subscriptionStatus !== "active") {
     throw new Error(
       `Subscription is ${household.subscriptionStatus}. Please update your subscription to continue.`,
@@ -853,8 +863,12 @@ export const getDocumentWithAccessInternal = internalQuery({
       return null; // Not a member - deny access silently
     }
 
+    // Check if household is in estate mode for elevated executor access
+    const household = await ctx.db.get(document.householdId);
+    const isEstateMode = household?.estateMode === true;
+
     // Check document-level access
-    const hasAccess = checkDocumentAccess(document, profile._id, membership.role);
+    const hasAccess = checkDocumentAccess(document, profile._id, membership.role, { isEstateMode });
     if (!hasAccess) {
       return null; // No document access - deny silently
     }

@@ -31,7 +31,6 @@ export default function PricingPage() {
 function PricingContent() {
   const router = useRouter();
   const { isLoaded, isSignedIn, has } = useAuth();
-
   // Check for active subscription using shared utility
   const hasActivePlan = checkHasActivePlan(has);
 

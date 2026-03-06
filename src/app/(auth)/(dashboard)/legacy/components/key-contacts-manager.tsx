@@ -64,6 +64,7 @@ interface KeyContactsManagerProps {
   householdId: Id<"households">;
   legacyPlanId: Id<"legacyPlans">;
   contacts: KeyContact[];
+  isReadOnly?: boolean;
 }
 
 const roleLabels: Record<ContactRole, string> = {
@@ -102,6 +103,7 @@ export function KeyContactsManager({
   householdId,
   legacyPlanId,
   contacts,
+  isReadOnly,
 }: KeyContactsManagerProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<Id<"keyContacts"> | null>(null);
@@ -178,10 +180,12 @@ export function KeyContactsManager({
             </CardTitle>
             <CardDescription>Important people involved in your legacy plan</CardDescription>
           </div>
-          <Button onClick={() => setIsAddDialogOpen(true)} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Contact
-          </Button>
+          {!isReadOnly && (
+            <Button onClick={() => setIsAddDialogOpen(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Contact
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -231,14 +235,16 @@ export function KeyContactsManager({
                     <p className="text-xs text-muted-foreground mt-1">{contact.notes}</p>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDeleteContact(contact._id)}
-                  disabled={isDeleting === contact._id}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteContact(contact._id)}
+                    disabled={isDeleting === contact._id}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
               </div>
             ))}
           </div>

@@ -53,6 +53,7 @@ type DocumentType =
 
 interface LegalDocumentsSectionProps {
   householdId: Id<"households">;
+  isReadOnly?: boolean;
 }
 
 // Document type metadata with icons
@@ -131,7 +132,7 @@ const DOCUMENT_ORDER: DocumentType[] = ALL_DOCUMENT_TYPES.filter((type) =>
   ENABLED_DOCUMENT_TYPES.includes(type),
 );
 
-export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProps) {
+export function LegalDocumentsSection({ householdId, isReadOnly }: LegalDocumentsSectionProps) {
   const router = useRouter();
   const { user, isLoaded: isUserLoaded } = useUser();
   const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
@@ -342,34 +343,40 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
 
                 {existingDoc ? (
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleEditDocument(existingDoc._id)}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      {existingDoc.status === "draft" ? "Continue" : "Edit"}
-                    </Button>
+                    {!isReadOnly && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleEditDocument(existingDoc._id)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        {existingDoc.status === "draft" ? "Continue" : "Edit"}
+                      </Button>
+                    )}
                     {(existingDoc.status === "complete" || existingDoc.status === "generated") && (
                       <Button
                         variant="outline"
                         size="sm"
+                        className={isReadOnly ? "flex-1" : ""}
                         onClick={() => handlePreviewDocument(existingDoc, meta.name)}
                         title="Preview document"
                       >
                         <Eye className="h-4 w-4" />
+                        {isReadOnly && <span className="ml-1">Preview</span>}
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeletingDocument(existingDoc._id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    {!isReadOnly && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletingDocument(existingDoc._id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
-                ) : (
+                ) : !isReadOnly ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -379,6 +386,8 @@ export function LegalDocumentsSection({ householdId }: LegalDocumentsSectionProp
                     <Plus className="h-4 w-4 mr-1" />
                     Start Document
                   </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center">Not started</p>
                 )}
               </CardContent>
             </Card>

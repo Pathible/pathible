@@ -1,6 +1,7 @@
 import { v } from "convex/values";
+import { internal } from "../_generated/api";
 import { mutation, query } from "../_generated/server";
-import { requireAdmin } from "../auth";
+import { requireAdmin, requireAuth } from "../auth";
 
 /**
  * Admin Users & Families Management
@@ -354,7 +355,31 @@ export const getHousehold = query({
         ),
         tierOverrideExpiresAt: v.optional(v.number()),
         tierOverrideReason: v.optional(v.string()),
+        // Estate fields
+        estateMode: v.optional(v.boolean()),
+        estateActivationId: v.optional(v.id("estateActivations")),
+        estateGraceUntil: v.optional(v.number()),
+        // Executor product fields
+        executorPurchased: v.optional(v.boolean()),
+        executorPurchasedAt: v.optional(v.number()),
+        executorPurchasedBy: v.optional(v.id("profiles")),
       }),
+      activation: v.optional(
+        v.object({
+          _id: v.id("estateActivations"),
+          status: v.union(
+            v.literal("pending"),
+            v.literal("active"),
+            v.literal("contested"),
+            v.literal("completed"),
+            v.literal("cancelled"),
+          ),
+          deceasedName: v.string(),
+          activatedAt: v.number(),
+          cooldownEndsAt: v.number(),
+          activatedByName: v.string(),
+        }),
+      ),
       members: v.array(
         v.object({
           _id: v.id("householdMemberships"),
@@ -462,7 +487,31 @@ export const getHousehold = query({
         tierOverride: household.tierOverride,
         tierOverrideExpiresAt: household.tierOverrideExpiresAt,
         tierOverrideReason: household.tierOverrideReason,
+        // Estate fields
+        estateMode: household.estateMode,
+        estateActivationId: household.estateActivationId,
+        estateGraceUntil: household.estateGraceUntil,
+        // Executor product fields
+        executorPurchased: household.executorPurchased,
+        executorPurchasedAt: household.executorPurchasedAt,
+        executorPurchasedBy: household.executorPurchasedBy,
       },
+      activation: await (async () => {
+        if (!household.estateActivationId) return undefined;
+        const activation = await ctx.db.get(household.estateActivationId);
+        if (!activation) return undefined;
+        const activatedBy = await ctx.db.get(activation.activatedBy);
+        return {
+          _id: activation._id,
+          status: activation.status,
+          deceasedName: activation.deceasedName,
+          activatedAt: activation.activatedAt,
+          cooldownEndsAt: activation.cooldownEndsAt,
+          activatedByName: activatedBy
+            ? `${activatedBy.firstName} ${activatedBy.lastName}`
+            : "Unknown",
+        };
+      })(),
       members: enrichedMembers,
       recentActivity: enrichedActivity,
     };
@@ -659,6 +708,289 @@ export const removeTierOverride = mutation({
       actionType: "other",
       entityType: "household",
       description: `Admin removed tier override${args.reason ? `: ${args.reason}` : ""}`,
+    });
+
+    return { success: true };
+  },
+});
+
+// ============================================================================
+// EXECUTOR PRODUCT MUTATIONS
+// ============================================================================
+
+/**
+ * Grant executor product purchase to a household.
+ * Admin-only function.
+ */
+export const grantExecutorPurchase = mutation({
+  args: {
+    householdId: v.id("households"),
+    reason: v.string(),
+  },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const { profile } = await requireAuth(ctx);
+
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
+
+    const reason = args.reason.trim();
+    if (!reason) {
+      throw new Error("A reason is required");
+    }
+
+    if (household.executorPurchased === true) {
+      throw new Error("Executor product is already purchased for this household");
+    }
+
+    await ctx.db.patch(args.householdId, {
+      executorPurchased: true,
+      executorPurchasedAt: Date.now(),
+      executorPurchasedBy: profile._id,
+      updatedAt: Date.now(),
+    });
+
+    await ctx.db.insert("activityLog", {
+      householdId: args.householdId,
+      userId: profile._id,
+      module: "estate",
+      actionType: "other",
+      entityType: "household",
+      description: `Admin granted executor product purchase. Reason: ${reason}`,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Revoke executor product purchase from a household.
+ * Admin-only function.
+ */
+export const revokeExecutorPurchase = mutation({
+  args: {
+    householdId: v.id("households"),
+    reason: v.string(),
+  },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const { profile } = await requireAuth(ctx);
+
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
+
+    const reason = args.reason.trim();
+    if (!reason) {
+      throw new Error("A reason is required");
+    }
+
+    if (household.executorPurchased !== true) {
+      throw new Error("Executor product is not purchased for this household");
+    }
+
+    await ctx.db.patch(args.householdId, {
+      executorPurchased: undefined,
+      executorPurchasedAt: undefined,
+      executorPurchasedBy: undefined,
+      updatedAt: Date.now(),
+    });
+
+    await ctx.db.insert("activityLog", {
+      householdId: args.householdId,
+      userId: profile._id,
+      module: "estate",
+      actionType: "other",
+      entityType: "household",
+      description: `Admin revoked executor product purchase. Reason: ${reason}`,
+    });
+
+    return { success: true };
+  },
+});
+
+// ============================================================================
+// ESTATE ADMIN MUTATIONS
+// ============================================================================
+
+const GRACE_PERIOD_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+
+/**
+ * Skip the 48-hour cooldown and immediately activate estate mode.
+ * Admin-only function for support scenarios or testing.
+ */
+export const completeCooldownEarly = mutation({
+  args: {
+    householdId: v.id("households"),
+    reason: v.string(),
+  },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
+
+    if (!household.estateActivationId) {
+      throw new Error("No estate activation exists for this household");
+    }
+
+    const activation = await ctx.db.get(household.estateActivationId);
+    if (!activation) {
+      throw new Error("Estate activation record not found");
+    }
+
+    if (activation.status !== "pending") {
+      throw new Error(
+        `Cannot skip cooldown: activation status is "${activation.status}", expected "pending"`,
+      );
+    }
+
+    const reason = args.reason.trim();
+    if (!reason) {
+      throw new Error("A reason is required");
+    }
+
+    const now = Date.now();
+
+    // Cancel the scheduled cooldown job
+    if (activation.cooldownJobId) {
+      await ctx.scheduler.cancel(activation.cooldownJobId);
+    }
+
+    // Set activation to active
+    await ctx.db.patch(household.estateActivationId, {
+      status: "active",
+      cooldownJobId: undefined,
+      updatedAt: now,
+    });
+
+    // Enable estate mode on household with grace period
+    await ctx.db.patch(args.householdId, {
+      estateMode: true,
+      estateGraceUntil: now + GRACE_PERIOD_MS,
+      updatedAt: now,
+    });
+
+    // Notify all household members
+    const memberships = await ctx.db
+      .query("householdMemberships")
+      .withIndex("by_household_and_status", (q) =>
+        q.eq("householdId", args.householdId).eq("status", "active"),
+      )
+      .collect();
+
+    for (const membership of memberships) {
+      await ctx.db.insert("notifications", {
+        userId: membership.userId,
+        householdId: args.householdId,
+        type: "estate_update",
+        title: "Estate Administration Active",
+        message: `Estate administration for ${activation.deceasedName} is now active. Planning features are now view-only.`,
+        link: "/estate",
+        isRead: false,
+      });
+    }
+
+    // Seed checklist items and import assets
+    await ctx.scheduler.runAfter(0, internal.estate.seedChecklistItems, {
+      activationId: household.estateActivationId,
+      householdId: args.householdId,
+    });
+    await ctx.scheduler.runAfter(0, internal.estateAssets.seedAssetsFromHouseholdData, {
+      activationId: household.estateActivationId,
+      householdId: args.householdId,
+      activatedBy: activation.activatedBy,
+    });
+
+    // Log activity
+    await ctx.db.insert("activityLog", {
+      householdId: args.householdId,
+      userId: activation.activatedBy,
+      module: "estate",
+      actionType: "estate_cooldown_complete",
+      entityType: "estate_activation",
+      description: `Admin skipped cooldown for ${activation.deceasedName}. Reason: ${reason}`,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Cancel an estate activation (any status except completed).
+ * Admin-only function for support scenarios.
+ */
+export const cancelEstateActivation = mutation({
+  args: {
+    householdId: v.id("households"),
+    reason: v.string(),
+  },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
+
+    if (!household.estateActivationId) {
+      throw new Error("No estate activation exists for this household");
+    }
+
+    const activation = await ctx.db.get(household.estateActivationId);
+    if (!activation) {
+      throw new Error("Estate activation record not found");
+    }
+
+    if (activation.status === "completed" || activation.status === "cancelled") {
+      throw new Error(`Cannot cancel: activation is already "${activation.status}"`);
+    }
+
+    const reason = args.reason.trim();
+    if (!reason) {
+      throw new Error("A reason is required");
+    }
+
+    const now = Date.now();
+
+    // Cancel any pending cooldown job
+    if (activation.cooldownJobId) {
+      await ctx.scheduler.cancel(activation.cooldownJobId);
+    }
+
+    // Cancel the activation
+    await ctx.db.patch(household.estateActivationId, {
+      status: "cancelled",
+      cancelledAt: now,
+      cancelReason: `Admin: ${reason}`,
+      cooldownJobId: undefined,
+      updatedAt: now,
+    });
+
+    // Disable estate mode
+    await ctx.db.patch(args.householdId, {
+      estateMode: false,
+      estateGraceUntil: undefined,
+      updatedAt: now,
+    });
+
+    // Log activity
+    await ctx.db.insert("activityLog", {
+      householdId: args.householdId,
+      userId: household.primaryContactId,
+      module: "estate",
+      actionType: "estate_cancelled",
+      entityType: "estate_activation",
+      description: `Admin cancelled estate activation for ${activation.deceasedName}. Reason: ${reason}`,
     });
 
     return { success: true };

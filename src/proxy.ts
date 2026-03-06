@@ -27,6 +27,7 @@ const isPublicRoute = createRouteMatcher([
   "/terms(.*)",
   "/help(.*)",
   "/learn(.*)",
+  "/for-executors(.*)",
   "/api/webhooks(.*)",
   // SEO routes - must be accessible to crawlers and social media bots
   "/sitemap.xml",

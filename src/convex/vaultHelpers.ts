@@ -50,7 +50,14 @@ export function checkDocumentAccess(
   document: DocumentForAccessCheck,
   profileId: Id<"profiles">,
   membershipRole: MembershipRole,
+  options?: { isEstateMode?: boolean },
 ): boolean {
+  // During estate mode, executors get elevated access to ALL documents
+  // so they can manage the estate effectively
+  if (options?.isEstateMode && membershipRole === "executor") {
+    return true;
+  }
+
   switch (document.accessLevel) {
     case "household":
       // All household members have access

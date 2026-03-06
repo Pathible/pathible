@@ -35,6 +35,7 @@ interface DocumentListProps {
   categories: Category[];
   householdId: Id<"households">;
   isLoading: boolean;
+  isReadOnly?: boolean;
 }
 
 function formatFileSize(bytes: number): string {
@@ -50,7 +51,13 @@ function getFileIcon(_fileType: string) {
   return <FileText className="h-10 w-10 text-primary" />;
 }
 
-export function DocumentList({ documents, categories, householdId, isLoading }: DocumentListProps) {
+export function DocumentList({
+  documents,
+  categories,
+  householdId,
+  isLoading,
+  isReadOnly,
+}: DocumentListProps) {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
 
   const handleDownload = async (document: Document) => {
@@ -217,6 +224,7 @@ export function DocumentList({ documents, categories, householdId, isLoading }: 
           open={!!selectedDocument}
           onOpenChange={(open) => !open && setSelectedDocument(null)}
           onDownload={() => handleDownload(selectedDocument)}
+          isReadOnly={isReadOnly}
         />
       )}
     </>

@@ -5,6 +5,7 @@ import {
   FileText,
   LayoutDashboard,
   type LucideIcon,
+  Scale,
   Shield,
   TrendingUp,
   Users,
@@ -21,6 +22,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { tierHasAccess } from "@/convex/shared/subscriptionTiers";
+import { useEstateMode } from "@/hooks/use-estate-mode";
 import {
   FEATURE_SLUGS,
   type FeatureSlug,
@@ -143,9 +145,12 @@ export function AppSidebar() {
     effectiveTier,
   } = useEffectiveMultipleFeatureAccess(navFeatureRequirements);
   const accessReady = !isLoading && effectiveTier !== null;
+  const { isEstateMode, hasExecutorPurchase } = useEstateMode();
 
-  // All nav items are visible - access control is handled in the render loop
-  const visibleNavItems = navItems;
+  // Estate Administration is visible when:
+  // - Estate mode is active (visible to ALL household members), OR
+  // - Household has purchased the executor product
+  const showEstateNav = isEstateMode || hasExecutorPurchase;
 
   return (
     <Sidebar collapsible="icon" className="border-r bg-sidebar border-border">
@@ -153,8 +158,7 @@ export function AppSidebar() {
         <SidebarGroup className="py-4">
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {visibleNavItems.map((item) => {
-                // Check if current path matches or is a sub-page of this nav item
+              {navItems.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
                 const hasAccess = accessReady
@@ -177,6 +181,20 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+              {showEstateNav && (
+                <SidebarMenuItem data-tour="nav-estate" data-testid="estate-admin-nav-item">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith("/estate")}
+                    className="px-2"
+                  >
+                    <Link href="/estate">
+                      <Scale className="h-4 w-4" />
+                      <span>Estate Administration</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

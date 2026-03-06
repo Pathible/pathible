@@ -7,15 +7,20 @@ import {
   FileText,
   Lightbulb,
   Loader2,
+  Scale,
   Shield,
   Sparkles,
   TrendingUp,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { QuickActionCard } from "@/app/(auth)/(dashboard)/dashboard/components/quick-action-card";
 import { TipCard } from "@/app/(auth)/(dashboard)/dashboard/components/tip-card";
 import { StatCard } from "@/components/stat-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
+import { useEstateMode } from "@/hooks/use-estate-mode";
 import {
   FEATURE_SLUGS,
   useEffectiveFeatureAccess,
@@ -74,6 +79,9 @@ export function DashboardContent() {
 
   // Check if profile already exists
   const profile = useQuery(api.profiles.get, isUserLoaded && user ? {} : "skip");
+
+  // Estate mode check for ExecutorRoleCard
+  const { isEstateMode, isExecutor } = useEstateMode();
 
   // Build quick actions based on user progress (cap at 4)
   const getQuickActions = () => {
@@ -226,6 +234,9 @@ export function DashboardContent() {
       {/* Compact greeting */}
       <h2 className="text-4xl font-bold mb-6">Welcome back, {profile?.firstName}!</h2>
 
+      {/* Executor Role Card - shown when user is executor but estate mode is not active */}
+      {isExecutor && !isEstateMode && <ExecutorRoleCard />}
+
       {/* Stats */}
       <div
         className={`grid grid-cols-1 gap-4 mb-8 ${
@@ -314,5 +325,27 @@ export function DashboardContent() {
         </div>
       </div>
     </>
+  );
+}
+
+function ExecutorRoleCard() {
+  return (
+    <Card className="mb-8 border-primary/20 bg-primary/5" data-testid="executor-role-card">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <Scale className="h-5 w-5 text-primary" />
+          <CardTitle className="text-lg">Executor Designation</CardTitle>
+        </div>
+        <CardDescription>
+          You have been designated as executor for this household. When the time comes, you can
+          begin estate administration to help manage and organize everything that needs attention.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button asChild variant="outline" data-testid="activate-estate-cta">
+          <Link href="/estate/activate">Learn More</Link>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

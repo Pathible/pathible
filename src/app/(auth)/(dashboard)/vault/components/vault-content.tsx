@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 import { useAuthenticatedHousehold } from "@/hooks/use-authenticated-household";
+import { useEstateMode } from "@/hooks/use-estate-mode";
 import { CategoryManager } from "./category-manager";
 import { DocumentList } from "./document-list";
 import { SearchAndFilter } from "./search-and-filter";
@@ -25,6 +26,7 @@ export function VaultContent() {
 
   // Use consolidated auth + household hook
   const { householdId, isLoading: isAuthLoading, error } = useAuthenticatedHousehold();
+  const { isEstateMode } = useEstateMode();
 
   // Only fetch vault data once we have a household ID
   const stats = useQuery(api.vault.getStats, householdId ? { householdId } : "skip");
@@ -94,21 +96,23 @@ export function VaultContent() {
             Everything your family needs, in one secure place they can actually find
           </p>
         </div>
-        <div className="flex gap-2 shrink-0">
-          <Button
-            variant="outline"
-            onClick={() => setCategoryManagerOpen(true)}
-            data-tour="vault-manage-categories"
-          >
-            <Settings className="h-4 w-4" />
-            Manage Categories
-          </Button>
-          <UploadButton
-            householdId={householdId}
-            categories={categories || []}
-            data-tour="vault-upload"
-          />
-        </div>
+        {!isEstateMode && (
+          <div className="flex gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setCategoryManagerOpen(true)}
+              data-tour="vault-manage-categories"
+            >
+              <Settings className="h-4 w-4" />
+              Manage Categories
+            </Button>
+            <UploadButton
+              householdId={householdId}
+              categories={categories || []}
+              data-tour="vault-upload"
+            />
+          </div>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -153,6 +157,7 @@ export function VaultContent() {
         categories={categories || []}
         householdId={householdId}
         isLoading={isLoading}
+        isReadOnly={isEstateMode}
       />
 
       {/* Category Manager Modal */}

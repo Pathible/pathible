@@ -7,6 +7,7 @@ import {
   requireFeatureAccess,
   requireHouseholdAccess,
 } from "./auth";
+import { requireNotInEstateMode } from "./estateHelpers";
 import { logActivity } from "./shared/activity";
 import { trackAnalytics } from "./shared/analyticsHelpers";
 
@@ -220,7 +221,8 @@ export const create = mutation({
   returns: v.id("wisdomEntries"),
   handler: async (ctx, args) => {
     await requireHouseholdAccess(ctx, args.householdId);
-    await requireActiveSubscription(ctx, args.householdId);
+    const createHousehold = await requireActiveSubscription(ctx, args.householdId);
+    requireNotInEstateMode(createHousehold);
     await requireFeatureAccess(ctx, args.householdId, "wisdom_entries");
     const { profile } = await requireAuth(ctx);
 
@@ -295,7 +297,8 @@ export const update = mutation({
     }
 
     await requireHouseholdAccess(ctx, entry.householdId);
-    await requireActiveSubscription(ctx, entry.householdId);
+    const updateHousehold = await requireActiveSubscription(ctx, entry.householdId);
+    requireNotInEstateMode(updateHousehold);
     await requireFeatureAccess(ctx, entry.householdId, "wisdom_entries");
     const { profile } = await requireAuth(ctx);
 
@@ -374,7 +377,8 @@ export const remove = mutation({
     }
 
     await requireHouseholdAccess(ctx, entry.householdId);
-    await requireActiveSubscription(ctx, entry.householdId);
+    const removeHousehold = await requireActiveSubscription(ctx, entry.householdId);
+    requireNotInEstateMode(removeHousehold);
     await requireFeatureAccess(ctx, entry.householdId, "wisdom_entries");
     const { profile } = await requireAuth(ctx);
 

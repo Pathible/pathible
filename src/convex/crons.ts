@@ -45,4 +45,33 @@ crons.cron(
   {},
 );
 
+// ============================================================================
+// ESTATE DOCUMENT SHARE MANAGEMENT
+// ============================================================================
+
+/**
+ * Daily share expiration - runs at midnight UTC
+ *
+ * Finds active document shares past their expiresAt time and marks them expired.
+ */
+crons.cron(
+  "expire document shares",
+  "0 0 * * *", // Daily at midnight UTC
+  internal.estateDocuments.expireDocumentShares,
+  {},
+);
+
+/**
+ * Weekly access log cleanup - Monday at 3 AM UTC
+ *
+ * Deletes documentShareAccessLog entries older than 1 year to prevent
+ * unbounded table growth.
+ */
+crons.cron(
+  "cleanup share access logs",
+  "0 3 * * 1", // Monday at 3 AM UTC
+  internal.estateDocuments.cleanupShareAccessLogs,
+  {},
+);
+
 export default crons;

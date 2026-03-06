@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireActiveSubscription, requireAuth, requireHouseholdAccess } from "./auth";
+import { requireNotInEstateMode } from "./estateHelpers";
 import { logActivity } from "./shared/activity";
 import { STRING_LIMITS, validateOptionalString, validateRequiredString } from "./shared/validators";
 
@@ -483,7 +484,8 @@ export const createAccount = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, args.householdId);
+    const createAccountHousehold = await requireActiveSubscription(ctx, args.householdId);
+    requireNotInEstateMode(createAccountHousehold);
 
     // Validate inputs
     const name = validateRequiredString(args.name, "Account name", STRING_LIMITS.name);
@@ -553,7 +555,8 @@ export const updateAccount = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, account.householdId);
+    const updateAccountHousehold = await requireActiveSubscription(ctx, account.householdId);
+    requireNotInEstateMode(updateAccountHousehold);
 
     // Build update object
     const updates: Partial<Doc<"financialAccounts">> = {
@@ -637,7 +640,8 @@ export const deleteAccount = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, account.householdId);
+    const deleteAccountHousehold = await requireActiveSubscription(ctx, account.householdId);
+    requireNotInEstateMode(deleteAccountHousehold);
 
     // Delete the account
     await ctx.db.delete(args.accountId);
@@ -681,7 +685,8 @@ export const createProperty = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, args.householdId);
+    const createPropertyHousehold = await requireActiveSubscription(ctx, args.householdId);
+    requireNotInEstateMode(createPropertyHousehold);
 
     // Validate inputs
     // Property names can be longer (e.g., "123 Main Street, Apartment 4B")
@@ -743,7 +748,8 @@ export const updateProperty = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, property.householdId);
+    const updatePropertyHousehold = await requireActiveSubscription(ctx, property.householdId);
+    requireNotInEstateMode(updatePropertyHousehold);
 
     // Build update object
     const updates: Partial<Doc<"properties">> = {
@@ -813,7 +819,8 @@ export const deleteProperty = mutation({
 
     // SECURITY: Verify access first to avoid leaking subscription status
     await requireHouseholdAccess(ctx, property.householdId);
-    await requireActiveSubscription(ctx, property.householdId);
+    const deletePropertyHousehold = await requireActiveSubscription(ctx, property.householdId);
+    requireNotInEstateMode(deletePropertyHousehold);
     const { profile } = await requireAuth(ctx);
 
     // Delete the property
@@ -860,7 +867,8 @@ export const createInsurancePolicy = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, args.householdId);
+    const createPolicyHousehold = await requireActiveSubscription(ctx, args.householdId);
+    requireNotInEstateMode(createPolicyHousehold);
 
     // Validate inputs
     const provider = validateRequiredString(args.provider, "Provider name", STRING_LIMITS.name);
@@ -934,7 +942,8 @@ export const updateInsurancePolicy = mutation({
     await requireHouseholdAccess(ctx, policy.householdId);
 
     // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, policy.householdId);
+    const updatePolicyHousehold = await requireActiveSubscription(ctx, policy.householdId);
+    requireNotInEstateMode(updatePolicyHousehold);
     const { profile } = await requireAuth(ctx);
 
     // Build update object
@@ -1022,7 +1031,8 @@ export const deleteInsurancePolicy = mutation({
     const { profile } = await requireAuth(ctx);
 
     // SECURITY: Require active subscription
-    await requireActiveSubscription(ctx, policy.householdId);
+    const deletePolicyHousehold = await requireActiveSubscription(ctx, policy.householdId);
+    requireNotInEstateMode(deletePolicyHousehold);
 
     // Delete the policy
     await ctx.db.delete(args.policyId);

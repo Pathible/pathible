@@ -38,6 +38,12 @@ const deletedSchema = v.object({
   userSuggestions: v.number(),
   notifications: v.number(),
   userRoles: v.number(),
+  estateActivations: v.number(),
+  estateChecklistItems: v.number(),
+  estateAssets: v.number(),
+  estateAssetStatusChanges: v.number(),
+  estateCommunications: v.number(),
+  estateDistributions: v.number(),
 });
 
 // Default empty deleted object
@@ -63,6 +69,12 @@ const emptyDeleted = {
   userSuggestions: 0,
   notifications: 0,
   userRoles: 0,
+  estateActivations: 0,
+  estateChecklistItems: 0,
+  estateAssets: 0,
+  estateAssetStatusChanges: 0,
+  estateCommunications: 0,
+  estateDistributions: 0,
 };
 
 /**
@@ -371,6 +383,71 @@ export const resetTestUser = mutation({
 
       // Note: smartSuggestions are system-wide (not per-household), so we don't delete them here
       // User's dismissed/completed suggestions are tracked in userSuggestions (already deleted above)
+
+      // --- Estate Data ---
+
+      // Delete estate distributions
+      const estateDistributions = await ctx.db
+        .query("estateDistributions")
+        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .collect();
+      for (const dist of estateDistributions) {
+        await ctx.db.delete(dist._id);
+        deleted.estateDistributions++;
+      }
+
+      // Delete estate communications
+      const estateCommunications = await ctx.db
+        .query("estateCommunications")
+        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .collect();
+      for (const comm of estateCommunications) {
+        await ctx.db.delete(comm._id);
+        deleted.estateCommunications++;
+      }
+
+      // Delete estate asset status changes
+      const estateAssetStatusChanges = await ctx.db
+        .query("estateAssetStatusChanges")
+        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .collect();
+      for (const change of estateAssetStatusChanges) {
+        await ctx.db.delete(change._id);
+        deleted.estateAssetStatusChanges++;
+      }
+
+      // Delete estate assets
+      const estateAssets = await ctx.db
+        .query("estateAssets")
+        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .collect();
+      for (const asset of estateAssets) {
+        await ctx.db.delete(asset._id);
+        deleted.estateAssets++;
+      }
+
+      // Delete estate checklist items
+      const estateChecklistItems = await ctx.db
+        .query("estateChecklistItems")
+        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .collect();
+      for (const item of estateChecklistItems) {
+        await ctx.db.delete(item._id);
+        deleted.estateChecklistItems++;
+      }
+
+      // Delete estate activations
+      const estateActivations = await ctx.db
+        .query("estateActivations")
+        .withIndex("by_household", (q) => q.eq("householdId", householdId))
+        .collect();
+      for (const activation of estateActivations) {
+        if (activation.cooldownJobId) {
+          await ctx.scheduler.cancel(activation.cooldownJobId);
+        }
+        await ctx.db.delete(activation._id);
+        deleted.estateActivations++;
+      }
 
       // --- Activity Logs ---
 
@@ -811,6 +888,257 @@ export const isCleanState = mutation({
       hasProfile: true,
       hasMemberships: memberships.length > 0,
       hasHouseholds: ownedHouseholds.length > 0,
+    };
+  },
+});
+
+/**
+ * Get the test user's primary household ID.
+ *
+ * Returns the household where the current user is the primary contact.
+ * Used by Cypress commands to obtain the householdId before calling
+ * estate-related test mutations.
+ *
+ * SECURITY: Only works for test user emails.
+ * SECURITY: Disabled in production environments.
+ */
+export const getTestHouseholdId = mutation({
+  args: {},
+  returns: v.union(v.id("households"), v.null()),
+  handler: async (ctx) => {
+    const convexUrl = process.env.CONVEX_CLOUD_URL || "";
+    if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
+      return null;
+    }
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const email = identity.email || "";
+    const isTestUser = TEST_EMAIL_PATTERNS.some((pattern) =>
+      email.toLowerCase().includes(pattern.toLowerCase()),
+    );
+    if (!isTestUser) return null;
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!profile) return null;
+
+    const household = await ctx.db
+      .query("households")
+      .withIndex("by_primaryContactId", (q) => q.eq("primaryContactId", profile._id))
+      .first();
+    return household?._id ?? null;
+  },
+});
+
+/**
+ * Activate estate mode for testing (skips cooldown).
+ *
+ * Creates an activation record already in "active" status with estateMode enabled.
+ * Seeds checklist items and assets immediately.
+ *
+ * SECURITY: Only works for test user emails.
+ * SECURITY: Disabled in production environments.
+ */
+export const activateEstateForTesting = mutation({
+  args: {
+    householdId: v.id("households"),
+    deceasedName: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    activationId: v.optional(v.id("estateActivations")),
+  }),
+  handler: async (ctx, args) => {
+    const convexUrl = process.env.CONVEX_CLOUD_URL || "";
+    if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
+      return { success: false, message: "Test functions are disabled in production" };
+    }
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return { success: false, message: "Not authenticated" };
+    }
+
+    const email = identity.email || "";
+    const isTestUser = TEST_EMAIL_PATTERNS.some((pattern) =>
+      email.toLowerCase().includes(pattern.toLowerCase()),
+    );
+    if (!isTestUser) {
+      return { success: false, message: "Only test users can activate estate for testing" };
+    }
+
+    const userId = identity.subject;
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (!profile) {
+      return { success: false, message: "Profile not found" };
+    }
+
+    const household = await ctx.db.get(args.householdId);
+    if (!household) {
+      return { success: false, message: "Household not found" };
+    }
+
+    const now = Date.now();
+    const deceasedName = args.deceasedName ?? "Test Deceased Person";
+
+    // Create activation in "active" status (skip cooldown)
+    const activationId = await ctx.db.insert("estateActivations", {
+      householdId: args.householdId,
+      activatedBy: profile._id,
+      deceasedName,
+      status: "active",
+      cooldownEndsAt: now,
+      activatedAt: now,
+      updatedAt: now,
+    });
+
+    // Enable estate mode with 90-day grace
+    await ctx.db.patch(args.householdId, {
+      estateMode: true,
+      estateActivationId: activationId,
+      estateGraceUntil: now + 90 * 24 * 60 * 60 * 1000,
+      updatedAt: now,
+    });
+
+    return {
+      success: true,
+      message: `Estate mode activated for testing (deceased: ${deceasedName})`,
+      activationId,
+    };
+  },
+});
+
+/**
+ * Clean up all estate data for a household.
+ *
+ * Removes activations, checklist items, assets, status changes, and communications.
+ * Resets household estate fields.
+ *
+ * SECURITY: Only works for test user emails.
+ * SECURITY: Disabled in production environments.
+ */
+export const cleanupEstateData = mutation({
+  args: {
+    householdId: v.id("households"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    deletedCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const convexUrl = process.env.CONVEX_CLOUD_URL || "";
+    if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
+      return {
+        success: false,
+        message: "Test functions are disabled in production",
+        deletedCount: 0,
+      };
+    }
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return { success: false, message: "Not authenticated", deletedCount: 0 };
+    }
+
+    const email = identity.email || "";
+    const isTestUser = TEST_EMAIL_PATTERNS.some((pattern) =>
+      email.toLowerCase().includes(pattern.toLowerCase()),
+    );
+    if (!isTestUser) {
+      return {
+        success: false,
+        message: "Only test users can clean up estate data",
+        deletedCount: 0,
+      };
+    }
+
+    let deletedCount = 0;
+
+    // Delete distributions
+    const distributions = await ctx.db
+      .query("estateDistributions")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+    for (const d of distributions) {
+      await ctx.db.delete(d._id);
+      deletedCount++;
+    }
+
+    // Delete communications
+    const communications = await ctx.db
+      .query("estateCommunications")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+    for (const c of communications) {
+      await ctx.db.delete(c._id);
+      deletedCount++;
+    }
+
+    // Delete asset status changes
+    const statusChanges = await ctx.db
+      .query("estateAssetStatusChanges")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+    for (const s of statusChanges) {
+      await ctx.db.delete(s._id);
+      deletedCount++;
+    }
+
+    // Delete assets
+    const assets = await ctx.db
+      .query("estateAssets")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+    for (const a of assets) {
+      await ctx.db.delete(a._id);
+      deletedCount++;
+    }
+
+    // Delete checklist items
+    const checklistItems = await ctx.db
+      .query("estateChecklistItems")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+    for (const item of checklistItems) {
+      await ctx.db.delete(item._id);
+      deletedCount++;
+    }
+
+    // Delete activations (cancel any scheduled jobs)
+    const activations = await ctx.db
+      .query("estateActivations")
+      .withIndex("by_household", (q) => q.eq("householdId", args.householdId))
+      .collect();
+    for (const activation of activations) {
+      if (activation.cooldownJobId) {
+        await ctx.scheduler.cancel(activation.cooldownJobId);
+      }
+      await ctx.db.delete(activation._id);
+      deletedCount++;
+    }
+
+    // Reset household estate fields
+    await ctx.db.patch(args.householdId, {
+      estateMode: undefined,
+      estateActivationId: undefined,
+      estateGraceUntil: undefined,
+      updatedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      message: `Cleaned up ${deletedCount} estate records`,
+      deletedCount,
     };
   },
 });
