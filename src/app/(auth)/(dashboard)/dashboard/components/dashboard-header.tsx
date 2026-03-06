@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import { HelpCircle, LogOut, User, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,12 +12,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+export interface HeaderMenuItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  testId?: string;
+}
+
+const defaultMenuItems: HeaderMenuItem[] = [
+  { label: "Profile Settings", href: "/profile-settings", icon: User },
+  { label: "Family Preferences", href: "/family-preferences", icon: Users },
+  { label: "Help Center", href: "/help", icon: HelpCircle },
+];
+
 interface DashboardHeaderProps {
   familyName?: string;
   userName?: string;
+  menuItems?: HeaderMenuItem[];
 }
 
-export function DashboardHeader({ familyName, userName }: DashboardHeaderProps) {
+export function DashboardHeader({ familyName, userName, menuItems }: DashboardHeaderProps) {
+  const items = menuItems ?? defaultMenuItems;
+
   return (
     <header className="flex items-center justify-between w-full">
       <div className="flex items-center gap-4">
@@ -56,24 +73,14 @@ export function DashboardHeader({ familyName, userName }: DashboardHeaderProps) 
           <DropdownMenuContent align="end" className="w-56" data-testid="user-menu">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/profile-settings">
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile Settings</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/family-preferences">
-                <Users className="mr-2 h-4 w-4" />
-                <span>Family Preferences</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/help">
-                <HelpCircle className="mr-2 h-4 w-4" />
-                <span>Help Center</span>
-              </Link>
-            </DropdownMenuItem>
+            {items.map((item) => (
+              <DropdownMenuItem key={item.href} asChild>
+                <Link href={item.href} data-testid={item.testId}>
+                  <item.icon className="mr-2 h-4 w-4" />
+                  <span>{item.label}</span>
+                </Link>
+              </DropdownMenuItem>
+            ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="text-destructive">
               <Link href="/sign-out" data-testid="sign-out-link">

@@ -3,7 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { pdf } from "@react-pdf/renderer";
 import { useQuery } from "convex/react";
-import { Download, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -25,14 +25,13 @@ export function ExportContent() {
 
   const summary = useQuery(api.estate.getEstateSummary, householdId ? { householdId } : "skip");
 
-  const [format, setFormat] = useState<ExportFormat>("pdf");
   const [sections, setSections] = useState<ExportSection[]>([
     "checklist",
     "assets",
     "communications",
     "distributions",
   ]);
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
 
   if (!isUserLoaded || households === undefined) {
     return (
@@ -45,9 +44,7 @@ export function ExportContent() {
   if (!household || !household.estateMode) {
     return (
       <div className="text-center py-12 space-y-4">
-        <p className="text-muted-foreground">
-          Estate administration must be active to export a summary.
-        </p>
+        <p className="text-muted-foreground">Activate estate administration to export a summary.</p>
         <Button variant="outline" asChild>
           <Link href="/estate">Go to Estate Overview</Link>
         </Button>
@@ -67,7 +64,7 @@ export function ExportContent() {
     return (
       <div className="text-center py-12 space-y-4">
         <p className="text-muted-foreground">
-          No estate data found. Begin by adding items to your checklist or asset inventory.
+          No estate data yet. Start by adding items to your checklist or asset list.
         </p>
         <Button variant="outline" asChild>
           <Link href="/estate">Go to Estate Overview</Link>
@@ -88,13 +85,13 @@ export function ExportContent() {
     return section && section.count > 0;
   });
 
-  const handleExport = async () => {
+  const handleExport = async (format: ExportFormat) => {
     if (activeSections.length === 0) {
       toast.error("Select at least one section with data to export.");
       return;
     }
 
-    setIsExporting(true);
+    setExportingFormat(format);
     try {
       const slug = summary.activation.deceasedName
         .toLowerCase()
@@ -117,40 +114,25 @@ export function ExportContent() {
       console.error("Export failed:", error);
       toast.error("Export failed. Please try again.");
     } finally {
-      setIsExporting(false);
+      setExportingFormat(null);
     }
   };
 
   return (
     <div className="space-y-6" data-testid="export-content">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold">Export Summary</h2>
-          <p className="mt-1 text-muted-foreground">
-            Generate a report of your estate administration progress.
-          </p>
-        </div>
-        <Button
-          onClick={handleExport}
-          disabled={isExporting || activeSections.length === 0}
-          data-testid="export-download-button"
-        >
-          {isExporting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="mr-2 h-4 w-4" />
-          )}
-          {isExporting ? "Generating..." : `Export ${format.toUpperCase()}`}
-        </Button>
+      <div>
+        <h2 className="text-4xl font-bold">Export Summary</h2>
+        <p className="mt-1 text-muted-foreground">Create a report of your progress so far.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
         <ExportOptions
-          format={format}
-          onFormatChange={setFormat}
           sections={sections}
           onSectionsChange={setSections}
           availableSections={availableSections}
+          onExport={handleExport}
+          exportingFormat={exportingFormat}
+          canExport={activeSections.length > 0}
         />
         <ExportPreview data={summary} sections={activeSections} />
       </div>

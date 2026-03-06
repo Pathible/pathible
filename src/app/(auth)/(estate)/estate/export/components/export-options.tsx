@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheet, FileText } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -9,19 +9,21 @@ import type { ExportSection } from "@/lib/estate-export";
 type ExportFormat = "pdf" | "csv";
 
 interface ExportOptionsProps {
-  format: ExportFormat;
-  onFormatChange: (format: ExportFormat) => void;
   sections: ExportSection[];
   onSectionsChange: (sections: ExportSection[]) => void;
   availableSections: { key: ExportSection; label: string; count: number }[];
+  onExport: (format: ExportFormat) => void;
+  exportingFormat: ExportFormat | null;
+  canExport: boolean;
 }
 
 export function ExportOptions({
-  format,
-  onFormatChange,
   sections,
   onSectionsChange,
   availableSections,
+  onExport,
+  exportingFormat,
+  canExport,
 }: ExportOptionsProps) {
   const toggleSection = (section: ExportSection) => {
     if (sections.includes(section)) {
@@ -31,46 +33,56 @@ export function ExportOptions({
     }
   };
 
+  const isExporting = exportingFormat !== null;
+
   return (
     <div className="space-y-4" data-testid="export-options">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Export Format</CardTitle>
-          <CardDescription>Choose how you want to export the data.</CardDescription>
+          <CardTitle className="text-base">Download</CardTitle>
+          <CardDescription>Export your estate summary.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
             <button
               type="button"
-              onClick={() => onFormatChange("pdf")}
-              className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
-                format === "pdf" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-              }`}
+              onClick={() => onExport("pdf")}
+              disabled={!canExport || isExporting}
+              className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50 disabled:pointer-events-none disabled:opacity-50"
               data-testid="export-format-pdf"
             >
-              <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
-              <div>
+              {exportingFormat === "pdf" ? (
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" />
+              ) : (
+                <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+              )}
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">PDF Report</p>
                 <p className="text-xs text-muted-foreground">
                   Formatted document for printing or sharing
                 </p>
               </div>
+              <Download className="h-4 w-4 shrink-0 text-muted-foreground" />
             </button>
             <button
               type="button"
-              onClick={() => onFormatChange("csv")}
-              className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
-                format === "csv" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-              }`}
+              onClick={() => onExport("csv")}
+              disabled={!canExport || isExporting}
+              className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50 disabled:pointer-events-none disabled:opacity-50"
               data-testid="export-format-csv"
             >
-              <FileSpreadsheet className="h-5 w-5 shrink-0 text-muted-foreground" />
-              <div>
+              {exportingFormat === "csv" ? (
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" />
+              ) : (
+                <FileSpreadsheet className="h-5 w-5 shrink-0 text-muted-foreground" />
+              )}
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">CSV Spreadsheet</p>
                 <p className="text-xs text-muted-foreground">
                   Tabular data for spreadsheet software
                 </p>
               </div>
+              <Download className="h-4 w-4 shrink-0 text-muted-foreground" />
             </button>
           </div>
         </CardContent>
@@ -78,8 +90,8 @@ export function ExportOptions({
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Sections to Include</CardTitle>
-          <CardDescription>Select which sections to include in your export.</CardDescription>
+          <CardTitle className="text-base">Sections</CardTitle>
+          <CardDescription>Choose what to include in your export.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
