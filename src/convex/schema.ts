@@ -150,6 +150,9 @@ export default defineSchema({
     estateMode: v.optional(v.boolean()),
     estateActivationId: v.optional(v.id("estateActivations")),
     estateGraceUntil: v.optional(v.number()), // 90-day subscription grace period
+    // Stripe billing fields
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
     // Executor product (separate from planning subscription)
     executorPurchased: v.optional(v.boolean()),
     executorPurchasedAt: v.optional(v.number()),
@@ -157,7 +160,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_primaryContactId", ["primaryContactId"])
-    .index("by_referralSource", ["referralSource"]),
+    .index("by_referralSource", ["referralSource"])
+    .index("by_stripeCustomerId", ["stripeCustomerId"]),
 
   /**
    * Household memberships - join table linking users to households

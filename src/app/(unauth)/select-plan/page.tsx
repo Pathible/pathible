@@ -1,23 +1,24 @@
 "use client";
 
-import { PricingTable, useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { FullPageLoader } from "@/components/full-page-loader";
+import { PricingPlans } from "@/components/pricing-plans";
 import { Button } from "@/components/ui/button";
-import { checkHasActivePlan } from "@/lib/feature-access";
+import { useEffectiveSubscription } from "@/lib/feature-access-hooks";
 
 /**
  * Select Plan Page
  *
- * Uses Clerk's PricingTable component to display subscription options.
- * Plans must be configured in the Clerk Dashboard under Billing > Plans.
+ * Displays custom pricing cards that redirect to Stripe Checkout.
  *
  * Modes:
  * - New users: Redirected here from middleware if no active subscription
- * - Existing users: Access via ?change=true to upgrade/downgrade plans
+ * - Existing users: Access via ?change=true to manage via Stripe Customer Portal
  */
 export default function SelectPlanPage() {
   return (
@@ -30,19 +31,16 @@ export default function SelectPlanPage() {
 function SelectPlanContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLoaded, isSignedIn, has } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { effectiveTier, subscriptionStatus } = useEffectiveSubscription();
+  const [isRedirectingToPortal, setIsRedirectingToPortal] = useState(false);
 
-  // Check if user is changing their existing plan
   const isChangingPlan = searchParams.get("change") === "true";
+  const hasActivePlan = effectiveTier && subscriptionStatus === "active";
 
-  // Check for active subscription using shared utility
-  const hasActivePlan = checkHasActivePlan(has);
-
-  // Check if user already has an active plan (only redirect if not changing plan)
   useEffect(() => {
     if (!isLoaded) return;
 
-    // If not signed in, redirect to login
     if (!isSignedIn) {
       router.push("/login?redirect=/select-plan");
       return;
@@ -54,12 +52,33 @@ function SelectPlanContent() {
     }
   }, [isLoaded, isSignedIn, hasActivePlan, isChangingPlan, router]);
 
-  // Show loading state while checking auth
+  const handleManageSubscription = async () => {
+    setIsRedirectingToPortal(true);
+    try {
+      const response = await fetch("/api/stripe/create-portal", {
+        method: "POST",
+      });
+      const data = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to open billing portal");
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Portal error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to open billing portal");
+    } finally {
+      setIsRedirectingToPortal(false);
+    }
+  };
+
   if (!isLoaded) {
     return <FullPageLoader />;
   }
 
-  // If not signed in, show loading (redirect will happen)
   if (!isSignedIn) {
     return <FullPageLoader />;
   }
@@ -86,19 +105,26 @@ function SelectPlanContent() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             {isChangingPlan
               ? "Upgrade or downgrade your subscription. Changes take effect immediately with prorated billing."
-              : "Start preserving your family's story today. All plans include core features with varying levels of storage, support, and advanced tools."}
+              : "Start preserving your family's story today. All plans include a 7-day free trial."}
           </p>
           {isChangingPlan && (
-            <Button variant="ghost" className="mt-4" asChild>
-              <Link href="/profile-settings">← Back to Settings</Link>
-            </Button>
+            <div className="flex justify-center gap-3 mt-4">
+              <Button variant="ghost" asChild>
+                <Link href="/profile-settings">← Back to Settings</Link>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleManageSubscription}
+                disabled={isRedirectingToPortal}
+              >
+                {isRedirectingToPortal ? "Opening..." : "Manage in Stripe"}
+              </Button>
+            </div>
           )}
         </div>
 
-        {/* Clerk PricingTable */}
-        <PricingTable
-          newSubscriptionRedirectUrl={isChangingPlan ? "/profile-settings" : "/dashboard"}
-        />
+        {/* Pricing Cards */}
+        <PricingPlans currentTier={effectiveTier} mode={isChangingPlan ? "change" : "new"} />
 
         {/* Trust Section */}
         <div className="mt-16 pt-12 border-t border-border">

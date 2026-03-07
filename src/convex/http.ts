@@ -1,6 +1,8 @@
 import { httpRouter } from "convex/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { httpAction } from "./_generated/server";
+import { resolveTierFromPriceId, STRIPE_EVENTS } from "./shared/stripeConfig";
 
 const http = httpRouter();
 
@@ -223,6 +225,252 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+// ============================================================================
+// STRIPE WEBHOOK
+// ============================================================================
+
+/**
+ * Stripe Webhook Handler
+ *
+ * Receives webhooks from Stripe and syncs subscription/payment data to Convex.
+ * Runs alongside the Clerk webhook during the migration period.
+ *
+ * Setup in Stripe Dashboard:
+ * - URL: https://[your-convex-deployment].convex.site/stripe-webhook
+ * - Events: checkout.session.completed, customer.subscription.updated,
+ *           customer.subscription.deleted, invoice.paid, invoice.payment_failed,
+ *           charge.refunded
+ */
+http.route({
+  path: "/stripe-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!stripeSecretKey || !webhookSecret) {
+      console.error("[Stripe Webhook] Missing STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET");
+      return new Response("Webhook not configured", { status: 500 });
+    }
+
+    const signature = request.headers.get("stripe-signature");
+    if (!signature) {
+      console.error("[Stripe Webhook] Missing stripe-signature header");
+      return new Response("Missing signature", { status: 400 });
+    }
+
+    const body = await request.text();
+
+    // Verify webhook signature
+    const isValid = await verifyStripeSignature(body, signature, webhookSecret);
+    if (!isValid) {
+      console.error("[Stripe Webhook] Signature verification failed");
+      return new Response("Invalid signature", { status: 400 });
+    }
+
+    const event = JSON.parse(body);
+    const eventType = event.type as string;
+
+    console.log(`[Stripe Webhook] Processing event: ${eventType} (${event.id})`);
+
+    try {
+      switch (eventType) {
+        case STRIPE_EVENTS.CHECKOUT_COMPLETED: {
+          const session = event.data.object;
+          const metadata = session.metadata || {};
+          const householdId = metadata.householdId as Id<"households"> | undefined;
+          const clerkUserId = metadata.clerkUserId as string | undefined;
+          const stripeCustomerId = session.customer as string | undefined;
+
+          if (!householdId || !clerkUserId || !stripeCustomerId) {
+            console.error("[Stripe Webhook] Missing metadata in checkout session:", {
+              householdId,
+              clerkUserId,
+              stripeCustomerId,
+            });
+            break;
+          }
+
+          // Get the price ID from line items
+          const lineItems = session.line_items?.data || [];
+          const priceId = lineItems[0]?.price?.id || (metadata.priceId as string | undefined) || "";
+
+          const mode = session.mode === "payment" ? "payment" : "subscription";
+
+          await ctx.runMutation(internal.stripe.handleCheckoutCompleted, {
+            stripeCustomerId,
+            householdId,
+            clerkUserId,
+            priceId,
+            mode: mode as "subscription" | "payment",
+            stripeSubscriptionId: session.subscription as string | undefined,
+          });
+          break;
+        }
+
+        case STRIPE_EVENTS.SUBSCRIPTION_UPDATED: {
+          const subscription = event.data.object;
+          const stripeCustomerId = subscription.customer as string;
+          const priceId = subscription.items?.data?.[0]?.price?.id as string | undefined;
+
+          let tier: "foundations" | "heritage" | "legacy" | "founders" | undefined;
+          if (priceId) {
+            tier = resolveTierFromPriceId(priceId) ?? undefined;
+          }
+
+          let status: "active" | "inactive" | "cancelled" | "past_due" | undefined;
+          const stripeStatus = subscription.status as string;
+          if (stripeStatus === "active" || stripeStatus === "trialing") {
+            status = "active";
+          } else if (stripeStatus === "past_due") {
+            status = "past_due";
+          } else if (stripeStatus === "canceled" || stripeStatus === "unpaid") {
+            status = "cancelled";
+          } else if (stripeStatus === "incomplete" || stripeStatus === "paused") {
+            status = "inactive";
+          }
+
+          if (tier || status) {
+            await ctx.runMutation(internal.stripe.syncSubscriptionFromStripe, {
+              stripeCustomerId,
+              stripeSubscriptionId: subscription.id as string,
+              tier,
+              status,
+            });
+          }
+          break;
+        }
+
+        case STRIPE_EVENTS.SUBSCRIPTION_DELETED: {
+          const subscription = event.data.object;
+          const stripeCustomerId = subscription.customer as string;
+
+          await ctx.runMutation(internal.stripe.syncSubscriptionFromStripe, {
+            stripeCustomerId,
+            status: "cancelled",
+          });
+          break;
+        }
+
+        case STRIPE_EVENTS.INVOICE_PAID: {
+          const invoice = event.data.object;
+          const stripeCustomerId = invoice.customer as string;
+
+          // Only process subscription invoices (not one-time)
+          if (invoice.subscription) {
+            await ctx.runMutation(internal.stripe.syncSubscriptionFromStripe, {
+              stripeCustomerId,
+              status: "active",
+            });
+          }
+          break;
+        }
+
+        case STRIPE_EVENTS.INVOICE_PAYMENT_FAILED: {
+          const invoice = event.data.object;
+          const stripeCustomerId = invoice.customer as string;
+
+          if (invoice.subscription) {
+            await ctx.runMutation(internal.stripe.syncSubscriptionFromStripe, {
+              stripeCustomerId,
+              status: "past_due",
+            });
+          }
+          break;
+        }
+
+        case STRIPE_EVENTS.CHARGE_REFUNDED: {
+          const charge = event.data.object;
+          const stripeCustomerId = charge.customer as string;
+
+          // Check if this was an executor purchase refund
+          const invoiceId = charge.invoice as string | null;
+          if (!invoiceId) {
+            // No invoice = one-time payment = executor purchase
+            await ctx.runMutation(internal.stripe.revokeExecutorAccess, {
+              stripeCustomerId,
+            });
+          }
+          // Subscription refunds are handled by subscription.deleted event
+          break;
+        }
+
+        default:
+          console.log(`[Stripe Webhook] Unhandled event type: ${eventType}`);
+      }
+    } catch (error) {
+      console.error(`[Stripe Webhook] Error processing ${eventType}:`, error);
+      return new Response("Webhook handler error", { status: 500 });
+    }
+
+    return new Response("OK", { status: 200 });
+  }),
+});
+
+/**
+ * Verify Stripe webhook signature using HMAC-SHA256.
+ *
+ * Stripe signature header format: t=<timestamp>,v1=<signature>[,v1=<signature>...]
+ * Signed payload: <timestamp>.<body>
+ */
+async function verifyStripeSignature(
+  body: string,
+  signatureHeader: string,
+  secret: string,
+): Promise<boolean> {
+  try {
+    // Parse the signature header
+    const parts = signatureHeader.split(",");
+    let timestamp = "";
+    const signatures: string[] = [];
+
+    for (const part of parts) {
+      const [key, value] = part.split("=");
+      if (key === "t") {
+        timestamp = value;
+      } else if (key === "v1") {
+        signatures.push(value);
+      }
+    }
+
+    if (!timestamp || signatures.length === 0) {
+      console.error("[Stripe Webhook] Invalid signature header format");
+      return false;
+    }
+
+    // Check timestamp tolerance (5 minutes)
+    const ts = parseInt(timestamp, 10);
+    const now = Math.floor(Date.now() / 1000);
+    if (Math.abs(now - ts) > 300) {
+      console.error("[Stripe Webhook] Timestamp too old or in future");
+      return false;
+    }
+
+    // Compute expected signature
+    const signedPayload = `${timestamp}.${body}`;
+    const encoder = new TextEncoder();
+
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+
+    const signatureBytes = await crypto.subtle.sign("HMAC", key, encoder.encode(signedPayload));
+    const expectedSignature = Array.from(new Uint8Array(signatureBytes))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    // Compare against provided signatures
+    return signatures.some((sig) => sig === expectedSignature);
+  } catch (error) {
+    console.error("[Stripe Webhook] Signature verification error:", error);
+    return false;
+  }
 }
 
 export default http;

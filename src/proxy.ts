@@ -5,15 +5,13 @@
  * See: https://clerk.com/docs/reference/nextjs/clerk-middleware
  *
  * Protection layers:
- * 1. Middleware (this file) - Fast edge checks for auth & subscription
- * 2. Layout (/app/(auth)/layout.tsx) - Server-side onboarding checks
+ * 1. Middleware (this file) - Fast edge checks for auth only
+ * 2. Layout (/app/(auth)/layout.tsx) - Server-side subscription & onboarding checks
  *
- * Note: Middleware cannot make Convex calls, so onboarding checks
- * (which require querying the Convex database for profile/household)
- * are done in the layout for protected routes.
+ * Note: Middleware cannot make Convex calls, so subscription and onboarding checks
+ * are done in the layout for protected routes. Middleware only handles auth.
  */
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { checkHasActivePlan } from "@/lib/feature-access";
 
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
@@ -29,6 +27,7 @@ const isPublicRoute = createRouteMatcher([
   "/learn(.*)",
   "/for-executors(.*)",
   "/api/webhooks(.*)",
+  "/api/stripe(.*)",
   // SEO routes - must be accessible to crawlers and social media bots
   "/sitemap.xml",
   "/robots.txt",
@@ -40,7 +39,7 @@ const isPublicRoute = createRouteMatcher([
 const isAuthOnlyRoute = createRouteMatcher(["/onboarding(.*)", "/select-plan(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
-  const { userId, has } = await auth();
+  const { userId } = await auth();
 
   // Public routes - no auth required
   if (isPublicRoute(request)) {
@@ -58,14 +57,8 @@ export default clerkMiddleware(async (auth, request) => {
     return;
   }
 
-  // Protected routes require active subscription
-  const hasActivePlan = checkHasActivePlan(has);
-
-  if (!hasActivePlan) {
-    // Redirect to plan selection page
-    const url = new URL("/select-plan", request.url);
-    return Response.redirect(url);
-  }
+  // Subscription and onboarding checks are handled by the auth layout
+  // which can query Convex for the actual subscription data
 });
 
 export const config = {

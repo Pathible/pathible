@@ -1,43 +1,35 @@
 "use client";
 
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { CheckCircle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useSubscription } from "@/hooks/use-subscription";
-import { FEATURE_METADATA, FEATURES, type FeatureSlug } from "@/lib/feature-access";
+import { tierHasAccess } from "@/convex/shared/subscriptionTiers";
+import { FEATURE_METADATA, FEATURE_TIERS, FEATURES, type FeatureSlug } from "@/lib/feature-access";
+import { useEffectiveSubscription } from "@/lib/feature-access-hooks";
 
 /**
  * Debug component to display current user's subscription and feature access.
- * Use this to verify Clerk configuration matches your feature definitions.
- *
- * Add to any page temporarily:
- * ```tsx
- * import { SubscriptionDebug } from "@/components/subscription-debug";
- * <SubscriptionDebug />
- * ```
+ * Uses Convex as source of truth (not Clerk billing).
  *
  * NOTE: This component is hidden in production builds.
  */
 export function SubscriptionDebug() {
   const { user, isLoaded: userLoaded } = useUser();
-  const { has, isLoaded: authLoaded } = useAuth();
   const {
-    plan,
-    hasFoundations,
-    hasHeritage,
-    hasLegacy,
-    hasFounders,
-    hasAnyPlan,
-    isLoaded: subLoaded,
-  } = useSubscription();
+    isLoading,
+    effectiveTier,
+    subscriptionTier,
+    subscriptionStatus,
+    hasOverride,
+    householdId,
+  } = useEffectiveSubscription();
 
-  // Hide in production - this is a development-only debug tool
   if (process.env.NODE_ENV === "production") {
     return null;
   }
 
-  const isLoaded = userLoaded && authLoaded && subLoaded;
+  const isLoaded = userLoaded && !isLoading;
 
   if (!isLoaded) {
     return (
@@ -50,10 +42,11 @@ export function SubscriptionDebug() {
     );
   }
 
-  // Check all features
+  // Check all features using effective tier
   const featureResults: Record<string, boolean> = {};
   for (const [_key, slug] of Object.entries(FEATURES)) {
-    featureResults[slug] = has?.({ feature: slug }) ?? false;
+    const requiredTier = FEATURE_TIERS[slug as FeatureSlug];
+    featureResults[slug] = effectiveTier ? tierHasAccess(effectiveTier, requiredTier) : false;
   }
 
   // Group features by category
@@ -71,12 +64,12 @@ export function SubscriptionDebug() {
     <Card className="border-dashed border-yellow-500 bg-yellow-50/50 dark:bg-yellow-950/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          🔧 Subscription Debug
+          Subscription Debug
           <Badge variant="outline" className="text-xs">
             DEV ONLY
           </Badge>
         </CardTitle>
-        <CardDescription>Current subscription status and feature access from Clerk</CardDescription>
+        <CardDescription>Current subscription status from Convex (source of truth)</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* User Info */}
@@ -90,36 +83,32 @@ export function SubscriptionDebug() {
               <span className="text-muted-foreground">Email:</span>{" "}
               {user?.primaryEmailAddress?.emailAddress ?? "N/A"}
             </p>
+            <p>
+              <span className="text-muted-foreground">Household:</span> {householdId ?? "N/A"}
+            </p>
           </div>
         </div>
 
         {/* Plan Status */}
         <div>
-          <h3 className="font-semibold mb-2">Plan Status</h3>
+          <h3 className="font-semibold mb-2">Plan Status (Convex)</h3>
           <div className="text-sm space-y-1 font-mono bg-muted p-3 rounded">
             <p>
-              <span className="text-muted-foreground">Current Plan:</span>{" "}
-              <Badge variant={plan ? "default" : "destructive"}>{plan ?? "NONE"}</Badge>
+              <span className="text-muted-foreground">Effective Tier:</span>{" "}
+              <Badge variant={effectiveTier ? "default" : "destructive"}>
+                {effectiveTier ?? "NONE"}
+              </Badge>
             </p>
             <p>
-              <span className="text-muted-foreground">hasAnyPlan:</span>{" "}
-              {hasAnyPlan ? "✅ true" : "❌ false"}
+              <span className="text-muted-foreground">Actual Tier:</span>{" "}
+              {subscriptionTier ?? "NONE"}
             </p>
             <p>
-              <span className="text-muted-foreground">has(foundations):</span>{" "}
-              {hasFoundations ? "✅ true" : "❌ false"}
+              <span className="text-muted-foreground">Status:</span> {subscriptionStatus ?? "NONE"}
             </p>
             <p>
-              <span className="text-muted-foreground">has(heritage):</span>{" "}
-              {hasHeritage ? "✅ true" : "❌ false"}
-            </p>
-            <p>
-              <span className="text-muted-foreground">has(legacy):</span>{" "}
-              {hasLegacy ? "✅ true" : "❌ false"}
-            </p>
-            <p>
-              <span className="text-muted-foreground">has(founders):</span>{" "}
-              {hasFounders ? "✅ true" : "❌ false"}
+              <span className="text-muted-foreground">Has Override:</span>{" "}
+              {hasOverride ? "Yes" : "No"}
             </p>
           </div>
         </div>
@@ -156,14 +145,6 @@ export function SubscriptionDebug() {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Raw has() output */}
-        <div>
-          <h3 className="font-semibold mb-2">Raw Feature Check Results</h3>
-          <pre className="text-xs font-mono bg-muted p-3 rounded overflow-auto max-h-64">
-            {JSON.stringify(featureResults, null, 2)}
-          </pre>
         </div>
       </CardContent>
     </Card>

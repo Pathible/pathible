@@ -67,24 +67,23 @@ export async function requireServerAuth() {
 }
 
 /**
- * Check if the user's household has a tier override (bypasses Clerk billing)
+ * Check if the user has an active subscription (or tier override) in Convex.
  *
- * This is used in the auth layout to allow demo/partner accounts to access
- * the app without a Clerk subscription. The tierOverride on the household
- * already unlocks all backend feature gates — this extends that bypass
- * to the frontend routing check.
+ * This is the primary subscription gate for server-side route protection.
+ * It queries Convex for the effective subscription status, which considers
+ * both actual subscriptions and tier overrides.
  *
- * Returns true if the user's household has:
- * - An active subscription status in Convex
- * - A non-expired tierOverride set
+ * Returns true if:
+ * - User has subscriptionStatus === "active" in Convex, OR
+ * - User has a valid (non-expired) tierOverride
  *
  * Returns false (fail-closed) if:
  * - User is not authenticated
  * - No household found
- * - No tierOverride set
+ * - Subscription is not active and no override
  * - Query fails
  */
-export async function getHasTierOverride(): Promise<boolean> {
+export async function getHasActiveSubscription(): Promise<boolean> {
   try {
     const { getToken, userId } = await auth();
 
@@ -107,9 +106,14 @@ export async function getHasTierOverride(): Promise<boolean> {
 
     const subscription = await convexClient.query(api.auth.getEffectiveSubscription);
 
-    return subscription?.hasOverride ?? false;
+    if (!subscription) {
+      return false;
+    }
+
+    // Active subscription or valid tier override grants access
+    return subscription.subscriptionStatus === "active" || subscription.hasOverride;
   } catch (error) {
-    console.error("[Auth] Failed to check tier override:", error);
+    console.error("[Auth] Failed to check subscription status:", error);
     return false;
   }
 }

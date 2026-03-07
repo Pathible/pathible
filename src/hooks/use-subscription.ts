@@ -1,62 +1,32 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
-import {
-  checkHasActivePlan,
-  getCurrentPlanTier,
-  type SubscriptionTier,
-} from "@/lib/feature-access";
+import type { SubscriptionTier } from "@/convex/shared/subscriptionTiers";
+import { useEffectiveSubscription } from "@/lib/feature-access-hooks";
 
 export type SubscriptionPlan = SubscriptionTier | null;
 
 /**
- * Hook to check user's subscription status using Clerk Billing
+ * Hook to check user's subscription status.
  *
- * Uses Clerk's `has()` method to check for active subscription plans.
- * This is the recommended way to check subscription status client-side.
- *
- * @example
- * ```tsx
- * const { plan, hasAnyPlan, isLoaded } = useSubscription();
- *
- * if (!isLoaded) return <Loading />;
- * if (!hasAnyPlan) return <NoPlanMessage />;
- *
- * return <div>Your plan: {plan}</div>;
- * ```
+ * Uses Convex as the source of truth (via useEffectiveSubscription).
+ * Maintains the same return shape for backwards compatibility.
  */
 export function useSubscription() {
-  const { has, isLoaded } = useAuth();
+  const { isLoading, effectiveTier, subscriptionStatus } = useEffectiveSubscription();
 
-  if (!isLoaded) {
-    return {
-      isLoaded: false,
-      plan: null as SubscriptionPlan,
-      hasFoundations: false,
-      hasHeritage: false,
-      hasLegacy: false,
-      hasFounders: false,
-      hasAnyPlan: false,
-    };
-  }
-
-  // Use shared utility functions
-  const plan = getCurrentPlanTier(has);
-  const hasAnyPlan = checkHasActivePlan(has);
-
-  // Individual plan checks for convenience
-  const hasFoundations = has?.({ plan: "foundations" }) ?? false;
-  const hasHeritage = has?.({ plan: "heritage" }) ?? false;
-  const hasLegacy = has?.({ plan: "legacy" }) ?? false;
-  const hasFounders = has?.({ plan: "founders" }) ?? false;
+  const isLoaded = !isLoading;
+  const plan = effectiveTier as SubscriptionPlan;
+  const hasAnyPlan = effectiveTier !== null && subscriptionStatus === "active";
 
   return {
-    isLoaded: true,
+    isLoaded,
     plan,
-    hasFoundations,
-    hasHeritage,
-    hasLegacy,
-    hasFounders,
+    hasFoundations: hasAnyPlan && effectiveTier === "foundations",
+    hasHeritage:
+      hasAnyPlan &&
+      (effectiveTier === "heritage" || effectiveTier === "legacy" || effectiveTier === "founders"),
+    hasLegacy: hasAnyPlan && (effectiveTier === "legacy" || effectiveTier === "founders"),
+    hasFounders: hasAnyPlan && effectiveTier === "founders",
     hasAnyPlan,
   };
 }

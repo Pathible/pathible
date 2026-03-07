@@ -360,27 +360,37 @@ export const TIER_DISPLAY: Record<
     label: string;
     description: string;
     shortDescription: string;
+    priceMonthly: number | null;
+    priceLabel: string;
   }
 > = {
   foundations: {
     label: "Foundations",
     description: "Essential features for getting started with family legacy planning",
     shortDescription: "Essential features for getting started",
+    priceMonthly: 9.99,
+    priceLabel: "$9.99/mo",
   },
   heritage: {
     label: "Heritage",
     description: "Advanced features for growing families with expanded storage and collaboration",
     shortDescription: "Advanced features for growing families",
+    priceMonthly: 19.99,
+    priceLabel: "$19.99/mo",
   },
   legacy: {
     label: "Legacy",
     description: "Premium features for comprehensive legacy planning with unlimited resources",
     shortDescription: "Premium features for comprehensive legacy planning",
+    priceMonthly: 39.99,
+    priceLabel: "$39.99/mo",
   },
   founders: {
     label: "Founders",
     description: "Exclusive launch offer with Legacy features forever and priority support",
     shortDescription: "Exclusive launch offer with Legacy features forever",
+    priceMonthly: null,
+    priceLabel: "Invite Only",
   },
 } as const;
 
