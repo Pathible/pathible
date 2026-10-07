@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "../support/clerk";
 
 /**
  * Legal Documents E2E Tests
@@ -16,7 +16,7 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  * Run with: pnpm test:e2e -- --spec "cypress/e2e/legal-documents.cy.ts"
  */
 
-const TEST_USER_EMAIL = Cypress.env("TEST_USER_EMAIL");
+const TEST_USER_EMAIL = Cypress.expose("TEST_USER_EMAIL");
 
 describe("Legal Documents - E2E Test Suite", () => {
   beforeEach(() => {

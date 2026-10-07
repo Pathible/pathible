@@ -1,264 +1,340 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
-import { trackAnalytics } from "./shared/analyticsHelpers";
-import { resolveTierFromPriceId } from "./shared/stripeConfig";
-import { type SubscriptionTier, TIER_LEVELS } from "./shared/subscriptionTiers";
+import { internalMutation, internalQuery, query } from "./_generated/server";
+import { requireAuth, requireHouseholdAdmin } from "./auth";
+import { subscriptionStatusValidator } from "./shared/commonValidators";
+import { isExecutorPriceId, resolveTierFromPriceId } from "./shared/stripeConfig";
 
-const subscriptionTierValidator = v.union(
-  v.literal("foundations"),
-  v.literal("heritage"),
-  v.literal("legacy"),
-  v.literal("founders"),
-);
-
-const subscriptionStatusValidator = v.union(
-  v.literal("active"),
-  v.literal("inactive"),
-  v.literal("cancelled"),
-  v.literal("past_due"),
-);
-
-/**
- * Link a Stripe Customer ID to a household.
- * Called on first checkout when the Stripe customer is created.
- */
-export const linkStripeCustomer = internalMutation({
-  args: {
-    householdId: v.id("households"),
-    stripeCustomerId: v.string(),
-    stripeSubscriptionId: v.optional(v.string()),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const household = await ctx.db.get(args.householdId);
-    if (!household) {
-      console.error("[Stripe] Household not found:", args.householdId);
-      return null;
-    }
-
-    await ctx.db.patch(args.householdId, {
-      stripeCustomerId: args.stripeCustomerId,
-      ...(args.stripeSubscriptionId && {
-        stripeSubscriptionId: args.stripeSubscriptionId,
-      }),
-      updatedAt: Date.now(),
-    });
-
-    return null;
-  },
+const billingAccountValidator = v.object({
+  householdId: v.id("households"),
+  clerkUserId: v.string(),
+  stripeCustomerId: v.optional(v.string()),
+  stripeSubscriptionId: v.optional(v.string()),
+  billingProvider: v.optional(v.union(v.literal("clerk"), v.literal("stripe"))),
+  subscriptionStatus: subscriptionStatusValidator,
+  executorPurchased: v.boolean(),
 });
 
-/**
- * Sync subscription tier and status from Stripe webhook events.
- * Mirrors the existing syncSubscriptionTier but looks up by stripeCustomerId.
- */
-export const syncSubscriptionFromStripe = internalMutation({
-  args: {
-    stripeCustomerId: v.string(),
-    stripeSubscriptionId: v.optional(v.string()),
-    tier: v.optional(subscriptionTierValidator),
-    status: v.optional(subscriptionStatusValidator),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    message: v.string(),
-    householdId: v.optional(v.id("households")),
-  }),
-  handler: async (ctx, args) => {
-    if (!args.tier && !args.status) {
-      return {
-        success: false,
-        message: "No tier or status provided",
-        householdId: undefined,
-      };
-    }
-
-    // Look up household by Stripe Customer ID
-    const household = await ctx.db
-      .query("households")
-      .withIndex("by_stripeCustomerId", (q) => q.eq("stripeCustomerId", args.stripeCustomerId))
-      .first();
-
-    if (!household) {
-      return {
-        success: false,
-        message: `Household not found for Stripe customer: ${args.stripeCustomerId}`,
-        householdId: undefined,
-      };
-    }
-
-    const patch: {
-      subscriptionTier?: SubscriptionTier;
-      subscriptionStatus?: "active" | "inactive" | "cancelled" | "past_due";
-      stripeSubscriptionId?: string;
-      updatedAt: number;
-    } = { updatedAt: Date.now() };
-
-    if (args.tier) {
-      patch.subscriptionTier = args.tier;
-    }
-    if (args.status) {
-      patch.subscriptionStatus = args.status;
-    }
-    if (args.stripeSubscriptionId) {
-      patch.stripeSubscriptionId = args.stripeSubscriptionId;
-    }
-
-    const previousTier = household.subscriptionTier;
-    const previousStatus = household.subscriptionStatus;
-
-    await ctx.db.patch(household._id, patch);
-
-    // Analytics
-    const primaryContact = await ctx.db.get(household.primaryContactId);
-    const clerkUserId = primaryContact?.userId;
-
-    if (clerkUserId) {
-      if (args.tier && args.tier !== previousTier) {
-        await trackAnalytics(ctx, clerkUserId, "subscription_tier_changed", {
-          household_id: household._id,
-          previous_tier: previousTier,
-          new_tier: args.tier,
-          is_upgrade: TIER_LEVELS[args.tier] > TIER_LEVELS[previousTier],
-          source: "stripe",
-        });
-      }
-
-      if (args.status && args.status !== previousStatus) {
-        await trackAnalytics(ctx, clerkUserId, "subscription_status_changed", {
-          household_id: household._id,
-          previous_status: previousStatus,
-          new_status: args.status,
-          source: "stripe",
-        });
-      }
-    }
-
+// Billing identity is household-scoped. Viewers and executors cannot manage it.
+export const getBillingAccount = query({
+  args: {},
+  returns: billingAccountValidator,
+  handler: async (ctx) => {
+    const { profile } = await requireAuth(ctx);
+    const memberships = await ctx.db
+      .query("householdMemberships")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .collect();
+    const membership = memberships.find((m) => m.status === "active");
+    if (!membership || (membership.role !== "owner" && membership.role !== "steward"))
+      throw new Error("Only household owners and stewards may manage billing");
+    const household = await ctx.db.get(membership.householdId);
+    if (!household) throw new Error("Household not found");
     return {
-      success: true,
-      message: "Subscription updated from Stripe",
       householdId: household._id,
+      clerkUserId: profile.userId,
+      stripeCustomerId: household.stripeCustomerId,
+      stripeSubscriptionId: household.stripeSubscriptionId,
+      billingProvider: household.billingProvider,
+      subscriptionStatus: household.subscriptionStatus,
+      executorPurchased: household.executorPurchased === true,
     };
   },
 });
 
-/**
- * Mark executor as purchased for a household.
- * Called when a one-time Stripe payment completes for the Executor product.
- */
-export const markExecutorPurchased = internalMutation({
+export const reserveCheckout = internalMutation({
   args: {
     householdId: v.id("households"),
-    purchasedBy: v.id("profiles"),
+    mode: v.union(v.literal("subscription"), v.literal("payment")),
+    priceId: v.string(),
   },
+  returns: v.object({ attemptId: v.id("billingAttempts"), createdAt: v.number() }),
+  handler: async (ctx, args) => {
+    const { profile } = await requireAuth(ctx);
+    await requireHouseholdAdmin(ctx, args.householdId);
+    const previous = await ctx.db
+      .query("billingAttempts")
+      .withIndex("by_household_and_mode", (q) =>
+        q.eq("householdId", args.householdId).eq("mode", args.mode),
+      )
+      .order("desc")
+      .first();
+    if (previous && !previous.completed && previous.createdAt > Date.now() - 60 * 60 * 1000) {
+      if (previous.priceId !== args.priceId)
+        throw new Error(
+          "Another checkout is in progress. Complete it or retry after the checkout expires.",
+        );
+      return { attemptId: previous._id, createdAt: previous.createdAt };
+    }
+    const createdAt = Date.now();
+    const attemptId = await ctx.db.insert("billingAttempts", {
+      ...args,
+      clerkUserId: profile.userId,
+      createdAt,
+      completed: false,
+    });
+    return { attemptId, createdAt };
+  },
+});
+
+export const linkStripeCustomer = internalMutation({
+  args: { householdId: v.id("households"), stripeCustomerId: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
     const household = await ctx.db.get(args.householdId);
-    if (!household) {
-      console.error("[Stripe] Household not found for executor purchase:", args.householdId);
-      return null;
+    if (!household) throw new Error("Household not found");
+    if (household.stripeCustomerId && household.stripeCustomerId !== args.stripeCustomerId) {
+      throw new Error("Household already has another billing customer");
     }
-
-    await ctx.db.patch(args.householdId, {
-      executorPurchased: true,
-      executorPurchasedAt: Date.now(),
-      executorPurchasedBy: args.purchasedBy,
+    const existing = await ctx.db
+      .query("households")
+      .withIndex("by_stripeCustomerId", (q) => q.eq("stripeCustomerId", args.stripeCustomerId))
+      .unique();
+    if (existing && existing._id !== household._id)
+      throw new Error("Customer already belongs to another household");
+    await ctx.db.patch(household._id, {
+      stripeCustomerId: args.stripeCustomerId,
       updatedAt: Date.now(),
     });
-
     return null;
   },
 });
 
-/**
- * Revoke executor access (e.g., on refund).
- */
-export const revokeExecutorAccess = internalMutation({
+// Each fulfillment and event receipt commit in one transaction.
+export const applySubscription = internalMutation({
   args: {
+    eventId: v.string(),
+    snapshotAt: v.number(),
     stripeCustomerId: v.string(),
+    stripeSubscriptionId: v.string(),
+    priceId: v.string(),
+    status: subscriptionStatusValidator,
+    billingAttemptId: v.optional(v.id("billingAttempts")),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    if (
+      await ctx.db
+        .query("stripeEvents")
+        .withIndex("by_eventId", (q) => q.eq("eventId", args.eventId))
+        .unique()
+    )
+      return null;
     const household = await ctx.db
       .query("households")
       .withIndex("by_stripeCustomerId", (q) => q.eq("stripeCustomerId", args.stripeCustomerId))
-      .first();
-
-    if (!household) {
-      console.error("[Stripe] Household not found for executor revocation:", args.stripeCustomerId);
+      .unique();
+    if (!household) throw new Error("Customer mapping not ready; retry event");
+    const tier = resolveTierFromPriceId(args.priceId);
+    if (!tier) {
+      if (
+        household.stripeSubscriptionId === args.stripeSubscriptionId &&
+        household.billingProvider === "stripe"
+      ) {
+        await ctx.db.patch(household._id, {
+          subscriptionStatus: "inactive",
+          updatedAt: Date.now(),
+        });
+        await ctx.db.insert("stripeEvents", { eventId: args.eventId, processedAt: Date.now() });
+      }
       return null;
     }
-
+    if (household.billingProvider === "clerk") return null;
+    let replacementAuthorized = false;
+    if (args.billingAttemptId) {
+      const attempt = await ctx.db.get(args.billingAttemptId);
+      if (!attempt || attempt.householdId !== household._id || attempt.mode !== "subscription")
+        throw new Error("Invalid checkout identity");
+      replacementAuthorized = !attempt.completed && household.subscriptionStatus !== "active";
+      await ctx.db.patch(attempt._id, { completed: true });
+    }
+    if (
+      household.stripeSubscriptionId &&
+      household.stripeSubscriptionId !== args.stripeSubscriptionId &&
+      !replacementAuthorized
+    )
+      return null;
+    if (
+      household.stripeSnapshotAt !== undefined &&
+      args.snapshotAt < household.stripeSnapshotAt &&
+      !replacementAuthorized
+    )
+      return null;
     await ctx.db.patch(household._id, {
-      executorPurchased: false,
+      subscriptionTier: tier,
+      subscriptionStatus: args.status,
+      billingProvider: "stripe",
+      stripeSubscriptionId: args.stripeSubscriptionId,
+      stripeSnapshotAt: args.snapshotAt,
       updatedAt: Date.now(),
     });
-
+    await ctx.db.insert("stripeEvents", { eventId: args.eventId, processedAt: Date.now() });
     return null;
   },
 });
 
-/**
- * Handle initial checkout completion.
- * Links Stripe customer, sets tier/status, and handles executor purchases.
- */
-export const handleCheckoutCompleted = internalMutation({
+export const applyExecutorPayment = internalMutation({
   args: {
-    stripeCustomerId: v.string(),
+    eventId: v.string(),
     householdId: v.id("households"),
-    clerkUserId: v.string(),
+    stripeCustomerId: v.string(),
+    billingAttemptId: v.id("billingAttempts"),
     priceId: v.string(),
-    mode: v.union(v.literal("subscription"), v.literal("payment")),
-    stripeSubscriptionId: v.optional(v.string()),
+    paymentIntentId: v.string(),
+    chargeId: v.string(),
+    paid: v.boolean(),
+    fullyRefunded: v.boolean(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const household = await ctx.db.get(args.householdId);
-    if (!household) {
-      console.error("[Stripe] Household not found:", args.householdId);
+    if (
+      await ctx.db
+        .query("stripeEvents")
+        .withIndex("by_eventId", (q) => q.eq("eventId", args.eventId))
+        .unique()
+    )
       return null;
-    }
-
-    // Link Stripe customer to household
-    const patch: Record<string, unknown> = {
-      stripeCustomerId: args.stripeCustomerId,
+    const attempt = await ctx.db.get(args.billingAttemptId);
+    const household = await ctx.db.get(args.householdId);
+    if (
+      !household ||
+      !attempt ||
+      attempt.householdId !== household._id ||
+      attempt.mode !== "payment" ||
+      household.stripeCustomerId !== args.stripeCustomerId
+    )
+      throw new Error("Executor billing identity mismatch");
+    if (!isExecutorPriceId(args.priceId) || !args.paid) return null;
+    if (
+      household.executorPurchasedAt !== undefined &&
+      household.executorPurchasedAt > attempt.createdAt
+    )
+      return null;
+    // A replay of an older purchase must not replace the identity of a newer purchase.
+    if (attempt.completed && household.executorPaymentIntentId !== args.paymentIntentId)
+      return null;
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", attempt.clerkUserId))
+      .unique();
+    if (!profile) throw new Error("Purchaser profile not ready; retry event");
+    const refund = await ctx.db
+      .query("stripeRefunds")
+      .withIndex("by_paymentIntentId", (q) => q.eq("paymentIntentId", args.paymentIntentId))
+      .unique();
+    await ctx.db.patch(household._id, {
+      executorPurchased: !args.fullyRefunded && !refund,
+      executorPurchasedBy: profile._id,
+      executorPurchasedAt: attempt.createdAt,
+      executorPaymentIntentId: args.paymentIntentId,
+      executorChargeId: args.chargeId,
       updatedAt: Date.now(),
-    };
-
-    if (args.mode === "subscription") {
-      // Planning subscription
-      const tier = resolveTierFromPriceId(args.priceId);
-      if (tier) {
-        patch.subscriptionTier = tier;
-        patch.subscriptionStatus = "active";
-      }
-      if (args.stripeSubscriptionId) {
-        patch.stripeSubscriptionId = args.stripeSubscriptionId;
-      }
-    } else {
-      // One-time executor purchase
-      const profile = await ctx.db
-        .query("profiles")
-        .withIndex("by_userId", (q) => q.eq("userId", args.clerkUserId))
-        .first();
-
-      if (profile) {
-        patch.executorPurchased = true;
-        patch.executorPurchasedAt = Date.now();
-        patch.executorPurchasedBy = profile._id;
-      }
-    }
-
-    await ctx.db.patch(args.householdId, patch);
-
-    // Analytics
-    await trackAnalytics(ctx, args.clerkUserId, "checkout_completed", {
-      household_id: args.householdId,
-      mode: args.mode,
-      price_id: args.priceId,
-      source: "stripe",
     });
-
+    await ctx.db.patch(attempt._id, { completed: true });
+    await ctx.db.insert("stripeEvents", { eventId: args.eventId, processedAt: Date.now() });
     return null;
+  },
+});
+
+export const applyExecutorRefund = internalMutation({
+  args: {
+    eventId: v.string(),
+    stripeCustomerId: v.string(),
+    paymentIntentId: v.string(),
+    chargeId: v.string(),
+    fullyRefunded: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    if (
+      await ctx.db
+        .query("stripeEvents")
+        .withIndex("by_eventId", (q) => q.eq("eventId", args.eventId))
+        .unique()
+    )
+      return null;
+    const household = await ctx.db
+      .query("households")
+      .withIndex("by_stripeCustomerId", (q) => q.eq("stripeCustomerId", args.stripeCustomerId))
+      .unique();
+    if (!household) throw new Error("Customer mapping not ready; retry event");
+    if (
+      args.fullyRefunded &&
+      !(await ctx.db
+        .query("stripeRefunds")
+        .withIndex("by_paymentIntentId", (q) => q.eq("paymentIntentId", args.paymentIntentId))
+        .unique())
+    ) {
+      await ctx.db.insert("stripeRefunds", {
+        paymentIntentId: args.paymentIntentId,
+        chargeId: args.chargeId,
+      });
+    }
+    if (
+      args.fullyRefunded &&
+      household.executorPaymentIntentId === args.paymentIntentId &&
+      household.executorChargeId === args.chargeId
+    ) {
+      await ctx.db.patch(household._id, { executorPurchased: false, updatedAt: Date.now() });
+    }
+    await ctx.db.insert("stripeEvents", { eventId: args.eventId, processedAt: Date.now() });
+    return null;
+  },
+});
+
+export const getLegacyAccount = internalQuery({
+  args: {},
+  returns: v.union(
+    v.object({ householdId: v.id("households"), clerkUserId: v.string() }),
+    v.null(),
+  ),
+  handler: async (ctx) => {
+    const { profile } = await requireAuth(ctx);
+    const memberships = await ctx.db
+      .query("householdMemberships")
+      .withIndex("by_user", (q) => q.eq("userId", profile._id))
+      .collect();
+    const membership = memberships.find((m) => m.status === "active");
+    if (!membership) return null;
+    const household = await ctx.db.get(membership.householdId);
+    if (!household || household.billingProvider || household.stripeSubscriptionId) return null;
+    const contact = await ctx.db.get(household.primaryContactId);
+    return contact ? { householdId: household._id, clerkUserId: contact.userId } : null;
+  },
+});
+
+export const completeCutover = internalMutation({
+  args: { householdId: v.id("households"), approvedBy: v.optional(v.string()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const household = await ctx.db.get(args.householdId);
+    if (!household || household.stripeSubscriptionId)
+      throw new Error("Household cannot be cut over");
+    if (args.approvedBy) {
+      const role = await ctx.db
+        .query("userRoles")
+        .withIndex("by_userId", (q) => q.eq("userId", args.approvedBy ?? ""))
+        .unique();
+      if (role?.role !== "admin")
+        throw new Error("An administrator must approve a paid-account cutover");
+    } else if (household.billingProvider) {
+      throw new Error("Existing provider requires explicit administrator approval");
+    }
+    await ctx.db.patch(household._id, {
+      billingProvider: "stripe",
+      subscriptionStatus: "inactive",
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+export const getCutoverAccount = internalQuery({
+  args: { householdId: v.id("households") },
+  returns: v.object({ clerkUserId: v.string() }),
+  handler: async (ctx, args) => {
+    const household = await ctx.db.get(args.householdId);
+    if (!household) throw new Error("Household not found");
+    const profile = await ctx.db.get(household.primaryContactId);
+    if (!profile) throw new Error("Owner profile not found");
+    return { clerkUserId: profile.userId };
   },
 });

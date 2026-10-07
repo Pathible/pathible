@@ -1,5 +1,6 @@
 "use client";
 
+import { useClerk } from "@clerk/nextjs";
 import { ArrowUpRight, CreditCard, Loader2, Settings } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -38,6 +39,7 @@ const statusVariants: Record<string, { label: string; className: string }> = {
 export function SubscriptionCard() {
   const { isLoading, effectiveTier, subscriptionStatus, hasOverride, subscription } =
     useEffectiveSubscription();
+  const clerk = useClerk();
   const [isRedirectingToPortal, setIsRedirectingToPortal] = useState(false);
 
   if (isLoading) {
@@ -62,6 +64,10 @@ export function SubscriptionCard() {
   const statusInfo = statusVariants[subscriptionStatus ?? "inactive"] ?? statusVariants.inactive;
 
   const handleManageSubscription = async () => {
+    if (subscription?.billingProvider === "clerk") {
+      clerk.openUserProfile();
+      return;
+    }
     setIsRedirectingToPortal(true);
     try {
       const response = await fetch("/api/stripe/create-portal", { method: "POST" });

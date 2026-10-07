@@ -12,11 +12,11 @@ export type SubscriptionPlan = SubscriptionTier | null;
  * Maintains the same return shape for backwards compatibility.
  */
 export function useSubscription() {
-  const { isLoading, effectiveTier, subscriptionStatus } = useEffectiveSubscription();
+  const { isLoading, effectiveTier, subscriptionStatus, hasOverride } = useEffectiveSubscription();
 
   const isLoaded = !isLoading;
   const plan = effectiveTier as SubscriptionPlan;
-  const hasAnyPlan = effectiveTier !== null && subscriptionStatus === "active";
+  const hasAnyPlan = effectiveTier !== null && (subscriptionStatus === "active" || hasOverride);
 
   return {
     isLoaded,

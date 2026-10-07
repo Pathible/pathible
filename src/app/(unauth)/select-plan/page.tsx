@@ -1,6 +1,7 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
+import { useAction } from "convex/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -9,6 +10,7 @@ import { toast } from "sonner";
 import { FullPageLoader } from "@/components/full-page-loader";
 import { PricingPlans } from "@/components/pricing-plans";
 import { Button } from "@/components/ui/button";
+import { api } from "@/convex/_generated/api";
 import { useEffectiveSubscription } from "@/lib/feature-access-hooks";
 
 /**
@@ -32,11 +34,20 @@ function SelectPlanContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoaded, isSignedIn } = useAuth();
-  const { effectiveTier, subscriptionStatus } = useEffectiveSubscription();
+  const { effectiveTier, subscriptionStatus, householdId, isLoading, subscription, hasOverride } =
+    useEffectiveSubscription();
+  const clerk = useClerk();
+  const reconcileLegacy = useAction(api.stripeActions.reconcileLegacy);
+  useEffect(() => {
+    if (subscription && !subscription.billingProvider)
+      void reconcileLegacy({}).catch(() =>
+        toast.error("Legacy billing could not be verified. Please contact support."),
+      );
+  }, [subscription, reconcileLegacy]);
   const [isRedirectingToPortal, setIsRedirectingToPortal] = useState(false);
 
   const isChangingPlan = searchParams.get("change") === "true";
-  const hasActivePlan = effectiveTier && subscriptionStatus === "active";
+  const hasActivePlan = effectiveTier && (subscriptionStatus === "active" || hasOverride);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -46,13 +57,22 @@ function SelectPlanContent() {
       return;
     }
 
+    if (!isLoading && !householdId) {
+      router.push("/onboarding");
+      return;
+    }
+
     // If user already has a plan and NOT changing plans, redirect to dashboard
     if (hasActivePlan && !isChangingPlan) {
       router.push("/dashboard");
     }
-  }, [isLoaded, isSignedIn, hasActivePlan, isChangingPlan, router]);
+  }, [isLoaded, isSignedIn, hasActivePlan, isChangingPlan, router, householdId, isLoading]);
 
   const handleManageSubscription = async () => {
+    if (subscription?.billingProvider === "clerk") {
+      clerk.openUserProfile();
+      return;
+    }
     setIsRedirectingToPortal(true);
     try {
       const response = await fetch("/api/stripe/create-portal", {
@@ -104,10 +124,10 @@ function SelectPlanContent() {
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             {isChangingPlan
-              ? "Upgrade or downgrade your subscription. Changes take effect immediately with prorated billing."
-              : "Start preserving your family's story today. All plans include a 7-day free trial."}
+              ? "Upgrade or downgrade your subscription. Review billing changes and any prorations before confirming."
+              : "Start preserving your family's story today. Secure checkout follows household setup."}
           </p>
-          {isChangingPlan && (
+          {(isChangingPlan || !!subscription?.billingProvider) && (
             <div className="flex justify-center gap-3 mt-4">
               <Button variant="ghost" asChild>
                 <Link href="/profile-settings">← Back to Settings</Link>
@@ -117,14 +137,17 @@ function SelectPlanContent() {
                 onClick={handleManageSubscription}
                 disabled={isRedirectingToPortal}
               >
-                {isRedirectingToPortal ? "Opening..." : "Manage in Stripe"}
+                {isRedirectingToPortal ? "Opening..." : "Manage Billing"}
               </Button>
             </div>
           )}
         </div>
 
         {/* Pricing Cards */}
-        <PricingPlans currentTier={effectiveTier} mode={isChangingPlan ? "change" : "new"} />
+        <PricingPlans
+          currentTier={hasActivePlan ? effectiveTier : null}
+          mode={isChangingPlan ? "change" : "new"}
+        />
 
         {/* Trust Section */}
         <div className="mt-16 pt-12 border-t border-border">

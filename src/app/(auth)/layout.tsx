@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { getHasActiveSubscription, getIsAdmin, getOnboardingStatus } from "@/lib/auth-session";
+import { getIsAdmin, getOnboardingStatus } from "@/lib/auth-session";
 
 /**
  * Auth Layout - Wraps all authenticated routes
@@ -10,7 +10,7 @@ import { getHasActiveSubscription, getIsAdmin, getOnboardingStatus } from "@/lib
  * 1. User is authenticated (redirect to login if not)
  * 2. If admin -> skip remaining checks (admins bypass onboarding/subscription)
  * 3. User has completed onboarding (redirect to /onboarding if not)
- * 4. User has an active subscription in Convex (redirect to select-plan if not)
+ * Planning and Executor entitlements are checked independently by child layouts.
  *
  * This ensures regular users cannot access protected routes like /vault or /dashboard
  * without completing the full setup flow, while admins can access the admin panel
@@ -21,6 +21,8 @@ import { getHasActiveSubscription, getIsAdmin, getOnboardingStatus } from "@/lib
  * - (dashboard)/ uses DashboardLayout for user-facing routes
  * - admin/ uses AdminLayout for admin routes
  */
+export const dynamic = "force-dynamic";
+
 export default async function AuthLayout({ children }: { children: ReactNode }) {
   const { userId } = await auth();
 
@@ -41,13 +43,6 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
 
   if (onboardingStatus?.needsOnboarding) {
     redirect("/onboarding");
-  }
-
-  // Check 4: Active subscription (queries Convex, considers tier overrides)
-  const hasActiveSubscription = await getHasActiveSubscription();
-
-  if (!hasActiveSubscription) {
-    redirect("/select-plan");
   }
 
   return <>{children}</>;

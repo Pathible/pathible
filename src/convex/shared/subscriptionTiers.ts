@@ -125,7 +125,7 @@ export function getEffectiveTier(household: HouseholdSubscriptionData): Subscrip
     const isExpired =
       household.tierOverrideExpiresAt !== null &&
       household.tierOverrideExpiresAt !== undefined &&
-      household.tierOverrideExpiresAt < now;
+      household.tierOverrideExpiresAt <= now;
 
     if (!isExpired) {
       return household.tierOverride;

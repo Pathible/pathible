@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "../../support/clerk";
 
 /**
  * Family Preferences E2E Tests
@@ -80,7 +80,7 @@ describe("Family Preferences - E2E Test Suite", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       cy.visit("/family-preferences", { timeout: 30000 });
       ensureUserOnboarded();
@@ -108,7 +108,7 @@ describe("Family Preferences - E2E Test Suite", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       cy.visit("/family-preferences", { timeout: 30000 });
       ensureUserOnboarded();
@@ -152,7 +152,7 @@ describe("Family Preferences - E2E Test Suite", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       cy.visit("/family-preferences", { timeout: 30000 });
       ensureUserOnboarded();

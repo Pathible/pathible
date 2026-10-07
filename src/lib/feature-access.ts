@@ -19,16 +19,6 @@ import {
   TIER_DISPLAY,
 } from "@/convex/shared/subscriptionTiers";
 
-// Re-export for backwards compatibility
-export {
-  FEATURE_SLUGS,
-  FEATURE_TIERS,
-  SUBSCRIPTION_TIERS,
-  TIER_DISPLAY,
-  type FeatureSlug,
-  type SubscriptionTier,
-};
-
 // Re-export hooks from the client-only module for backwards compatibility
 // Note: These should only be imported in client components
 export {
@@ -37,6 +27,15 @@ export {
   useEffectiveSubscription,
   useEffectiveTierAccess,
 } from "./feature-access-hooks";
+// Re-export for backwards compatibility
+export {
+  FEATURE_SLUGS,
+  FEATURE_TIERS,
+  type FeatureSlug,
+  SUBSCRIPTION_TIERS,
+  type SubscriptionTier,
+  TIER_DISPLAY,
+};
 
 /**
  * Feature slugs alias for backwards compatibility

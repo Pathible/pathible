@@ -1,253 +1,103 @@
-# Stripe Migration Guide
+# Stripe billing migration
 
-Migration from Clerk Billing to Stripe for all billing (Planning subscriptions + Executor one-time purchases).
+Clerk remains the identity provider. Login credentials, Clerk user IDs, Convex profiles, household memberships, documents, and estate data do not move. Only the billing lifecycle changes.
 
-## Architecture
+Clerk Billing uses Stripe for payment processing, but its plans and subscriptions are **not** Stripe Billing subscriptions. Do not infer a billing identity from an email or assume existing payment methods can be reused. [Clerk billing overview](https://clerk.com/docs/guides/billing/overview).
 
-### Previous Flow (Clerk Billing)
-```
-User -> Clerk PricingTable (iframe) -> Clerk wraps Stripe checkout
-  -> Clerk webhook -> syncSubscriptionTier mutation
-  -> household.subscriptionTier updated -> feature gating via Convex
-```
+## Existing accounts
 
-### New Flow (Stripe Direct)
-```
-User -> Custom Pricing UI -> Stripe Checkout Session (via API route)
-  -> Stripe webhook -> syncSubscriptionFromStripe mutation
-  -> household.subscriptionTier updated -> feature gating via Convex (unchanged)
-```
+New households start unpaid and without a verified provider. On first protected planning access or checkout, households without a billing provider are verified against the primary contact's current Clerk subscription using the backend API:
 
-### Executor Flow (new)
-```
-User -> Executor Purchase UI -> Stripe Checkout Session (mode: 'payment')
-  -> Stripe webhook -> sets household.executorPurchased = true
-```
+- A recognized paid plan becomes Clerk-managed and retains its verified tier and current coverage. A canceled item with an unexpired paid period retains access.
+- A household with no paid Clerk items becomes Stripe-managed but inactive. Old synthetic `active` rows do not grant unpaid access.
+- Both Clerk and Stripe webhook handlers verify signatures with their SDKs and read current billing state. Failed verification denies access and does not create another subscription.
+- Existing Clerk-managed users use Clerk's user profile billing management. Stripe subscription checkout is blocked for them.
+- Stripe and Clerk events cannot overwrite a subscription owned by the other provider.
 
-## Environment Variables
+Set `CLERK_SECRET_KEY` on Convex before enabling this reconciliation. Inventory existing subscriptions and verify the tier slugs before rollout; do not disable Clerk webhooks during the transition.
 
-### Convex Dashboard (Settings -> Environment Variables)
+## Recommended paid-account cutover: next renewal
 
-| Variable | Description |
-|---|---|
-| `STRIPE_SECRET_KEY` | Stripe secret key (starts with `sk_test_` or `sk_live_`) |
-| `STRIPE_WEBHOOK_SECRET` | Webhook signing secret (starts with `whsec_`) |
-| `STRIPE_PRICE_FOUNDATIONS` | Stripe Price ID for Foundations tier |
-| `STRIPE_PRICE_HERITAGE` | Stripe Price ID for Heritage tier |
-| `STRIPE_PRICE_LEGACY` | Stripe Price ID for Legacy tier |
-| `STRIPE_PRICE_FOUNDERS` | Stripe Price ID for Founders tier |
-| `STRIPE_PRICE_EXECUTOR` | Stripe Price ID for Executor one-time purchase |
+1. Inventory each household's primary contact, Clerk subscription items, tier, paid-through date, outstanding payments, and any already-linked Stripe customer. Resolve duplicates manually.
+2. Ask the customer to approve the new Stripe price and billing terms. Tell them whether a new payment method entry is required.
+3. Schedule the Clerk subscription to stop renewing at its paid-through date, through Clerk's supported billing management. This code does not cancel live subscriptions.
+4. Keep Clerk responsible for entitlement until its paid coverage ends. Do not let a scheduled cancellation start Stripe billing early.
+5. After Clerk's lifecycle has ended, an authorized operator runs the internal cutover action, using a real administrator's Clerk user ID:
 
-### Next.js (.env.local / Vercel)
+   ```bash
+   pnpm exec convex run stripeActions:finishClerkCutover '{"householdId":"HOUSEHOLD_ID","approvedBy":"ADMIN_CLERK_USER_ID"}'
+   ```
 
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (starts with `pk_test_` or `pk_live_`) |
-| `NEXT_PUBLIC_STRIPE_PRICE_FOUNDATIONS` | Price ID for client-side checkout redirect |
-| `NEXT_PUBLIC_STRIPE_PRICE_HERITAGE` | Price ID for client-side checkout redirect |
-| `NEXT_PUBLIC_STRIPE_PRICE_LEGACY` | Price ID for client-side checkout redirect |
+   Select the intended deployment explicitly using the CLI's deployment options. This action re-reads Clerk, refuses active/upcoming/past-due or unexpired paid coverage, checks the administrator, and marks the household Stripe-managed and inactive. It never charges or cancels.
+6. The customer signs in, completes Stripe Checkout, and receives access only after a verified webhook reconciles the current subscription. Monitor delivery errors and retry failed events.
+7. Confirm the new subscription and the end of the old renewal. Retain Clerk billing verification until all legacy households have been reconciled and new-account classification no longer depends on that API. Do not disable it just because known paid accounts have migrated.
 
-> **Note:** The `NEXT_PUBLIC_` price IDs are used by the `PricingPlans` component to redirect users to the correct Stripe Checkout session. The Convex-side price IDs are used by the webhook handler to resolve tiers from incoming events.
+This safe manual cutover may leave a brief access gap between coverage ending and new checkout. A seamless automated cutover, credits, price guarantees, and an immediate migration need a separately approved business policy. Do not silently run either billing lifecycle twice.
 
-## Stripe Dashboard Setup
+Retain backups and an inventory. Never delete profiles or households to migrate billing. For old Better Auth profiles, the separate legacy profile-link operation requires a verified matching JWT email; configure `email` and `email_verified` claims in the Clerk Convex JWT template. It is not needed for accounts already using Clerk.
 
-### 1. Create Products & Prices
+## Configuration
 
-Create the following in Stripe Dashboard -> Products:
+### Convex deployment
 
-| Product | Type | Price | Interval |
-|---|---|---|---|
-| Planning - Foundations | Recurring | $9.99 | Monthly |
-| Planning - Heritage | Recurring | $19.99 | Monthly |
-| Planning - Legacy | Recurring | $39.99 | Monthly |
-| Planning - Founders | Recurring | (invite only) | Monthly |
-| Executor | One-time | TBD | N/A |
+| Variable | Required purpose |
+| --- | --- |
+| `APP_URL` | Exact application origin allowed for checkout/portal return URLs |
+| `STRIPE_SECRET_KEY` | Stripe API calls in authenticated Node actions and webhook reconciliation |
+| `STRIPE_WEBHOOK_SECRET` | Signature verification |
+| `STRIPE_PRICE_FOUNDATIONS`, `STRIPE_PRICE_HERITAGE`, `STRIPE_PRICE_LEGACY` | Approved recurring prices |
+| `STRIPE_PRICE_EXECUTOR` | Approved one-time Executor price |
+| `STRIPE_PRICE_FOUNDERS` | Optional internal/invitation plan; public checkout rejects it |
+| `CLERK_SECRET_KEY` | Authoritative legacy billing verification |
+| `CLERK_JWT_ISSUER_DOMAIN` | Clerk authentication issuer |
+| `STRIPE_AUTOMATIC_TAX` | Set `true` only after Stripe Tax is configured; defaults off |
 
-Record each Price ID (starts with `price_`) and set the environment variables above.
+The current Stripe SDK is 23.0.0 and its default API version is `2026-09-30.endive`. Configure the webhook endpoint consistently and test before changing API versions. Invoice subscription identity is read from `parent.subscription_details.subscription`.
 
-### 2. Configure Webhook
+### Next.js / Vercel
 
-In Stripe Dashboard -> Developers -> Webhooks:
+Set `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and the three `NEXT_PUBLIC_STRIPE_PRICE_*` recurring price IDs matching Convex. These routes delegate to authenticated Convex actions, so **Next.js no longer requires a Stripe secret key**. No Stripe.js publishable key is needed for hosted checkout redirects.
 
-- **Endpoint URL:** `https://[your-convex-deployment].convex.site/stripe-webhook`
-- **Events to listen for:**
-  - `checkout.session.completed`
-  - `customer.subscription.updated`
-  - `customer.subscription.deleted`
-  - `invoice.paid`
-  - `invoice.payment_failed`
-  - `charge.refunded`
+Checkout collects and saves customer address/name for tax. Configure Stripe Customer Portal with the approved prices and subscription-update-confirmation flow. There are no automatic seven-day trials; issue controlled promotions if the business wants trials.
 
-Copy the webhook signing secret and set `STRIPE_WEBHOOK_SECRET` in Convex.
+### Webhook endpoint
 
-### 3. Configure Customer Portal
+POST `https://DEPLOYMENT.convex.site/stripe-webhook`:
 
-In Stripe Dashboard -> Settings -> Billing -> Customer Portal:
+- `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
+- `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+- `invoice.paid`, `invoice.payment_failed`
+- `charge.refunded`
 
-- Enable: Update payment method, View invoice history, Cancel subscription
-- Optionally enable: Switch plans (if you want portal-based plan changes)
-- Set business information and branding
+Failed asynchronous payments never fulfill access. Each delivery is verified with Stripe's SDK and current API state is fetched before fulfillment. Database receipts and entitlement changes commit together. Missing customer mappings return 500 for Stripe retry. Subscription updates match the tracked subscription; Executor refunds match the exact payment intent and charge. Full refunds revoke Executor; partial refunds do not. A refund received before fulfillment is recorded so replay cannot restore access.
 
-### 4. Enable Stripe Tax (Optional)
+Customer IDs are created idempotently, linked to a household before checkout, and checked against Stripe customer metadata before management. Legacy customer mappings lacking verified household metadata need operator reconciliation; email lookup is not a fallback.
 
-In Stripe Dashboard -> Settings -> Tax:
+## Verification and deployment gate
 
-- Enable automatic tax collection
-- Configure tax registrations for applicable jurisdictions
+Deploy the updated Convex functions to the intended development/test deployment before running the new frontend against it. `Could not find public function for 'stripeActions:reconcileLegacy'` means the frontend and backend are out of sync; it is not evidence of an onboarding or membership problem. Confirm `NEXT_PUBLIC_CONVEX_URL` points to that same deployment. For an explicitly selected development deployment, run `pnpm exec convex dev --once`; production deployment requires operator approval and the release checks below. Generating types alone does not deploy backend functions.
 
-## Files Changed
-
-### New Files
-
-| File | Purpose |
-|---|---|
-| `src/convex/shared/stripeConfig.ts` | Price ID <-> tier mapping, event constants |
-| `src/convex/stripe.ts` | Stripe sync mutations (internal) |
-| `src/app/api/stripe/create-checkout/route.ts` | Creates Stripe Checkout sessions |
-| `src/app/api/stripe/create-portal/route.ts` | Creates Stripe Customer Portal sessions |
-| `src/components/pricing-plans.tsx` | Custom pricing cards with Stripe redirect |
-
-### Modified Files
-
-| File | Change |
-|---|---|
-| `src/convex/schema.ts` | Added `stripeCustomerId`, `stripeSubscriptionId`, `by_stripeCustomerId` index |
-| `src/convex/http.ts` | Added `/stripe-webhook` route |
-| `src/convex/shared/subscriptionTiers.ts` | Added `priceMonthly`, `priceLabel` to `TIER_DISPLAY` |
-| `src/app/(unauth)/pricing/page.tsx` | Replaced Clerk `PricingTable` with `PricingPlans` |
-| `src/app/(unauth)/select-plan/page.tsx` | Replaced Clerk `PricingTable` with `PricingPlans` + Portal button |
-| `src/app/(unauth)/onboarding/page.tsx` | Uses `useEffectiveSubscription()` instead of Clerk `has()` |
-| `src/app/(auth)/layout.tsx` | Uses `getHasActiveSubscription()` instead of Clerk `has()` |
-| `src/app/(auth)/(dashboard)/profile-settings/components/subscription-card.tsx` | Removed `@clerk/nextjs/experimental`, uses Convex + Stripe Portal |
-| `src/hooks/use-subscription.ts` | Rewritten to use Convex via `useEffectiveSubscription()` |
-| `src/components/subscription-debug.tsx` | Uses Convex tier checks instead of Clerk `has()` |
-| `src/proxy.ts` | Simplified to auth-only, removed subscription check |
-| `src/lib/auth-session.ts` | Replaced `getHasTierOverride()` with `getHasActiveSubscription()` |
-| `src/lib/feature-access.ts` | Removed `checkHasActivePlan`, `getCurrentPlanTier`, `checkFeatureAccess`, `checkAnyFeatureAccess` |
-| `src/lib/__tests__/feature-access.test.ts` | Rewritten to test tier-based access |
-
-### Clerk Artifacts (kept for transition, remove in Phase 5)
-
-| File | Status |
-|---|---|
-| `/clerk-webhook` route in `src/convex/http.ts` | Keep running during transition |
-| `syncSubscriptionTier` in `src/convex/auth.ts` | Keep for existing Clerk subscribers |
-| `src/app/api/webhooks/clerk/route.ts` | Keep (legacy webhook forwarder) |
-| `src/app/api/debug/clerk-billing/route.ts` | Keep for debugging |
-
-## How It Works
-
-### Checkout Flow
-
-1. User clicks plan on `/pricing` or `/select-plan`
-2. `PricingPlans` component calls `POST /api/stripe/create-checkout` with `priceId` and `mode`
-3. API route authenticates via Clerk, gets household from Convex
-4. Creates/finds Stripe Customer by email
-5. Creates Checkout Session with `metadata: { householdId, clerkUserId, priceId }`
-6. User redirected to Stripe-hosted checkout page
-7. On success, Stripe fires `checkout.session.completed` webhook
-8. Webhook handler calls `handleCheckoutCompleted` mutation
-9. Mutation links Stripe customer, sets tier/status on household
-
-### Subscription Management
-
-1. User clicks "Manage Subscription" on profile settings
-2. Calls `POST /api/stripe/create-portal`
-3. Creates Stripe Customer Portal session
-4. User redirected to Stripe-hosted portal
-5. Changes trigger `customer.subscription.updated/deleted` webhooks
-6. Webhook handler updates Convex household accordingly
-
-### Subscription Gating (unchanged)
-
-All feature gating reads from Convex `household.subscriptionTier` and `household.subscriptionStatus`:
-
-- **Server-side (Convex):** `requireSubscriptionTier()`, `requireFeatureAccess()` in `auth.ts`
-- **Client-side (React):** `useEffectiveSubscription()`, `useEffectiveFeatureAccess()` in `feature-access-hooks.ts`
-- **Server-side (Next.js):** `getHasActiveSubscription()` in `auth-session.ts`
-
-## Existing User Migration
-
-No forced migration needed:
-
-1. Every existing subscriber already has `subscriptionTier`/`subscriptionStatus` set in Convex
-2. Feature gating reads these fields regardless of payment source
-3. Clerk Billing uses Stripe under the hood - subscriptions already exist in Stripe
-4. Keep Clerk webhook running during transition
-5. New users go through Stripe directly
-6. Existing users who change plans get routed through Stripe Customer Portal
-
-### Optional: Batch Link Script
-
-To cleanly cut over, batch-link existing Stripe Customer IDs:
-
-1. Use Clerk API to get all users with billing
-2. Use Stripe API to find matching customers by email
-3. Run Convex mutation to set `stripeCustomerId` on each household
-4. After linking, Stripe webhooks fire directly for these subscriptions
-
-## Webhook Event Handling
-
-| Event | Action |
-|---|---|
-| `checkout.session.completed` | Link Stripe customer, set tier/status or mark executor purchased |
-| `customer.subscription.updated` | Map Price ID to tier, update household tier/status |
-| `customer.subscription.deleted` | Set status to `cancelled` |
-| `invoice.paid` | Set status back to `active` |
-| `invoice.payment_failed` | Set status to `past_due` |
-| `charge.refunded` | Revoke executor access (one-time) or let subscription events handle |
-
-## Testing
-
-### Local Development with Stripe CLI
+Use Node 24.13+ and pnpm. Generated Convex API files are checked in so PR lint/unit tests do not need production credentials.
 
 ```bash
-# Install Stripe CLI
-brew install stripe/stripe-cli/stripe
-
-# Login to Stripe
-stripe login
-
-# Forward webhooks to local Convex
-stripe listen --forward-to https://[your-convex-deployment].convex.site/stripe-webhook
-
-# Trigger test events
-stripe trigger checkout.session.completed
-stripe trigger customer.subscription.updated
-stripe trigger invoice.payment_failed
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm test:run
+pnpm audit --prod
+pnpm audit
+pnpm build:ci
+pnpm test:e2e
 ```
 
-### Test Cards
+For full E2E testing, use a dedicated Clerk development instance, Stripe test mode, and an isolated Convex deployment with the updated functions. Set `TESTING_ENABLED=true` and `TESTING_USER_IDS` to an explicit comma-separated allowlist of test user IDs on that Convex deployment. Its Clerk issuer must be a `*.clerk.accounts.dev` HTTPS origin. Helpers fail closed otherwise; email patterns alone cannot grant privileges.
 
-| Card Number | Scenario |
-|---|---|
-| `4242 4242 4242 4242` | Successful payment |
-| `4000 0000 0000 3220` | 3D Secure authentication required |
-| `4000 0000 0000 0341` | Card declined |
-| `4000 0000 0000 9995` | Insufficient funds |
+The current Clerk testing package's browser helpers still use removed Cypress.env APIs. The local adapter uses Cypress 16's `cy.env` for tokens and `Cypress.expose` only for non-secret test configuration. Its upstream Cypress peer range still stops at 15; authenticated flows require explicit verification before release.
 
-### E2E Tests
+Public smoke tests do not need a test account or backend writes:
 
-`cy.setSubscriptionTier()` still works (directly sets Convex data, bypasses both Clerk and Stripe).
+```bash
+CYPRESS_BILLING_SMOKE_ONLY=true pnpm exec cypress run --spec cypress/e2e/billing-public.cy.ts --config baseUrl=http://localhost:3100
+```
 
-### Manual Testing Checklist
-
-- [ ] New user: signup -> onboard -> select plan -> Stripe checkout -> dashboard access
-- [ ] Plan change: settings -> manage subscription -> Stripe Portal -> tier updated
-- [ ] Cancel: Stripe Portal -> cancel -> access revoked
-- [ ] Failed payment: simulate in Stripe test mode -> past_due status
-- [ ] Executor purchase: one-time checkout -> executorPurchased = true
-- [ ] Existing Clerk user: continues working with no changes
-- [ ] Tier override: admin sets override -> user gets elevated access regardless of Stripe
-
-## Phase 5: Cleanup (When Ready)
-
-Only after confirming no active Clerk-managed subscriptions remain:
-
-1. Remove `/clerk-webhook` route from `src/convex/http.ts`
-2. Remove `syncSubscriptionTier` from `src/convex/auth.ts`
-3. Delete `src/app/api/webhooks/clerk/route.ts`
-4. Delete `src/app/api/debug/clerk-billing/route.ts`
-5. Remove `CLERK_WEBHOOK_SECRET` from Convex env vars
-6. Disable Clerk Billing in Clerk Dashboard (keep auth config unchanged)
-7. Optionally remove `@clerk/nextjs/experimental` if no other experimental features are used
+Run settled/unsettled checkout, cancel/resubscribe, plan change, webhook duplicates/reordering, refund-before-fulfillment, unrelated/partial refunds, owner/viewer billing access, and Clerk cutover in test mode. A production build or unit-test pass is not a substitute for this gate. No production deployment or live account migration has been performed.

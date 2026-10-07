@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireAuth } from "./auth";
 
 /**
@@ -220,12 +220,11 @@ export const removeRole = mutation({
  * This can only be called when there are no existing admins
  * Used for initial system setup
  */
-export const initializeFirstAdmin = mutation({
-  args: {},
+export const initializeFirstAdmin = internalMutation({
+  args: { clerkUserId: v.string() },
   returns: v.id("userRoles"),
-  handler: async (ctx) => {
-    const { user } = await requireAuth(ctx);
-    const userId = user._id; // Clerk user ID
+  handler: async (ctx, args) => {
+    const userId = args.clerkUserId;
 
     // Check if any admins exist
     const allRoles = await ctx.db.query("userRoles").collect();

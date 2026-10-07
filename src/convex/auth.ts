@@ -26,7 +26,7 @@ import { checkDocumentAccess } from "./vaultHelpers";
  */
 
 // Re-export types and constants for backwards compatibility
-export { FEATURE_TIERS, PLAN_LIMITS, TIER_LEVELS, type FeatureSlug, type SubscriptionTier };
+export { FEATURE_TIERS, type FeatureSlug, PLAN_LIMITS, type SubscriptionTier, TIER_LEVELS };
 
 /**
  * Type for authenticated context with user and profile
@@ -359,7 +359,15 @@ export async function requireActiveSubscription(
     return household;
   }
 
-  if (household.subscriptionStatus !== "active") {
+  if (
+    ((!household.billingProvider && !household.stripeSubscriptionId) ||
+      household.subscriptionStatus !== "active") &&
+    !(
+      household.tierOverride &&
+      (household.tierOverrideExpiresAt === undefined ||
+        household.tierOverrideExpiresAt > Date.now())
+    )
+  ) {
     throw new Error(
       `Subscription is ${household.subscriptionStatus}. Please update your subscription to continue.`,
     );
@@ -392,7 +400,7 @@ export async function requireSubscriptionTier(
   const household = await requireActiveSubscription(ctx, householdId);
 
   // Use tierOverride if set, otherwise fall back to subscriptionTier
-  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const effectiveTier = getEffectiveTier(household);
 
   if (!tierHasAccess(effectiveTier, requiredTier)) {
     throw new Error(
@@ -462,7 +470,7 @@ export async function checkStorageQuota(
   const household = await requireActiveSubscription(ctx, householdId);
 
   // Use tierOverride if set, otherwise fall back to subscriptionTier
-  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const effectiveTier = getEffectiveTier(household);
   const limits = PLAN_LIMITS[effectiveTier];
 
   // Use pre-computed counter (defaults to 0 for backwards compatibility)
@@ -507,7 +515,7 @@ export async function checkFamilyMemberLimit(
 ): Promise<{ currentCount: number; maxCount: number; canAddMore: boolean }> {
   const household = await requireActiveSubscription(ctx, householdId);
   // Use tierOverride if set, otherwise fall back to subscriptionTier
-  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const effectiveTier = getEffectiveTier(household);
   const limits = PLAN_LIMITS[effectiveTier];
 
   const nonOwnerCount = await getMemberCountFromHousehold(ctx, household);
@@ -551,7 +559,7 @@ export async function checkFamilyUnitLimit(
   const household = await requireActiveSubscription(ctx, householdId);
 
   // Use tierOverride if set, otherwise fall back to subscriptionTier
-  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const effectiveTier = getEffectiveTier(household);
   const limits = PLAN_LIMITS[effectiveTier];
 
   const currentCount = await getFamilyUnitCount(ctx, household);
@@ -660,6 +668,8 @@ export const getEffectiveSubscription = query({
       overrideReason: v.optional(v.string()),
       overrideExpiresAt: v.optional(v.number()),
       householdId: v.id("households"),
+      executorPurchased: v.boolean(),
+      billingProvider: v.optional(v.union(v.literal("clerk"), v.literal("stripe"))),
     }),
     v.null(),
   ),
@@ -701,13 +711,19 @@ export const getEffectiveSubscription = query({
     const hasOverride =
       household.tierOverride !== undefined &&
       household.tierOverride !== null &&
-      effectiveTier === household.tierOverride;
+      (household.tierOverrideExpiresAt === undefined ||
+        household.tierOverrideExpiresAt > Date.now());
 
     return {
       effectiveTier,
       subscriptionTier: household.subscriptionTier,
-      subscriptionStatus: household.subscriptionStatus,
+      subscriptionStatus:
+        household.billingProvider || household.stripeSubscriptionId
+          ? household.subscriptionStatus
+          : ("inactive" as const),
       hasOverride,
+      executorPurchased: household.executorPurchased === true,
+      billingProvider: household.billingProvider,
       overrideReason: household.tierOverrideReason ?? undefined,
       overrideExpiresAt: household.tierOverrideExpiresAt ?? undefined,
       householdId: household._id,
@@ -1054,6 +1070,17 @@ export const syncSubscriptionTier = internalMutation({
       };
     }
 
+    if (household.billingProvider === "stripe" || household.stripeSubscriptionId) {
+      return {
+        success: true,
+        message: "Stripe owns this subscription",
+        householdId: household._id,
+      };
+    }
+
+    if (args.status === "active" && !args.tier)
+      throw new Error("Active Clerk billing requires a verified paid tier");
+
     // Build the patch object with only the fields that are provided
     const patch: {
       subscriptionTier?: "foundations" | "heritage" | "legacy" | "founders";
@@ -1073,7 +1100,10 @@ export const syncSubscriptionTier = internalMutation({
     const previousStatus = household.subscriptionStatus;
 
     // Update the subscription tier and/or status
-    await ctx.db.patch(household._id, patch);
+    await ctx.db.patch(household._id, {
+      ...patch,
+      billingProvider: args.tier || household.billingProvider === "clerk" ? "clerk" : "stripe",
+    });
 
     // Analytics: Track subscription changes
     if (args.tier && args.tier !== previousTier) {

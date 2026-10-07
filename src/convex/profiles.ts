@@ -419,6 +419,13 @@ export const linkToClerkUser = mutation({
       throw new Error("Not authenticated");
     }
 
+    if (
+      identity.emailVerified !== true ||
+      !identity.email ||
+      identity.email.toLowerCase() !== args.email.toLowerCase()
+    ) {
+      throw new Error("A verified matching account email is required for migration");
+    }
     const clerkUserId = identity.subject;
 
     // First, check if a profile already exists for this Clerk user ID

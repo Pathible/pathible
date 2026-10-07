@@ -15,7 +15,7 @@
 
 // Import Clerk testing commands for E2E auth testing
 // This adds cy.clerkSignIn() and cy.clerkSignOut() commands
-import { addClerkCommands } from "@clerk/testing/cypress";
+import { addClerkCommands } from "./clerk";
 
 // Register Clerk commands with Cypress
 addClerkCommands({ Cypress, cy });
@@ -90,6 +90,8 @@ Cypress.config("responseTimeout", 10000);
 
 // Log environment info (console.log is safe outside tests)
 console.log("Cypress Test Environment:");
-console.log(`TEST_OTP: ${Cypress.env("TEST_OTP") || "123456"}`);
-console.log(`NEW_USER_EMAIL: ${Cypress.env("NEW_USER_EMAIL") || "newuser@test.com"}`);
-console.log(`RETURNING_USER_EMAIL: ${Cypress.env("RETURNING_USER_EMAIL") || "returning@test.com"}`);
+console.log(`TEST_OTP: ${Cypress.expose("TEST_OTP") || "123456"}`);
+console.log(`NEW_USER_EMAIL: ${Cypress.expose("NEW_USER_EMAIL") || "newuser@test.com"}`);
+console.log(
+  `RETURNING_USER_EMAIL: ${Cypress.expose("RETURNING_USER_EMAIL") || "returning@test.com"}`,
+);

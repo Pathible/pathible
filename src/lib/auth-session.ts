@@ -104,7 +104,11 @@ export async function getHasActiveSubscription(): Promise<boolean> {
     const convexClient = new ConvexHttpClient(convexUrl);
     convexClient.setAuth(token);
 
-    const subscription = await convexClient.query(api.auth.getEffectiveSubscription);
+    let subscription = await convexClient.query(api.auth.getEffectiveSubscription);
+    if (subscription && !subscription.billingProvider) {
+      await convexClient.action(api.stripeActions.reconcileLegacy, {});
+      subscription = await convexClient.query(api.auth.getEffectiveSubscription);
+    }
 
     if (!subscription) {
       return false;
@@ -226,5 +230,21 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus | null> {
     // Log error but fail open - don't block users on transient errors
     console.error("[Auth] Failed to get onboarding status:", error);
     return null;
+  }
+}
+
+export async function getHasExecutorPurchase(): Promise<boolean> {
+  try {
+    const { userId, getToken } = await auth();
+    const url = process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!userId || !url) return false;
+    const token = await getToken({ template: "convex" });
+    if (!token) return false;
+    const client = new ConvexHttpClient(url);
+    client.setAuth(token);
+    const subscription = await client.query(api.auth.getEffectiveSubscription);
+    return subscription?.executorPurchased === true;
+  } catch {
+    return false;
   }
 }

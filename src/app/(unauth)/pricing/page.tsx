@@ -58,7 +58,7 @@ function PricingContent() {
             Choose Your Legacy Plan
           </h1>
           <p className="text-xl text-muted-foreground leading-relaxed">
-            Start preserving your family's story today. All plans include a 7-day free trial.
+            Start preserving your family's story today. Secure checkout follows household setup.
           </p>
         </div>
 

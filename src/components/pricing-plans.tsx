@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -15,6 +15,7 @@ import {
   TIER_DISPLAY,
   UNLIMITED,
 } from "@/convex/shared/subscriptionTiers";
+import { useEffectiveSubscription } from "@/lib/feature-access-hooks";
 
 interface PricingPlansProps {
   currentTier?: SubscriptionTier | null;
@@ -73,6 +74,8 @@ const PRICE_IDS: Partial<Record<SubscriptionTier, string>> = {
 
 export function PricingPlans({ currentTier, mode = "new" }: PricingPlansProps) {
   const { isSignedIn } = useAuth();
+  const clerk = useClerk();
+  const { householdId, subscription, isLoading } = useEffectiveSubscription();
   const router = useRouter();
   const [loadingTier, setLoadingTier] = useState<SubscriptionTier | null>(null);
 
@@ -81,10 +84,19 @@ export function PricingPlans({ currentTier, mode = "new" }: PricingPlansProps) {
 
   const handleSelectPlan = async (tier: SubscriptionTier) => {
     if (!isSignedIn) {
-      router.push(`/sign-up?redirect_url=/select-plan`);
+      router.push(`/sign-up?plan=${tier}`);
       return;
     }
 
+    if (isLoading) return;
+    if (!householdId) {
+      router.push(`/onboarding?plan=${tier}`);
+      return;
+    }
+    if (subscription?.billingProvider === "clerk") {
+      clerk.openUserProfile();
+      return;
+    }
     const priceId = PRICE_IDS[tier];
     if (!priceId) {
       toast.error("This plan is not available for purchase.");

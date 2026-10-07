@@ -158,7 +158,13 @@ function OnboardingContent() {
           setTimeout(() => router.push("/dashboard"), 500);
         } else {
           toast.success("Onboarding complete! Now let's select your plan.");
-          setTimeout(() => router.push("/select-plan"), 500);
+          setTimeout(
+            () =>
+              router.push(
+                `/select-plan${searchParams.get("plan") ? `?plan=${encodeURIComponent(searchParams.get("plan") ?? "")}` : ""}`,
+              ),
+            500,
+          );
         }
       }
     } catch (error) {

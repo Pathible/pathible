@@ -9,12 +9,9 @@ import {
   requireHouseholdAccess,
   requireHouseholdAdmin,
 } from "./auth";
+import schema from "./schema";
 import { logActivity } from "./shared/activity";
-import {
-  householdRoleValidator,
-  subscriptionStatusValidator,
-  subscriptionTierValidator,
-} from "./shared/commonValidators";
+import { householdRoleValidator } from "./shared/commonValidators";
 import { incrementMemberCount } from "./shared/counters";
 import {
   EMAIL_REGEX,
@@ -48,31 +45,11 @@ export const get = query({
   },
   returns: v.union(
     v.object({
+      ...schema.tables.households.validator.fields,
       _id: v.id("households"),
       _creationTime: v.number(),
-      name: v.string(),
-      description: v.optional(v.string()),
-      imageUrl: v.optional(v.string()),
-      primaryContactId: v.id("profiles"),
-      subscriptionTier: subscriptionTierValidator,
-      subscriptionStatus: subscriptionStatusValidator,
-      // Tier override fields (for promotional pricing)
-      tierOverride: v.optional(subscriptionTierValidator),
-      tierOverrideReason: v.optional(v.string()),
-      tierOverrideExpiresAt: v.optional(v.number()),
-      updatedAt: v.number(),
-      // Include the user's role in this household
       userRole: householdRoleValidator,
       memberCount: v.number(),
-      familyUnitCount: v.optional(v.number()),
-      storageUsedBytes: v.optional(v.number()),
-      vaultDocumentCount: v.optional(v.number()),
-      estateMode: v.optional(v.boolean()),
-      estateActivationId: v.optional(v.id("estateActivations")),
-      estateGraceUntil: v.optional(v.number()),
-      executorPurchased: v.optional(v.boolean()),
-      executorPurchasedAt: v.optional(v.number()),
-      executorPurchasedBy: v.optional(v.id("profiles")),
     }),
     v.null(),
   ),
@@ -115,31 +92,11 @@ export const list = query({
   returns: v.union(
     v.array(
       v.object({
+        ...schema.tables.households.validator.fields,
         _id: v.id("households"),
         _creationTime: v.number(),
-        name: v.string(),
-        description: v.optional(v.string()),
-        imageUrl: v.optional(v.string()),
-        primaryContactId: v.id("profiles"),
-        subscriptionTier: subscriptionTierValidator,
-        subscriptionStatus: subscriptionStatusValidator,
-        // Tier override fields for promotional pricing
-        tierOverride: v.optional(subscriptionTierValidator),
-        tierOverrideReason: v.optional(v.string()),
-        tierOverrideExpiresAt: v.optional(v.number()),
-        updatedAt: v.number(),
-        // Include the user's role in this household
         userRole: householdRoleValidator,
         memberCount: v.number(),
-        familyUnitCount: v.optional(v.number()),
-        storageUsedBytes: v.optional(v.number()),
-        vaultDocumentCount: v.optional(v.number()),
-        estateMode: v.optional(v.boolean()),
-        estateActivationId: v.optional(v.id("estateActivations")),
-        estateGraceUntil: v.optional(v.number()),
-        executorPurchased: v.optional(v.boolean()),
-        executorPurchasedAt: v.optional(v.number()),
-        executorPurchasedBy: v.optional(v.id("profiles")),
       }),
     ),
     v.null(),
@@ -362,8 +319,8 @@ export const create = mutation({
       STRING_LIMITS.description,
     );
 
-    // Use the tier from Clerk Billing if provided, otherwise default to foundations
-    const tier = args.subscriptionTier || "foundations";
+    // Client-selected tiers never grant paid access. Verified billing sets the tier.
+    const tier = "foundations";
 
     // Create the household
     const householdId = await ctx.db.insert("households", {
@@ -371,7 +328,7 @@ export const create = mutation({
       description,
       primaryContactId: profile._id,
       subscriptionTier: tier,
-      subscriptionStatus: "active",
+      subscriptionStatus: "inactive",
       storageUsedBytes: 0,
       memberCount: 0,
       familyUnitCount: 0,

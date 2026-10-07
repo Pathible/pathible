@@ -1,4 +1,4 @@
-import { Facebook, Heart, Instagram, Lock, Shield } from "lucide-react";
+import { Heart, Lock, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -176,7 +176,7 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
                     aria-label="Follow Pathible on Instagram"
                     className="text-muted-foreground hover:text-pathible-forest transition-colors"
                   >
-                    <Instagram className="w-5 h-5" />
+                    <span className="text-sm">Instagram</span>
                   </a>
                   <a
                     href="https://www.facebook.com/people/Pathible/61577949614554/"
@@ -185,7 +185,7 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
                     aria-label="Follow Pathible on Facebook"
                     className="text-muted-foreground hover:text-pathible-forest transition-colors"
                   >
-                    <Facebook className="w-5 h-5" />
+                    <span className="text-sm">Facebook</span>
                   </a>
                 </div>
               </div>

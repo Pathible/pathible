@@ -2,7 +2,14 @@ import { SignUp } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
+  const { plan } = await searchParams;
+  const selectedPlan =
+    plan && ["foundations", "heritage", "legacy"].includes(plan) ? plan : undefined;
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-md">
@@ -32,6 +39,7 @@ export default function SignUpPage() {
                 card: "shadow-lg",
               },
             }}
+            forceRedirectUrl={selectedPlan ? `/onboarding?plan=${selectedPlan}` : undefined}
             fallbackRedirectUrl="/onboarding"
             signInUrl="/sign-in"
           />

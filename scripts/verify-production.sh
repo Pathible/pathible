@@ -61,6 +61,29 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
+# Billing environment validation never prints secret values.
+echo ""
+echo "Checking billing environment (target: ${VERIFY_BILLING_TARGET:-next})..."
+if ! node --input-type=module -e '
+import fs from "node:fs";
+import dotenv from "dotenv";
+const local = fs.existsSync(".env.local") ? dotenv.parse(fs.readFileSync(".env.local")) : {};
+const env = { ...local, ...process.env };
+const convex = env.VERIFY_BILLING_TARGET === "convex";
+const required = convex
+  ? ["APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_FOUNDATIONS", "STRIPE_PRICE_HERITAGE", "STRIPE_PRICE_LEGACY", "STRIPE_PRICE_EXECUTOR", "CLERK_SECRET_KEY", "CLERK_JWT_ISSUER_DOMAIN"]
+  : ["NEXT_PUBLIC_CONVEX_URL", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "CLERK_SECRET_KEY", "NEXT_PUBLIC_STRIPE_PRICE_FOUNDATIONS", "NEXT_PUBLIC_STRIPE_PRICE_HERITAGE", "NEXT_PUBLIC_STRIPE_PRICE_LEGACY"];
+let failed = false;
+for (const name of required) {
+  if (!env[name]?.trim()) { console.error("Missing configuration: " + name); failed = true; }
+}
+if (env.TESTING_ENABLED === "true") { console.error("Production must not enable TESTING_ENABLED"); failed = true; }
+if (convex && env.APP_URL && !env.APP_URL.startsWith("https://")) { console.error("Production APP_URL must use HTTPS"); failed = true; }
+process.exit(failed ? 1 : 0);
+'; then
+  ERRORS=$((ERRORS + 1))
+fi
+
 # Summary
 echo ""
 echo "=== Summary ==="
