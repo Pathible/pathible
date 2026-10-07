@@ -50,7 +50,7 @@ Hi {{firstName}},
 
 Start with something simple—a family photo, an important document, or a cherished recipe. Every journey begins with a single step.
 
-[Upload Your First Document](https://pathible.com/dashboard/vault)
+[Upload Your First Document](https://www.pathible.com/vault)
 
 ---
 

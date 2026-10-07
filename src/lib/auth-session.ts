@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
+import { cache } from "react";
 import { api } from "@/convex/_generated/api";
 
 /**
@@ -66,40 +67,23 @@ export async function requireServerAuth() {
   return session;
 }
 
-/**
- * Check if the user's household has a tier override (bypasses Clerk billing)
- *
- * This is used in the auth layout to allow demo/partner accounts to access
- * the app without a Clerk subscription. The tierOverride on the household
- * already unlocks all backend feature gates — this extends that bypass
- * to the frontend routing check.
- *
- * Returns true if the user's household has:
- * - An active subscription status in Convex
- * - A non-expired tierOverride set
- *
- * Returns false (fail-closed) if:
- * - User is not authenticated
- * - No household found
- * - No tierOverride set
- * - Query fails
- */
-export async function getHasTierOverride(): Promise<boolean> {
+/** Check shared household billing access, including the backend's estate grace period. */
+export const getHouseholdSubscription = cache(async () => {
   try {
     const { getToken, userId } = await auth();
 
     if (!userId) {
-      return false;
+      return null;
     }
 
     const token = await getToken({ template: "convex" });
     if (!token) {
-      return false;
+      return null;
     }
 
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
     if (!convexUrl) {
-      return false;
+      return null;
     }
 
     const convexClient = new ConvexHttpClient(convexUrl);
@@ -107,11 +91,15 @@ export async function getHasTierOverride(): Promise<boolean> {
 
     const subscription = await convexClient.query(api.auth.getEffectiveSubscription);
 
-    return subscription?.hasOverride ?? false;
+    return subscription;
   } catch (error) {
-    console.error("[Auth] Failed to check tier override:", error);
-    return false;
+    console.error("[Auth] Failed to check household access:", error);
+    return null;
   }
+});
+
+export async function getHasHouseholdAccess(): Promise<boolean> {
+  return (await getHouseholdSubscription())?.hasAccess ?? false;
 }
 
 /**

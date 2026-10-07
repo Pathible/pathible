@@ -1,8 +1,9 @@
 "use client";
 
-import { PricingTable, useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect } from "react";
+import { AnnualFamilyPlan } from "@/components/annual-family-plan";
 import { FullPageLoader } from "@/components/full-page-loader";
 import { PublicPageLayout } from "@/components/PublicPageLayout";
 import { checkHasActivePlan } from "@/lib/feature-access";
@@ -10,7 +11,7 @@ import { checkHasActivePlan } from "@/lib/feature-access";
 /**
  * Public Pricing Page
  *
- * Displays Clerk's PricingTable for visitors to view subscription options.
+ * Displays one annual plan with live Clerk pricing.
  * Uses PublicPageLayout for consistent header/footer with home page.
  *
  * - Unauthenticated users: See plans, Clerk handles sign-up + checkout flow
@@ -62,17 +63,17 @@ function PricingContent() {
             Simple, transparent pricing
           </p>
           <h1 className="font-crimson text-4xl sm:text-5xl lg:text-6xl mb-6 leading-tight">
-            Choose Your Legacy Plan
+            One Annual Family Plan
           </h1>
           <p className="text-xl text-muted-foreground leading-relaxed">
-            Start preserving your family's story today. All plans include core features with varying
-            levels of storage, support, and advanced tools.
+            Put your documents, accounts, and wishes in one place. Give the people you trust a clear
+            place to start when they need it.
           </p>
         </div>
 
         {/* Clerk PricingTable - wider container for 3-column layout on desktop */}
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <PricingTable newSubscriptionRedirectUrl="/onboarding" />
+          <AnnualFamilyPlan />
         </div>
       </section>
     </PublicPageLayout>

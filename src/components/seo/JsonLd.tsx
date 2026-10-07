@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 interface JsonLdProps {
   data: Record<string, unknown> | Record<string, unknown>[];
 }
@@ -23,13 +21,12 @@ export function JsonLd({ data }: JsonLdProps) {
         const key = `json-ld-${schemaType}`;
 
         return (
-          <Script
+          <script
             key={key}
             id={key}
             type="application/ld+json"
             // biome-ignore lint/security/noDangerouslySetInnerHtml: Required for JSON-LD structured data injection
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(item) }}
-            strategy="beforeInteractive"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(item).replace(/</g, "\\u003c") }}
           />
         );
       })}

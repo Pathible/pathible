@@ -721,7 +721,7 @@ export const revokeDocumentShare = mutation({
 export const logShareAccess = mutation({
   args: {
     shareToken: v.string(),
-    action: v.union(v.literal("viewed"), v.literal("downloaded")),
+    action: v.literal("viewed"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -753,19 +753,7 @@ export const logShareAccess = mutation({
       action: args.action,
     });
 
-    // Update counters
-    const updates: Record<string, unknown> = { lastAccessedAt: now };
-
-    if (args.action === "downloaded") {
-      const newCount = share.downloadCount + 1;
-      updates.downloadCount = newCount;
-
-      if (newCount >= share.maxDownloads) {
-        updates.status = "exhausted";
-      }
-    }
-
-    await ctx.db.patch(share._id, updates);
+    await ctx.db.patch(share._id, { lastAccessedAt: now });
 
     return null;
   },
@@ -784,6 +772,7 @@ export const getShareDocumentB2Info = internalQuery({
   args: { token: v.string() },
   returns: v.union(
     v.object({
+      recipientEmail: v.string(),
       b2FileName: v.string(),
       documentName: v.string(),
       fileType: v.string(),
@@ -805,6 +794,7 @@ export const getShareDocumentB2Info = internalQuery({
     if (!vaultDoc) return null;
 
     return {
+      recipientEmail: share.recipientEmail,
       b2FileName: vaultDoc.b2FileName,
       documentName: vaultDoc.name,
       fileType: vaultDoc.fileType,
@@ -858,5 +848,64 @@ export const cleanupShareAccessLogs = internalMutation({
     }
 
     return { deletedCount };
+  },
+});
+
+/** Atomically authorize and count a download before releasing its signed URL. */
+export const consumeShareDownload = internalMutation({
+  args: { token: v.string(), verifiedEmails: v.array(v.string()) },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const share = await ctx.db
+      .query("documentShares")
+      .withIndex("by_token", (q) => q.eq("shareToken", args.token))
+      .unique();
+    if (
+      !share ||
+      share.status !== "active" ||
+      share.expiresAt <= Date.now() ||
+      share.downloadCount >= share.maxDownloads
+    )
+      return false;
+    if (
+      !args.verifiedEmails.some(
+        (email) => email.toLowerCase() === share.recipientEmail.toLowerCase(),
+      )
+    )
+      return false;
+    const count = share.downloadCount + 1;
+    await ctx.db.patch(share._id, {
+      downloadCount: count,
+      lastAccessedAt: Date.now(),
+      status: count >= share.maxDownloads ? "exhausted" : "active",
+    });
+    await ctx.db.insert("documentShareAccessLog", {
+      documentShareId: share._id,
+      accessedAt: Date.now(),
+      action: "downloaded",
+    });
+    return true;
+  },
+});
+
+/** Shared across frontend instances; only valid shares consume storage. */
+export const checkShareRateLimit = internalMutation({
+  args: { token: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const share = await ctx.db
+      .query("documentShares")
+      .withIndex("by_token", (q) => q.eq("shareToken", args.token))
+      .unique();
+    if (!share) return true;
+    const now = Date.now();
+    const windowStart = share.requestWindowStartedAt ?? 0;
+    const count = now - windowStart >= 60000 ? 0 : (share.requestCount ?? 0);
+    if (count >= 5) return false;
+    await ctx.db.patch(share._id, {
+      requestWindowStartedAt: count === 0 ? now : windowStart,
+      requestCount: count + 1,
+    });
+    return true;
   },
 });

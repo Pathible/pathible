@@ -1,7 +1,9 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, BookOpen, Clock, Loader2 } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
+
+import { useMutation } from "convex/react";
+import { ArrowLeft, Clock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import posthog from "posthog-js";
@@ -15,6 +17,7 @@ import {
   type ArticleCategory,
   LEGACY_CATEGORY_MAPPING,
 } from "@/convex/shared/categories";
+import type { PublicArticle } from "@/lib/public-articles";
 
 /**
  * Get display label for a category, handling both legacy and new category values
@@ -31,11 +34,12 @@ function getCategoryDisplayLabel(category: string): string {
 }
 
 interface ArticleContentProps {
-  slug: string;
+  article: PublicArticle;
 }
 
-export function ArticleContent({ slug }: ArticleContentProps) {
-  const article = useQuery(api.articles.getPublicBySlug, { slug });
+export function ArticleContent({ article }: ArticleContentProps) {
+  const { isSignedIn } = useUser();
+  const { slug } = article;
   const incrementPublicViewCount = useMutation(api.articles.incrementPublicViewCount);
   const hasTrackedView = useRef(false);
 
@@ -63,34 +67,6 @@ export function ArticleContent({ slug }: ArticleContentProps) {
       }
     }
   }, [article, slug, incrementPublicViewCount]);
-
-  if (article === undefined) {
-    return (
-      <div className="py-24 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (article === null) {
-    return (
-      <div className="py-24">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 text-center">
-          <BookOpen className="h-16 w-16 mx-auto text-muted-foreground/50 mb-6" />
-          <h1 className="font-crimson text-3xl mb-4">Article Not Found</h1>
-          <p className="text-muted-foreground mb-8">
-            The article you're looking for doesn't exist or has been moved.
-          </p>
-          <Button asChild>
-            <Link href="/learn">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Learn
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <article className="py-12 sm:py-16">
@@ -150,7 +126,7 @@ export function ArticleContent({ slug }: ArticleContentProps) {
 
         {/* Footer CTA */}
         <div className="mt-16 pt-8 border-t border-pathible-sage/20 text-center">
-          <p className="text-muted-foreground mb-4">Want more resources like this?</p>
+          <p className="text-muted-foreground mb-4">Put this guide into action for your family.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button asChild variant="outline" className="rounded-xl">
               <Link href="/learn">Explore More Articles</Link>
@@ -159,7 +135,7 @@ export function ArticleContent({ slug }: ArticleContentProps) {
               asChild
               className="bg-pathible-forest hover:bg-pathible-green-hover text-white rounded-xl"
             >
-              <Link href="/signup">Start Your Journey</Link>
+              <Link href={isSignedIn ? "/dashboard" : "/signup"}>Organize My Family</Link>
             </Button>
           </div>
         </div>

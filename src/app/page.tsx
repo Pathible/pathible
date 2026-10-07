@@ -25,16 +25,11 @@ export default function Index() {
         data={[organizationSchema, websiteSchema, softwareApplicationSchema, faqPageSchema]}
       />
 
-      {/* StoryBrand PEACE Narrative Flow */}
-      {/* P - Problem: The question that stops them */}
       <HeroSection />
-      {/* E - Empathy: Make them feel the chaos */}
-      <PainSection />
-      {/* A - Answer: The guide shows up */}
-      <GuideSection />
-      {/* C - Change: The plan + what you get */}
       <ThePlan />
       <ModulesPreview />
+      <GuideSection />
+      <PainSection />
       {/* Identity: Who this is for */}
       <ForWhoSection />
       {/* Stakes: What happens if you don't vs if you do */}

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = "https://pathible.com";
+  const baseUrl = "https://www.pathible.com";
 
   return {
     rules: [
@@ -21,6 +21,9 @@ export default function robots(): MetadataRoute.Robots {
           "/migrate/",
           // Admin routes
           "/admin/",
+          "/estate/",
+          "/share/",
+          "/unsubscribe",
           // API routes
           "/api/",
           // Onboarding and plan selection (post-signup)

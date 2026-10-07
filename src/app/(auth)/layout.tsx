@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { getHasTierOverride, getIsAdmin, getOnboardingStatus } from "@/lib/auth-session";
+import { getHasHouseholdAccess, getIsAdmin, getOnboardingStatus } from "@/lib/auth-session";
 import { checkHasActivePlan } from "@/lib/feature-access";
 
 /**
@@ -49,13 +49,13 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
   }
 
   // Check 4: Subscription status (backup to middleware)
-  // First check Clerk billing, then fall back to Convex tierOverride
-  // This allows demo/partner accounts to bypass Clerk billing via tierOverride
+  // First check Clerk billing, then check shared Convex household access
+  // This allows family members to use their household subscription and estate grace period
   const hasActivePlan = checkHasActivePlan(has);
 
   if (!hasActivePlan) {
-    const hasTierOverride = await getHasTierOverride();
-    if (!hasTierOverride) {
+    const hasHouseholdAccess = await getHasHouseholdAccess();
+    if (!hasHouseholdAccess) {
       redirect("/select-plan");
     }
   }

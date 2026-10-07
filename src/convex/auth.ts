@@ -359,7 +359,11 @@ export async function requireActiveSubscription(
     return household;
   }
 
-  if (household.subscriptionStatus !== "active") {
+  if (
+    household.subscriptionStatus !== "active" ||
+    (household.subscriptionValidUntil !== undefined &&
+      household.subscriptionValidUntil <= Date.now())
+  ) {
     throw new Error(
       `Subscription is ${household.subscriptionStatus}. Please update your subscription to continue.`,
     );
@@ -392,7 +396,7 @@ export async function requireSubscriptionTier(
   const household = await requireActiveSubscription(ctx, householdId);
 
   // Use tierOverride if set, otherwise fall back to subscriptionTier
-  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const effectiveTier = getEffectiveTier(household);
 
   if (!tierHasAccess(effectiveTier, requiredTier)) {
     throw new Error(
@@ -462,7 +466,7 @@ export async function checkStorageQuota(
   const household = await requireActiveSubscription(ctx, householdId);
 
   // Use tierOverride if set, otherwise fall back to subscriptionTier
-  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const effectiveTier = getEffectiveTier(household);
   const limits = PLAN_LIMITS[effectiveTier];
 
   // Use pre-computed counter (defaults to 0 for backwards compatibility)
@@ -507,7 +511,7 @@ export async function checkFamilyMemberLimit(
 ): Promise<{ currentCount: number; maxCount: number; canAddMore: boolean }> {
   const household = await requireActiveSubscription(ctx, householdId);
   // Use tierOverride if set, otherwise fall back to subscriptionTier
-  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const effectiveTier = getEffectiveTier(household);
   const limits = PLAN_LIMITS[effectiveTier];
 
   const nonOwnerCount = await getMemberCountFromHousehold(ctx, household);
@@ -551,7 +555,7 @@ export async function checkFamilyUnitLimit(
   const household = await requireActiveSubscription(ctx, householdId);
 
   // Use tierOverride if set, otherwise fall back to subscriptionTier
-  const effectiveTier = household.tierOverride ?? household.subscriptionTier;
+  const effectiveTier = getEffectiveTier(household);
   const limits = PLAN_LIMITS[effectiveTier];
 
   const currentCount = await getFamilyUnitCount(ctx, household);
@@ -657,6 +661,9 @@ export const getEffectiveSubscription = query({
         v.literal("past_due"),
       ),
       hasOverride: v.boolean(),
+      hasAccess: v.boolean(),
+      hasPlanningAccess: v.boolean(),
+      hasExecutorRole: v.boolean(),
       overrideReason: v.optional(v.string()),
       overrideExpiresAt: v.optional(v.number()),
       householdId: v.id("households"),
@@ -701,13 +708,27 @@ export const getEffectiveSubscription = query({
     const hasOverride =
       household.tierOverride !== undefined &&
       household.tierOverride !== null &&
-      effectiveTier === household.tierOverride;
+      (household.tierOverrideExpiresAt == null || household.tierOverrideExpiresAt > Date.now());
 
     return {
       effectiveTier,
       subscriptionTier: household.subscriptionTier,
       subscriptionStatus: household.subscriptionStatus,
       hasOverride,
+      // Executor members may enter the estate purchase flow. Individual estate
+      // mutations still enforce the separate executor purchase entitlement.
+      hasExecutorRole: membership.role === "executor",
+      hasAccess:
+        membership.role === "executor" ||
+        (household.subscriptionStatus === "active" &&
+          (household.subscriptionValidUntil === undefined ||
+            household.subscriptionValidUntil > Date.now())) ||
+        (household.estateMode === true && (household.estateGraceUntil ?? 0) > Date.now()),
+      hasPlanningAccess:
+        (household.subscriptionStatus === "active" &&
+          (household.subscriptionValidUntil === undefined ||
+            household.subscriptionValidUntil > Date.now())) ||
+        (household.estateMode === true && (household.estateGraceUntil ?? 0) > Date.now()),
       overrideReason: household.tierOverrideReason ?? undefined,
       overrideExpiresAt: household.tierOverrideExpiresAt ?? undefined,
       householdId: household._id,
@@ -994,6 +1015,7 @@ export const getOnboardingStatus = query({
 export const syncSubscriptionTier = internalMutation({
   args: {
     clerkUserId: v.string(),
+    validUntil: v.optional(v.number()),
     tier: v.optional(
       v.union(
         v.literal("foundations"),
@@ -1026,6 +1048,21 @@ export const syncSubscriptionTier = internalMutation({
       };
     }
 
+    const existing = await ctx.db
+      .query("billingEntitlements")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", args.clerkUserId))
+      .unique();
+    const entitlement = {
+      clerkUserId: args.clerkUserId,
+      tier: args.tier ?? existing?.tier ?? ("foundations" as const),
+      status: args.status ?? existing?.status ?? ("inactive" as const),
+      validUntil: args.validUntil,
+      updatedAt: Date.now(),
+    };
+    if (existing) await ctx.db.patch(existing._id, entitlement);
+    else await ctx.db.insert("billingEntitlements", entitlement);
+
+    // Keep billing state even when checkout precedes profile creation.
     // Find the user's profile by Clerk user ID
     const profile = await ctx.db
       .query("profiles")
@@ -1034,8 +1071,8 @@ export const syncSubscriptionTier = internalMutation({
 
     if (!profile) {
       return {
-        success: false,
-        message: "Profile not found for user",
+        success: true,
+        message: "Billing saved for onboarding",
         householdId: undefined,
       };
     }
@@ -1048,9 +1085,17 @@ export const syncSubscriptionTier = internalMutation({
 
     if (!household) {
       return {
-        success: false,
-        message: "Household not found for user",
+        success: true,
+        message: "Billing saved for household creation",
         householdId: undefined,
+      };
+    }
+
+    if (household.billingProvider === "stripe") {
+      return {
+        success: false,
+        message: "Clerk billing cannot overwrite a Stripe-managed household",
+        householdId: household._id,
       };
     }
 
@@ -1059,7 +1104,8 @@ export const syncSubscriptionTier = internalMutation({
       subscriptionTier?: "foundations" | "heritage" | "legacy" | "founders";
       subscriptionStatus?: "active" | "inactive" | "cancelled" | "past_due";
       updatedAt: number;
-    } = { updatedAt: Date.now() };
+      subscriptionValidUntil?: number;
+    } = { updatedAt: Date.now(), subscriptionValidUntil: args.validUntil };
 
     if (args.tier) {
       patch.subscriptionTier = args.tier;

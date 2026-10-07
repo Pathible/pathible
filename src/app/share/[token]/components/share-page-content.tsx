@@ -1,5 +1,6 @@
 "use client";
 
+import { SignInButton, useAuth } from "@clerk/nextjs";
 import { AlertCircle, Download, FileText, Loader2, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ interface ShareError {
 type PageState = "loading" | "ready" | "downloading" | "error";
 
 export function SharePageContent({ token }: { token: string }) {
+  const { isSignedIn, isLoaded } = useAuth();
   const [pageState, setPageState] = useState<PageState>("loading");
   const [shareData, setShareData] = useState<ShareMetadata | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -152,24 +154,35 @@ export function SharePageContent({ token }: { token: string }) {
           </div>
         </div>
 
-        <Button
-          onClick={handleDownload}
-          disabled={pageState === "downloading"}
-          className="w-full"
-          size="lg"
-        >
-          {pageState === "downloading" ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Preparing download...
-            </>
-          ) : (
-            <>
-              <Download className="mr-2 h-4 w-4" />
-              Download Document
-            </>
-          )}
-        </Button>
+        {!isSignedIn ? (
+          <SignInButton mode="modal" forceRedirectUrl={`/share/${encodeURIComponent(token)}`}>
+            <Button className="w-full" size="lg" disabled={!isLoaded}>
+              Sign In With the Recipient Email
+            </Button>
+          </SignInButton>
+        ) : (
+          <Button
+            onClick={handleDownload}
+            disabled={pageState === "downloading"}
+            className="w-full"
+            size="lg"
+          >
+            {pageState === "downloading" ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Preparing download...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Download Document
+              </>
+            )}
+          </Button>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Downloads require the verified email address this document was shared with.
+        </p>
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" />

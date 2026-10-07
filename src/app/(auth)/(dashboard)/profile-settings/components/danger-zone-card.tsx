@@ -106,15 +106,16 @@ export function DangerZoneCard({ profileName }: DangerZoneCardProps) {
                   <AlertDialogDescription asChild>
                     <div className="space-y-4">
                       <p>
-                        This action <strong>cannot be undone</strong>. This will permanently delete
-                        the account for <strong>{profileName}</strong> and remove:
+                        This action <strong>cannot be undone</strong>. This will delete the login
+                        for <strong>{profileName}</strong> and deactivate your Pathible profile and
+                        household memberships. Shared household records, documents, and activity
+                        history may remain. Contact support@pathible.com to request removal of
+                        retained personal data. Account owners must transfer ownership first.
                       </p>
                       <ul className="list-disc list-inside space-y-1 text-sm">
                         <li>Your login credentials and authentication</li>
-                        <li>Your profile and personal information</li>
-                        <li>All documents in your Heritage Vault</li>
+                        <li>Access to your Pathible profile</li>
                         <li>Your membership in all households</li>
-                        <li>All activity history and notifications</li>
                       </ul>
                       <div className="pt-2">
                         <Label htmlFor="confirm-delete" className="text-sm">

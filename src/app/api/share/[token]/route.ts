@@ -1,3 +1,4 @@
+import { currentUser } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
 import { NextResponse } from "next/server";
 import { api, internal } from "@/convex/_generated/api";
@@ -9,41 +10,16 @@ import { getBackblazeS3Client } from "@/lib/backblaze/s3-client";
  * GET  /api/share/[token] - Get share metadata (document name, status, expiry)
  * POST /api/share/[token] - Download action (generates presigned B2 URL)
  *
- * No authentication required - token-based access only.
+ * Metadata uses token-based access. Downloads require the verified recipient email.
  * Rate limited to 5 requests per token per minute.
  */
 
-// Simple in-memory rate limiter: Map<token, { count, resetAt }>
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_MAX = 5;
-const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
-
-function checkRateLimit(token: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(token);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(token, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
-
-  entry.count++;
-  return true;
+async function checkRateLimit(token: string): Promise<boolean> {
+  const client = getAdminConvexClient();
+  return await (
+    client as unknown as { mutation: (fn: unknown, args: unknown) => Promise<boolean> }
+  ).mutation(internal.estateDocuments.checkShareRateLimit, { token });
 }
-
-// Periodically clean up stale entries to prevent memory leaks
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitMap) {
-    if (now > entry.resetAt) {
-      rateLimitMap.delete(key);
-    }
-  }
-}, 5 * 60_000); // Every 5 minutes
 
 function getConvexClient(): ConvexHttpClient {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -81,14 +57,14 @@ export async function GET(
   try {
     const { token } = await params;
 
-    if (!token || token.length < 20) {
+    if (!token || token.length < 20 || token.length > 128) {
       return NextResponse.json(
         { error: "Invalid share link" },
         { status: 400, headers: SECURITY_HEADERS },
       );
     }
 
-    if (!checkRateLimit(token)) {
+    if (!(await checkRateLimit(token))) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429, headers: SECURITY_HEADERS },
@@ -168,14 +144,14 @@ export async function POST(
   try {
     const { token } = await params;
 
-    if (!token || token.length < 20) {
+    if (!token || token.length < 20 || token.length > 128) {
       return NextResponse.json(
         { error: "Invalid share link" },
         { status: 400, headers: SECURITY_HEADERS },
       );
     }
 
-    if (!checkRateLimit(token)) {
+    if (!(await checkRateLimit(token))) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429, headers: SECURITY_HEADERS },
@@ -222,9 +198,16 @@ export async function POST(
       );
     }
 
-    // TODO: Email verification step - send verification code to recipient email
-    // before allowing download. Requires a verification code email template in
-    // the email queue system. For now, token validation is sufficient.
+    const user = await currentUser();
+    const verifiedEmails =
+      user?.emailAddresses
+        .filter((email) => email.verification?.status === "verified")
+        .map((email) => email.emailAddress.toLowerCase()) ?? [];
+    if (!verifiedEmails.length)
+      return NextResponse.json(
+        { error: "Sign in with the recipient email to download this document." },
+        { status: 401, headers: SECURITY_HEADERS },
+      );
 
     // Get B2 file info via internal query (requires admin auth with deploy key)
     const adminClient = getAdminConvexClient();
@@ -235,7 +218,12 @@ export async function POST(
       }
     ).query(internal.estateDocuments.getShareDocumentB2Info, {
       token,
-    })) as { b2FileName: string; documentName: string; fileType: string } | null;
+    })) as {
+      recipientEmail: string;
+      b2FileName: string;
+      documentName: string;
+      fileType: string;
+    } | null;
 
     if (!docInfo) {
       return NextResponse.json(
@@ -244,21 +232,26 @@ export async function POST(
       );
     }
 
+    if (!verifiedEmails.includes(docInfo.recipientEmail.toLowerCase()))
+      return NextResponse.json(
+        { error: "This document was shared with a different email address." },
+        { status: 403, headers: SECURITY_HEADERS },
+      );
+
     // Generate presigned download URL (valid for 1 hour)
     const s3Client = getBackblazeS3Client();
     const { downloadUrl, expiresIn } = await s3Client.getPresignedDownloadUrl(docInfo.b2FileName, {
       expiresIn: 3600,
     });
 
-    // Log the download access (non-critical)
-    try {
-      await convexClient.mutation(api.estateDocuments.logShareAccess, {
-        shareToken: token,
-        action: "downloaded",
-      });
-    } catch {
-      // Don't fail the download if logging fails
-    }
+    const consumed = await (
+      adminClient as unknown as { mutation: (fn: unknown, args: unknown) => Promise<boolean> }
+    ).mutation(internal.estateDocuments.consumeShareDownload, { token, verifiedEmails });
+    if (!consumed)
+      return NextResponse.json(
+        { error: "This share link is no longer available." },
+        { status: 410, headers: SECURITY_HEADERS },
+      );
 
     return NextResponse.json(
       {

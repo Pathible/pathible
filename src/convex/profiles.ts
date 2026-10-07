@@ -421,6 +421,14 @@ export const linkToClerkUser = mutation({
 
     const clerkUserId = identity.subject;
 
+    if (
+      identity.emailVerified !== true ||
+      !identity.email ||
+      identity.email.toLowerCase() !== args.email.trim().toLowerCase()
+    ) {
+      throw new Error("Migration requires the matching verified account email");
+    }
+
     // First, check if a profile already exists for this Clerk user ID
     const existingClerkProfile = await ctx.db
       .query("profiles")

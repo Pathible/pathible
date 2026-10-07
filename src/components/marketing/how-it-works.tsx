@@ -2,18 +2,18 @@ export function ThePlan() {
   const steps = [
     {
       number: "01",
-      title: "Gather",
-      body: "Put your documents, finances, and stories in one secure place.",
+      title: "Upload one document",
+      body: "Start with a will, insurance policy, or another document your family would need.",
     },
     {
       number: "02",
-      title: "Share",
-      body: "Give your family access to what they'll need, when they need it.",
+      title: "Record one account",
+      body: "Write down where an important account is held and who your family should contact.",
     },
     {
       number: "03",
-      title: "Rest",
-      body: "Know it's handled. Live your life.",
+      title: "Invite someone you trust",
+      body: "Give a trusted family member access and show them where to start.",
     },
   ];
 
@@ -31,7 +31,8 @@ export function ThePlan() {
             Three simple steps
           </h2>
           <p className="text-xl text-muted-foreground leading-relaxed">
-            No complicated setup. No overwhelming features. Just clarity.
+            Build your family plan with three practical actions. Our guides help you decide what to
+            add.
           </p>
         </div>
 

@@ -157,6 +157,32 @@ export const markProcessing = internalMutation({
       return false;
     }
 
+    // Re-check consent at dispatch time, not only when the campaign was queued.
+    const profileId = email.recipientContext?.profileId;
+    const campaignId = email.campaignId;
+    if (campaignId && profileId) {
+      const preferences = await ctx.db
+        .query("userPreferences")
+        .withIndex("by_profile", (q) => q.eq("profileId", profileId))
+        .first();
+      if (preferences?.emailNotifications !== true) {
+        await ctx.db.patch(args.emailId, {
+          status: "failed",
+          attempts: email.maxAttempts,
+          errorMessage: "Suppressed: recipient opted out of optional emails",
+        });
+        const campaign = await ctx.db
+          .query("emailCampaigns")
+          .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+          .unique();
+        if (campaign) await ctx.db.patch(campaign._id, { failedCount: campaign.failedCount + 1 });
+        await ctx.scheduler.runAfter(0, internal.emailQueue.checkCampaignCompletionAction, {
+          campaignId,
+        });
+        return false;
+      }
+    }
+
     await ctx.db.patch(args.emailId, {
       status: "processing",
       lastAttemptAt: Date.now(),
@@ -306,12 +332,22 @@ export const sendSingleEmail = internalAction({
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     try {
+      let htmlContent = email.htmlContent;
+      if (email.profileId) {
+        const link = await ctx.runAction(internal.emailUnsubscribeLinks.createLink, {
+          profileId: email.profileId,
+        });
+        htmlContent = htmlContent.replace(
+          /https:\/\/(?:www\.)?pathible\.com\/unsubscribe(?=["\s<])/g,
+          link,
+        );
+      }
       const response = await resend.emails.send({
         from: "Pathible <noreply@app.pathible.com>",
         replyTo: "support@pathible.com",
         to: email.to,
         subject: email.subject,
-        html: email.htmlContent,
+        html: htmlContent,
       });
 
       if (response.error) {
@@ -368,6 +404,7 @@ export const getEmailById = internalQuery({
   returns: v.union(
     v.object({
       _id: v.id("emailQueue"),
+      profileId: v.optional(v.id("profiles")),
       to: v.string(),
       subject: v.string(),
       htmlContent: v.string(),
@@ -387,6 +424,7 @@ export const getEmailById = internalQuery({
 
     return {
       _id: email._id,
+      profileId: email.recipientContext?.profileId,
       to: email.to,
       subject: email.subject,
       htmlContent: email.htmlContent,

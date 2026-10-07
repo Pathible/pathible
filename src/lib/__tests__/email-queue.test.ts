@@ -147,7 +147,7 @@ describe("Vault Empty Email Template", () => {
       const html = generateVaultEmptyEmailHtml("Test");
 
       expect(html).toContain("Upload Your First Document");
-      expect(html).toContain("https://pathible.com/dashboard/vault");
+      expect(html).toContain("https://www.pathible.com/vault");
     });
 
     it("includes benefits section", () => {

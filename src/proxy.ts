@@ -5,15 +5,17 @@
  * See: https://clerk.com/docs/reference/nextjs/clerk-middleware
  *
  * Protection layers:
- * 1. Middleware (this file) - Fast edge checks for auth & subscription
+ * 1. Middleware (this file) - Authentication at the edge
  * 2. Layout (/app/(auth)/layout.tsx) - Server-side onboarding checks
  *
  * Note: Middleware cannot make Convex calls, so onboarding checks
  * (which require querying the Convex database for profile/household)
  * are done in the layout for protected routes.
  */
+
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { checkHasActivePlan } from "@/lib/feature-access";
+import { NextResponse } from "next/server";
+import { normalizeReferralSource } from "@/lib/referral";
 
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
@@ -29,43 +31,28 @@ const isPublicRoute = createRouteMatcher([
   "/learn(.*)",
   "/for-executors(.*)",
   "/api/webhooks(.*)",
+  "/share/(.*)",
+  "/api/share/(.*)",
+  "/unsubscribe(.*)",
   // SEO routes - must be accessible to crawlers and social media bots
   "/sitemap.xml",
   "/robots.txt",
   "/opengraph-image(.*)",
 ]);
 
-// Routes that require auth but NOT subscription
-// These are steps in the user journey before subscription
-const isAuthOnlyRoute = createRouteMatcher(["/onboarding(.*)", "/select-plan(.*)"]);
-
 export default clerkMiddleware(async (auth, request) => {
-  const { userId, has } = await auth();
-
-  // Public routes - no auth required
-  if (isPublicRoute(request)) {
-    return;
+  if (!isPublicRoute(request)) await auth.protect();
+  const response = NextResponse.next();
+  const referral = normalizeReferralSource(request.nextUrl.searchParams.get("ref"));
+  if (referral) {
+    response.cookies.set("pathible_ref", referral, {
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 30,
+    });
   }
-
-  // All other routes require authentication
-  if (!userId) {
-    await auth.protect();
-    return;
-  }
-
-  // Auth-only routes (onboarding, plan selection) - no subscription check
-  if (isAuthOnlyRoute(request)) {
-    return;
-  }
-
-  // Protected routes require active subscription
-  const hasActivePlan = checkHasActivePlan(has);
-
-  if (!hasActivePlan) {
-    // Redirect to plan selection page
-    const url = new URL("/select-plan", request.url);
-    return Response.redirect(url);
-  }
+  return response;
 });
 
 export const config = {

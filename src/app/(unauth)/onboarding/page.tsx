@@ -1,11 +1,11 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FullPageLoader } from "@/components/full-page-loader";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { api } from "@/convex/_generated/api";
-import { checkHasActivePlan, getCurrentPlanTier } from "@/lib/feature-access";
+import { checkHasActivePlan } from "@/lib/feature-access";
+import { normalizeReferralSource } from "@/lib/referral";
 
 /**
  * Multi-Step Onboarding Wizard
@@ -49,7 +50,18 @@ function OnboardingContent() {
   const totalSteps = 3; // Reduced from 4 - invitations moved to dashboard
 
   // Capture partner referral from URL (e.g., ?ref=cfr)
-  const referralSource = searchParams.get("ref") || undefined;
+  const [savedReferral, setSavedReferral] = useState<string>();
+  useEffect(() => {
+    setSavedReferral(
+      normalizeReferralSource(
+        document.cookie
+          .split("; ")
+          .find((cookie) => cookie.startsWith("pathible_ref="))
+          ?.split("=")[1],
+      ),
+    );
+  }, []);
+  const referralSource = normalizeReferralSource(searchParams.get("ref")) ?? savedReferral;
 
   // Check if user already has an active subscription (e.g., subscribed from /pricing)
   const hasActivePlan = checkHasActivePlan(has);
@@ -77,9 +89,33 @@ function OnboardingContent() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Mutations
+  const reconcileBilling = useAction(api.billing.reconcileCurrentUser);
   const updateProfileMutation = useMutation(api.onboarding.updateProfile);
   const createHouseholdMutation = useMutation(api.onboarding.createFirstHousehold);
   const setPreferencesMutation = useMutation(api.onboarding.setPreferences);
+
+  const userWithProfile = useQuery(api.auth.getCurrentUserWithProfile);
+  const savedOnboarding = useQuery(
+    api.onboarding.getStatus,
+    userWithProfile?.profile ? {} : "skip",
+  );
+  const subscription = useQuery(api.auth.getEffectiveSubscription);
+  const hasProductAccess = hasActivePlan || subscription?.hasAccess === true;
+  const restored = useRef(false);
+  useEffect(() => {
+    if (!savedOnboarding || restored.current) return;
+    restored.current = true;
+    setFirstName(savedOnboarding.profile.firstName);
+    setLastName(savedOnboarding.profile.lastName);
+    setPhone(savedOnboarding.profile.phone ?? "");
+    if (savedOnboarding.household) setHouseholdName(savedOnboarding.household.name);
+    setCurrentStep(savedOnboarding.household ? 3 : Math.min(savedOnboarding.currentStep, 3));
+  }, [savedOnboarding]);
+  useEffect(() => {
+    if (savedOnboarding?.status === "complete" && subscription !== undefined) {
+      router.replace(hasProductAccess ? "/dashboard" : "/select-plan");
+    }
+  }, [savedOnboarding, subscription, hasProductAccess, router]);
 
   const goalOptions: Array<{ id: Goal; label: string }> = [
     { id: "document_organization", label: "Organize important documents" },
@@ -126,18 +162,16 @@ function OnboardingContent() {
           return;
         }
 
-        // Get the user's subscription tier from Clerk Billing
-        // This ensures the household is created with the correct tier
-        // (not hardcoded to "foundations")
-        const clerkTier = getCurrentPlanTier(has);
+        // Verify paid entitlement on the server before creating the household.
+        if (hasActivePlan && !(await reconcileBilling({})))
+          throw new Error("We could not confirm your paid plan yet. Please try again.");
 
-        // Create household with the user's actual subscription tier
-        await createHouseholdMutation({
-          name: householdName,
-          description: householdDescription || undefined,
-          subscriptionTier: clerkTier || undefined,
-          referralSource,
-        });
+        if (!savedOnboarding?.household)
+          await createHouseholdMutation({
+            name: householdName,
+            description: householdDescription || undefined,
+            referralSource,
+          });
 
         toast.success("Household created!");
         setCurrentStep(3);
@@ -158,7 +192,7 @@ function OnboardingContent() {
 
         // If user already has a plan (subscribed from /pricing), go to dashboard
         // Otherwise, redirect to plan selection
-        if (hasActivePlan) {
+        if (hasProductAccess) {
           toast.success("Onboarding complete! Welcome to Pathible.");
           setTimeout(() => router.push("/dashboard"), 500);
         } else {

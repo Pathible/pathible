@@ -2,8 +2,8 @@ import { clerkSetup } from "@clerk/testing/cypress";
 import { defineConfig } from "cypress";
 import dotenv from "dotenv";
 
-// Load environment variables from .env.test for E2E testing
-dotenv.config({ path: ".env.test" });
+// Test-specific settings take precedence over the local development configuration.
+dotenv.config({ path: [".env.test", ".env.local"] });
 
 export default defineConfig({
   e2e: {

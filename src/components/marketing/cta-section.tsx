@@ -11,14 +11,14 @@ export function CTASection() {
 
       <div className="relative mx-auto max-w-4xl text-center px-4 sm:px-6 lg:px-8">
         <h3 className="font-crimson text-4xl sm:text-5xl lg:text-6xl mb-4 leading-tight text-white">
-          Get everything in one place.
+          Make your family's next step easier.
         </h3>
         <p className="font-crimson text-3xl sm:text-4xl lg:text-5xl text-pathible-gold mb-12">
-          So they never have to.
+          Start with one important document.
         </p>
 
         <p className="text-lg sm:text-xl text-white/70 mb-12 max-w-xl mx-auto leading-relaxed">
-          You know how hard it was. Don&apos;t pass that on.
+          Create your family workspace, add an essential document, and invite someone you trust.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -28,7 +28,7 @@ export function CTASection() {
             className="bg-white hover:bg-pathible-sand text-pathible-forest px-10 py-7 rounded-2xl text-lg font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
           >
             <Link href="/signup" className="flex items-center gap-2">
-              Get Started
+              Organize My Family
               <ArrowRight className="w-5 h-5" />
             </Link>
           </Button>

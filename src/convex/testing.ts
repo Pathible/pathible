@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { mutation } from "./_generated/server";
+import { requireTestAccess } from "./shared/testAccess";
 
 /**
  * Testing Module
@@ -108,6 +109,7 @@ export const resetTestUser = mutation({
     deleted: deletedSchema,
   }),
   handler: async (ctx) => {
+    await requireTestAccess(ctx);
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
@@ -524,6 +526,7 @@ export const grantAdminRole = mutation({
     message: v.string(),
   }),
   handler: async (ctx) => {
+    await requireTestAccess(ctx);
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
@@ -608,6 +611,7 @@ export const cleanupTestArticles = mutation({
     deletedCount: v.number(),
   }),
   handler: async (ctx) => {
+    await requireTestAccess(ctx);
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
@@ -696,6 +700,7 @@ export const adminCleanupTestArticles = mutation({
     deletedCount: v.number(),
   }),
   handler: async (ctx) => {
+    await requireTestAccess(ctx);
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
@@ -763,6 +768,7 @@ export const setTestSubscriptionTier = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
+    await requireTestAccess(ctx);
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
@@ -844,6 +850,7 @@ export const isCleanState = mutation({
     hasHouseholds: v.boolean(),
   }),
   handler: async (ctx) => {
+    await requireTestAccess(ctx);
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return {
@@ -906,6 +913,7 @@ export const getTestHouseholdId = mutation({
   args: {},
   returns: v.union(v.id("households"), v.null()),
   handler: async (ctx) => {
+    await requireTestAccess(ctx);
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
       return null;
@@ -954,6 +962,7 @@ export const activateEstateForTesting = mutation({
     activationId: v.optional(v.id("estateActivations")),
   }),
   handler: async (ctx, args) => {
+    await requireTestAccess(ctx);
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
       return { success: false, message: "Test functions are disabled in production" };
@@ -1036,6 +1045,7 @@ export const cleanupEstateData = mutation({
     deletedCount: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireTestAccess(ctx);
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
       return {
