@@ -210,7 +210,7 @@ export function PricingPlans({ currentTier, mode = "new" }: PricingPlansProps) {
                   ) : mode === "change" ? (
                     "Switch Plan"
                   ) : (
-                    "Start Free Trial"
+                    "Subscribe"
                   )}
                 </Button>
               )}

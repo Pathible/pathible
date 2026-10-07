@@ -105,6 +105,8 @@ export async function getHasActiveSubscription(): Promise<boolean> {
     convexClient.setAuth(token);
 
     let subscription = await convexClient.query(api.auth.getEffectiveSubscription);
+    // Convex has already verified the override and its expiry independently of billing.
+    if (subscription?.hasOverride) return true;
     if (subscription && !subscription.billingProvider) {
       await convexClient.action(api.stripeActions.reconcileLegacy, {});
       subscription = await convexClient.query(api.auth.getEffectiveSubscription);

@@ -68,11 +68,6 @@ export const createCheckout = action({
     if (args.mode === "payment" && account.executorPurchased)
       throw new Error("Executor is already purchased");
     const stripe = stripeClient();
-    const { attemptId, createdAt } = await ctx.runMutation(internal.stripe.reserveCheckout, {
-      householdId: account.householdId,
-      mode: args.mode,
-      priceId: args.priceId,
-    });
     let customerId = account.stripeCustomerId;
     if (!customerId) {
       const customer = await stripe.customers.create(
@@ -117,6 +112,12 @@ export const createCheckout = action({
         return { url: portal.url };
       }
     }
+    // Portal-only changes never create Checkout sessions or leave pending attempts.
+    const { attemptId, createdAt } = await ctx.runMutation(internal.stripe.reserveCheckout, {
+      householdId: account.householdId,
+      mode: args.mode,
+      priceId: args.priceId,
+    });
     if (args.mode === "subscription" && account.stripeSubscriptionId) {
       const snapshotAt = Date.now();
       const previous = await stripe.subscriptions.retrieve(account.stripeSubscriptionId);
@@ -152,7 +153,7 @@ export const createCheckout = action({
         ? { subscription_data: { metadata } }
         : { payment_intent_data: { metadata } }),
     };
-    // No repeated free trials: trials, if desired, must be issued through a controlled promotion.
+    // Paid checkout only: no free trial period is offered.
     const session = await stripe.checkout.sessions.create(params, {
       idempotencyKey: `checkout:${attemptId}`,
     });

@@ -20,6 +20,8 @@ describe("public billing boundaries", () => {
     cy.contains("Heritage").should("be.visible");
     cy.contains("Legacy").should("be.visible");
     cy.contains("Current Plan").should("not.exist");
+    cy.contains("Start Free Trial").should("not.exist");
+    cy.contains("button", "Subscribe").should("be.visible");
   });
   it("keeps protected planning and Executor routes behind authentication", () => {
     for (const path of ["/dashboard", "/estate"]) {

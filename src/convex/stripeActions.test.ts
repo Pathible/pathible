@@ -108,7 +108,7 @@ describe("Stripe checkout and current-state fulfillment", () => {
     expect(calls[0][0].customer_update).toEqual({ address: "auto", name: "auto" });
   });
   it("plan changes update the existing subscription through portal confirmation", async () => {
-    const { user } = await setup();
+    const { t, user } = await setup();
     stripe.subscriptions.list.mockResolvedValue({
       data: [
         {
@@ -123,6 +123,13 @@ describe("Stripe checkout and current-state fulfillment", () => {
       mode: "subscription",
       origin: "http://localhost:3000",
     });
+    await user.action(api.stripeActions.createCheckout, {
+      priceId: "price_foundations",
+      mode: "subscription",
+      origin: "http://localhost:3000",
+    });
+    expect(stripe.billingPortal.sessions.create).toHaveBeenCalledTimes(2);
+    expect(await t.run((ctx) => ctx.db.query("billingAttempts").collect())).toEqual([]);
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
     expect(stripe.billingPortal.sessions.create.mock.calls[0][0]).toMatchObject({
       customer: "cus_test",
