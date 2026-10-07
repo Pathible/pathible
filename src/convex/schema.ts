@@ -105,6 +105,21 @@ export default defineSchema({
   /**
    * Households - the primary organizational unit for families
    */
+  stripeRefunds: defineTable({ paymentIntentId: v.string(), chargeId: v.string() }).index(
+    "by_paymentIntentId",
+    ["paymentIntentId"],
+  ),
+  stripeEvents: defineTable({ eventId: v.string(), processedAt: v.number() }).index("by_eventId", [
+    "eventId",
+  ]),
+  billingAttempts: defineTable({
+    householdId: v.id("households"),
+    clerkUserId: v.string(),
+    mode: v.union(v.literal("payment"), v.literal("subscription")),
+    priceId: v.string(),
+    createdAt: v.number(),
+    completed: v.boolean(),
+  }).index("by_household_and_mode", ["householdId", "mode"]),
   households: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
@@ -150,6 +165,13 @@ export default defineSchema({
     estateMode: v.optional(v.boolean()),
     estateActivationId: v.optional(v.id("estateActivations")),
     estateGraceUntil: v.optional(v.number()), // 90-day subscription grace period
+    // Stripe billing fields
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    billingProvider: v.optional(v.union(v.literal("clerk"), v.literal("stripe"))),
+    stripeSnapshotAt: v.optional(v.number()),
+    executorPaymentIntentId: v.optional(v.string()),
+    executorChargeId: v.optional(v.string()),
     // Executor product (separate from planning subscription)
     executorPurchased: v.optional(v.boolean()),
     executorPurchasedAt: v.optional(v.number()),
@@ -157,7 +179,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_primaryContactId", ["primaryContactId"])
-    .index("by_referralSource", ["referralSource"]),
+    .index("by_referralSource", ["referralSource"])
+    .index("by_stripeCustomerId", ["stripeCustomerId"]),
 
   /**
    * Household memberships - join table linking users to households

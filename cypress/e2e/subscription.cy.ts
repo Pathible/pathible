@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "../support/clerk";
 
 /**
  * Subscription & Billing E2E Tests
@@ -72,7 +72,7 @@ describe("Subscription & Billing - E2E Test Suite", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       // Reset user to simulate new user without subscription
       cy.visit("/dashboard", { timeout: 30000 });
@@ -124,7 +124,7 @@ describe("Subscription & Billing - E2E Test Suite", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       cy.visit("/dashboard", { timeout: 30000 });
       ensureUserOnboarded();
@@ -161,7 +161,7 @@ describe("Subscription & Billing - E2E Test Suite", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       cy.visit("/dashboard", { timeout: 30000 });
       ensureUserOnboarded();
@@ -201,7 +201,7 @@ describe("Subscription & Billing - E2E Test Suite", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       cy.visit("/dashboard", { timeout: 30000 });
       ensureUserOnboarded();

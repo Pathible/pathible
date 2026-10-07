@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "../support/clerk";
 
 /**
  * Heritage Vault E2E Tests

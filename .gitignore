@@ -49,7 +49,6 @@ next-env.d.ts
 
 # convex
 .convex/
-src/convex/_generated/
 .playwright-mcp/
 
 # clerk configuration (can include secrets)

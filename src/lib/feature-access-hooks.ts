@@ -89,9 +89,13 @@ export function useEffectiveSubscription() {
  * ```
  */
 export function useEffectiveTierAccess(requiredTier: SubscriptionTier) {
-  const { effectiveTier, isLoading, subscription } = useEffectiveSubscription();
+  const { effectiveTier, isLoading, subscription, subscriptionStatus, hasOverride } =
+    useEffectiveSubscription();
 
-  const hasAccess = effectiveTier ? tierHasAccess(effectiveTier, requiredTier) : false;
+  const hasAccess =
+    (subscriptionStatus === "active" || hasOverride) && effectiveTier
+      ? tierHasAccess(effectiveTier, requiredTier)
+      : false;
 
   return {
     isLoading,
@@ -123,10 +127,14 @@ export function useEffectiveTierAccess(requiredTier: SubscriptionTier) {
  * ```
  */
 export function useEffectiveFeatureAccess(feature: FeatureSlug) {
-  const { effectiveTier, isLoading, subscription } = useEffectiveSubscription();
+  const { effectiveTier, isLoading, subscription, subscriptionStatus, hasOverride } =
+    useEffectiveSubscription();
 
   const requiredTier = FEATURE_TIERS[feature];
-  const hasAccess = effectiveTier ? tierHasFeatureAccess(effectiveTier, feature) : false;
+  const hasAccess =
+    (subscriptionStatus === "active" || hasOverride) && effectiveTier
+      ? tierHasFeatureAccess(effectiveTier, feature)
+      : false;
 
   return {
     isLoading,

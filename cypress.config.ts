@@ -21,7 +21,8 @@ export default defineConfig({
     async setupNodeEvents(on, config) {
       // Set up Clerk testing tokens for E2E tests
       // This bypasses bot detection and enables automated auth testing
-      const clerkConfig = await clerkSetup({ config });
+      const clerkConfig =
+        process.env.CYPRESS_BILLING_SMOKE_ONLY === "true" ? config : await clerkSetup({ config });
 
       // Additional task handlers
       on("task", {
@@ -34,13 +35,15 @@ export default defineConfig({
       return clerkConfig;
     },
 
+    expose: {
+      TEST_USER_EMAIL: process.env.CYPRESS_TEST_USER_EMAIL || "test+clerk_test@example.com",
+    },
     env: {
       // Load from .env.test - Cypress automatically picks up CYPRESS_* prefixed vars
       // IMPORTANT: Clerk requires +clerk_test subaddress for Testing Tokens
       TEST_USER_EMAIL: process.env.CYPRESS_TEST_USER_EMAIL || "test+clerk_test@example.com",
       // Clerk keys for testing (needed by @clerk/testing)
       CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
     },
   },
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import type { EmailAddressResource } from "@clerk/types";
+import type { EmailAddressResource } from "@clerk/shared/types";
 import { useMutation } from "convex/react";
 import { Loader2, Mail, Pencil, Save, X } from "lucide-react";
 import { useState } from "react";

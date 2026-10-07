@@ -214,9 +214,7 @@ export const createFirstHousehold = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
-    // Subscription tier from Clerk Billing - passed from frontend
-    // This allows the household to be created with the user's actual subscription tier
-    // rather than defaulting to "foundations"
+    // Accepted for older clients but deliberately ignored for authorization.
     subscriptionTier: v.optional(
       v.union(
         v.literal("foundations"),
@@ -250,8 +248,8 @@ export const createFirstHousehold = mutation({
       throw new Error("You already belong to a household");
     }
 
-    // Use the tier from Clerk Billing if provided, otherwise default to foundations
-    const tier = args.subscriptionTier || "foundations";
+    // Client-selected tiers never grant paid access. Verified billing sets the tier.
+    const tier = "foundations";
 
     // Create household
     const householdId = await ctx.db.insert("households", {
@@ -259,7 +257,7 @@ export const createFirstHousehold = mutation({
       description: args.description?.trim(),
       primaryContactId: profile._id,
       subscriptionTier: tier,
-      subscriptionStatus: "active",
+      subscriptionStatus: "inactive",
       storageUsedBytes: 0,
       memberCount: 0,
       familyUnitCount: 0,

@@ -1,11 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  checkAnyFeatureAccess,
-  checkFeatureAccess,
-  checkHasActivePlan,
+  FEATURE_TIERS,
+  tierHasAccess,
+  tierHasFeatureAccess,
+} from "@/convex/shared/subscriptionTiers";
+import {
   FEATURE_METADATA,
   FEATURES,
-  getCurrentPlanTier,
   getRequiredPlanForFeature,
   PLAN_LABELS,
   SUBSCRIPTION_TIERS,
@@ -15,193 +16,58 @@ import {
  * Feature Access Tests
  *
  * Tests for feature gating utilities that control access to premium features
- * based on subscription tier. Critical for:
- * - Ensuring users only see features they have access to
- * - Validating subscription tier checks
- * - Preventing unauthorized access to premium features
+ * based on subscription tier. Now uses Convex tier-based checks instead of
+ * Clerk's has() function.
  */
 
-describe("checkFeatureAccess", () => {
-  it("should return false when has function is undefined", () => {
-    const result = checkFeatureAccess(undefined, FEATURES.VAULT_TAGS_COLLECTIONS);
-    expect(result).toBe(false);
+describe("tierHasAccess", () => {
+  it("should grant access when user tier equals required tier", () => {
+    expect(tierHasAccess("heritage", "heritage")).toBe(true);
   });
 
-  it("should return true when user has feature", () => {
-    const mockHas = vi.fn().mockReturnValue(true);
-    const result = checkFeatureAccess(mockHas, FEATURES.VAULT_TAGS_COLLECTIONS);
-
-    expect(result).toBe(true);
-    expect(mockHas).toHaveBeenCalledWith({ feature: FEATURES.VAULT_TAGS_COLLECTIONS });
+  it("should grant access when user tier is higher than required", () => {
+    expect(tierHasAccess("legacy", "foundations")).toBe(true);
+    expect(tierHasAccess("legacy", "heritage")).toBe(true);
+    expect(tierHasAccess("heritage", "foundations")).toBe(true);
   });
 
-  it("should return false when user lacks feature", () => {
-    const mockHas = vi.fn().mockReturnValue(false);
-    const result = checkFeatureAccess(mockHas, FEATURES.VAULT_TAGS_COLLECTIONS);
-
-    expect(result).toBe(false);
-    expect(mockHas).toHaveBeenCalledWith({ feature: FEATURES.VAULT_TAGS_COLLECTIONS });
+  it("should deny access when user tier is lower than required", () => {
+    expect(tierHasAccess("foundations", "heritage")).toBe(false);
+    expect(tierHasAccess("foundations", "legacy")).toBe(false);
+    expect(tierHasAccess("heritage", "legacy")).toBe(false);
   });
 
-  it("should return false for invalid feature slug", () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const mockHas = vi.fn().mockReturnValue(true);
-
-    // Cast to unknown to test runtime validation with invalid input
-    const result = checkFeatureAccess(
-      mockHas,
-      "invalid_feature_slug" as unknown as Parameters<typeof checkFeatureAccess>[1],
-    );
-
-    expect(result).toBe(false);
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "[feature-access] Invalid feature slug: invalid_feature_slug",
-    );
-    expect(mockHas).not.toHaveBeenCalled();
-
-    consoleSpy.mockRestore();
+  it("should treat founders as equivalent to legacy", () => {
+    expect(tierHasAccess("founders", "legacy")).toBe(true);
+    expect(tierHasAccess("founders", "heritage")).toBe(true);
+    expect(tierHasAccess("founders", "foundations")).toBe(true);
   });
 });
 
-describe("checkAnyFeatureAccess", () => {
-  it("should return false when has function is undefined", () => {
-    const result = checkAnyFeatureAccess(undefined, [
-      FEATURES.VAULT_TAGS_COLLECTIONS,
-      FEATURES.FINANCIAL_OVERVIEW,
-    ]);
-    expect(result).toBe(false);
+describe("tierHasFeatureAccess", () => {
+  it("should grant foundations users access to foundations features", () => {
+    expect(tierHasFeatureAccess("foundations", "vault_document_storage")).toBe(true);
+    expect(tierHasFeatureAccess("foundations", "financial_overview")).toBe(true);
   });
 
-  it("should return true when user has any of the features", () => {
-    const mockHas = vi.fn().mockImplementation(({ feature }) => {
-      return feature === FEATURES.FINANCIAL_OVERVIEW;
-    });
-
-    const result = checkAnyFeatureAccess(mockHas, [
-      FEATURES.VAULT_TAGS_COLLECTIONS,
-      FEATURES.FINANCIAL_OVERVIEW,
-    ]);
-
-    expect(result).toBe(true);
+  it("should deny foundations users access to heritage features", () => {
+    expect(tierHasFeatureAccess("foundations", "vault_tags_collections")).toBe(false);
+    expect(tierHasFeatureAccess("foundations", "wisdom_entries")).toBe(false);
   });
 
-  it("should return false when user has none of the features", () => {
-    const mockHas = vi.fn().mockReturnValue(false);
-
-    const result = checkAnyFeatureAccess(mockHas, [
-      FEATURES.VAULT_TAGS_COLLECTIONS,
-      FEATURES.FINANCIAL_OVERVIEW,
-    ]);
-
-    expect(result).toBe(false);
+  it("should grant heritage users access to heritage and foundations features", () => {
+    expect(tierHasFeatureAccess("heritage", "vault_tags_collections")).toBe(true);
+    expect(tierHasFeatureAccess("heritage", "vault_document_storage")).toBe(true);
   });
 
-  it("should short-circuit when first feature matches", () => {
-    const mockHas = vi.fn().mockReturnValue(true);
-
-    const result = checkAnyFeatureAccess(mockHas, [
-      FEATURES.VAULT_TAGS_COLLECTIONS,
-      FEATURES.FINANCIAL_OVERVIEW,
-    ]);
-
-    expect(result).toBe(true);
-    // Should only check first feature due to short-circuit
-    expect(mockHas).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("checkHasActivePlan", () => {
-  it("should return false when has function is undefined", () => {
-    const result = checkHasActivePlan(undefined);
-    expect(result).toBe(false);
+  it("should deny heritage users access to legacy features", () => {
+    expect(tierHasFeatureAccess("heritage", "legacy_legal_documents")).toBe(false);
   });
 
-  it("should return true when user has any valid plan", () => {
-    const mockHas = vi.fn().mockImplementation(({ plan }) => {
-      return plan === "heritage";
-    });
-
-    const result = checkHasActivePlan(mockHas);
-    expect(result).toBe(true);
-  });
-
-  it("should return false when user has no plan", () => {
-    const mockHas = vi.fn().mockReturnValue(false);
-
-    const result = checkHasActivePlan(mockHas);
-    expect(result).toBe(false);
-  });
-
-  it("should check all subscription tiers", () => {
-    const mockHas = vi.fn().mockReturnValue(false);
-
-    checkHasActivePlan(mockHas);
-
-    // Should check each tier
-    for (const tier of SUBSCRIPTION_TIERS) {
-      expect(mockHas).toHaveBeenCalledWith({ plan: tier });
-    }
-  });
-});
-
-describe("getCurrentPlanTier", () => {
-  it("should return null when has function is undefined", () => {
-    const result = getCurrentPlanTier(undefined);
-    expect(result).toBeNull();
-  });
-
-  it("should return founders tier when user has founders plan", () => {
-    const mockHas = vi.fn().mockImplementation(({ plan }) => {
-      return plan === "founders";
-    });
-
-    const result = getCurrentPlanTier(mockHas);
-    expect(result).toBe("founders");
-  });
-
-  it("should return legacy tier when user has legacy plan", () => {
-    const mockHas = vi.fn().mockImplementation(({ plan }) => {
-      return plan === "legacy";
-    });
-
-    const result = getCurrentPlanTier(mockHas);
-    expect(result).toBe("legacy");
-  });
-
-  it("should return heritage tier when user has heritage plan", () => {
-    const mockHas = vi.fn().mockImplementation(({ plan }) => {
-      return plan === "heritage";
-    });
-
-    const result = getCurrentPlanTier(mockHas);
-    expect(result).toBe("heritage");
-  });
-
-  it("should return foundations tier when user has foundations plan", () => {
-    const mockHas = vi.fn().mockImplementation(({ plan }) => {
-      return plan === "foundations";
-    });
-
-    const result = getCurrentPlanTier(mockHas);
-    expect(result).toBe("foundations");
-  });
-
-  it("should return null when user has no plan", () => {
-    const mockHas = vi.fn().mockReturnValue(false);
-
-    const result = getCurrentPlanTier(mockHas);
-    expect(result).toBeNull();
-  });
-
-  it("should return highest tier when user has multiple plans", () => {
-    // User has both founders and heritage
-    const mockHas = vi.fn().mockImplementation(({ plan }) => {
-      return plan === "founders" || plan === "heritage";
-    });
-
-    const result = getCurrentPlanTier(mockHas);
-    // Founders should be returned first as highest tier
-    expect(result).toBe("founders");
+  it("should grant legacy users access to all features", () => {
+    expect(tierHasFeatureAccess("legacy", "vault_document_storage")).toBe(true);
+    expect(tierHasFeatureAccess("legacy", "vault_tags_collections")).toBe(true);
+    expect(tierHasFeatureAccess("legacy", "legacy_legal_documents")).toBe(true);
   });
 });
 
@@ -257,7 +123,6 @@ describe("PLAN_LABELS", () => {
 
 describe("FEATURES constant", () => {
   it("should have all expected feature slugs", () => {
-    // Core feature categories should exist
     expect(FEATURES.VAULT_TAGS_COLLECTIONS).toBeDefined();
     expect(FEATURES.FINANCIAL_OVERVIEW).toBeDefined();
     expect(FEATURES.WISDOM_ENTRIES).toBeDefined();
@@ -267,5 +132,14 @@ describe("FEATURES constant", () => {
     const values = Object.values(FEATURES);
     const uniqueValues = new Set(values);
     expect(uniqueValues.size).toBe(values.length);
+  });
+});
+
+describe("FEATURE_TIERS mapping", () => {
+  it("should have a tier mapping for every feature slug", () => {
+    for (const slug of Object.values(FEATURES)) {
+      expect(FEATURE_TIERS[slug]).toBeDefined();
+      expect(SUBSCRIPTION_TIERS).toContain(FEATURE_TIERS[slug]);
+    }
   });
 });

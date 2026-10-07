@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "../support/clerk";
 
 /**
  * Wisdom Hub E2E Tests

@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "../../support/clerk";
 
 /**
  * Profile Settings E2E Tests
@@ -80,7 +80,7 @@ describe("Profile Settings - E2E Test Suite", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       cy.visit("/profile-settings", { timeout: 30000 });
       ensureUserOnboarded();
@@ -116,7 +116,7 @@ describe("Profile Settings - E2E Test Suite", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       cy.visit("/profile-settings", { timeout: 30000 });
       ensureUserOnboarded();
@@ -145,7 +145,7 @@ describe("Profile Settings - E2E Test Suite", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       cy.visit("/profile-settings", { timeout: 30000 });
       ensureUserOnboarded();

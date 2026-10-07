@@ -283,7 +283,7 @@ export function ActivateEstateContent() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => openSignIn({ afterSignInUrl: "/estate/activate" })}
+                        onClick={() => openSignIn({ forceRedirectUrl: "/estate/activate" })}
                         data-testid="reauth-button"
                       >
                         <LogIn className="mr-2 h-4 w-4" />

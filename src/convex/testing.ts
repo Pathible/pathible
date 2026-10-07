@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { mutation } from "./_generated/server";
+import { type MutationCtx, mutation } from "./_generated/server";
+import { requireHouseholdAdmin } from "./auth";
 
 /**
  * Testing Module
@@ -13,6 +14,22 @@ import { mutation } from "./_generated/server";
  */
 
 // Test user email patterns that are allowed to be reset
+async function requireTesting(ctx: MutationCtx): Promise<void> {
+  const identity = await ctx.auth.getUserIdentity();
+  const ids = (process.env.TESTING_USER_IDS ?? "").split(",").map((id) => id.trim());
+  const issuer = process.env.CLERK_JWT_ISSUER_DOMAIN ?? "";
+  if (
+    process.env.TESTING_ENABLED !== "true" ||
+    !/^https:\/\/[^/]+\.clerk\.accounts\.dev$/.test(issuer) ||
+    !identity ||
+    !ids.includes(identity.subject)
+  ) {
+    throw new Error(
+      "Test functions require an explicitly enabled isolated deployment and allowlisted user",
+    );
+  }
+}
+
 const TEST_EMAIL_PATTERNS = ["+clerk_test", "+e2e_test", "@test.pathible.com"];
 
 // Return type for deleted counts
@@ -108,6 +125,7 @@ export const resetTestUser = mutation({
     deleted: deletedSchema,
   }),
   handler: async (ctx) => {
+    await requireTesting(ctx);
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
@@ -524,6 +542,7 @@ export const grantAdminRole = mutation({
     message: v.string(),
   }),
   handler: async (ctx) => {
+    await requireTesting(ctx);
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
@@ -608,6 +627,7 @@ export const cleanupTestArticles = mutation({
     deletedCount: v.number(),
   }),
   handler: async (ctx) => {
+    await requireTesting(ctx);
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
@@ -696,6 +716,7 @@ export const adminCleanupTestArticles = mutation({
     deletedCount: v.number(),
   }),
   handler: async (ctx) => {
+    await requireTesting(ctx);
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
@@ -763,6 +784,7 @@ export const setTestSubscriptionTier = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
+    await requireTesting(ctx);
     // Environment check - disable in production
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
@@ -844,6 +866,7 @@ export const isCleanState = mutation({
     hasHouseholds: v.boolean(),
   }),
   handler: async (ctx) => {
+    await requireTesting(ctx);
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return {
@@ -906,6 +929,7 @@ export const getTestHouseholdId = mutation({
   args: {},
   returns: v.union(v.id("households"), v.null()),
   handler: async (ctx) => {
+    await requireTesting(ctx);
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
       return null;
@@ -954,6 +978,7 @@ export const activateEstateForTesting = mutation({
     activationId: v.optional(v.id("estateActivations")),
   }),
   handler: async (ctx, args) => {
+    await requireTesting(ctx);
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
       return { success: false, message: "Test functions are disabled in production" };
@@ -982,6 +1007,7 @@ export const activateEstateForTesting = mutation({
       return { success: false, message: "Profile not found" };
     }
 
+    await requireHouseholdAdmin(ctx, args.householdId);
     const household = await ctx.db.get(args.householdId);
     if (!household) {
       return { success: false, message: "Household not found" };
@@ -1036,6 +1062,7 @@ export const cleanupEstateData = mutation({
     deletedCount: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireTesting(ctx);
     const convexUrl = process.env.CONVEX_CLOUD_URL || "";
     if (convexUrl.includes("prod") || convexUrl.includes("hushed-horse")) {
       return {

@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "../support/clerk";
 
 /**
  * Admin Content Manager E2E Test
@@ -19,7 +19,7 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  * Run with: pnpm test:e2e --spec cypress/e2e/admin-content.cy.ts
  */
 
-const TEST_USER_EMAIL = Cypress.env("TEST_USER_EMAIL");
+const TEST_USER_EMAIL = Cypress.expose("TEST_USER_EMAIL");
 const TEST_ARTICLE_TITLE = `E2E Test Article ${Date.now()}`;
 const TEST_ARTICLE_SLUG = `e2e-test-article-${Date.now()}`;
 

@@ -1,8 +1,10 @@
+import { redirect } from "next/navigation";
 import { type ReactNode, Suspense } from "react";
 import { EstateSidebar } from "@/components/estate-sidebar";
 import { EstateStatusBanner } from "@/components/estate-status-banner";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { EstateModeProvider } from "@/hooks/use-estate-mode";
+import { getHasExecutorPurchase, getIsAdmin } from "@/lib/auth-session";
 import { DynamicEstateHeader } from "./estate/components/dynamic-estate-header";
 
 /**
@@ -12,7 +14,8 @@ import { DynamicEstateHeader } from "./estate/components/dynamic-estate-header";
  * Authentication is already handled by the parent (auth) layout.
  * EstateModeProvider ensures one shared Convex subscription for estate state.
  */
-export default function EstateGroupLayout({ children }: { children: ReactNode }) {
+export default async function EstateGroupLayout({ children }: { children: ReactNode }) {
+  if (!(await getIsAdmin()) && !(await getHasExecutorPurchase())) redirect("/for-executors");
   return (
     <EstateModeProvider>
       <SidebarProvider defaultOpen={true}>

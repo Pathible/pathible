@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "../support/clerk";
 
 /**
  * Complete User Journey E2E Test
@@ -22,7 +22,7 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  */
 
 // Test constants
-const TEST_USER_EMAIL = Cypress.env("TEST_USER_EMAIL");
+const TEST_USER_EMAIL = Cypress.expose("TEST_USER_EMAIL");
 const TEST_FIRST_NAME = "E2E";
 const TEST_LAST_NAME = "TestUser";
 const TEST_HOUSEHOLD_NAME = `Test Household ${Date.now()}`;

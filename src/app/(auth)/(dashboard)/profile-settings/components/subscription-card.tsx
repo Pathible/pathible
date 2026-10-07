@@ -1,13 +1,15 @@
 "use client";
 
-import { SignedIn, useAuth, useUser } from "@clerk/nextjs";
-import { SubscriptionDetailsButton, useSubscription } from "@clerk/nextjs/experimental";
+import { useClerk } from "@clerk/nextjs";
 import { ArrowUpRight, CreditCard, Loader2, Settings } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCurrentPlanTier, PLAN_LABELS } from "@/lib/feature-access";
+import { PLAN_LABELS } from "@/lib/feature-access";
+import { useEffectiveSubscription } from "@/lib/feature-access-hooks";
 
 const statusVariants: Record<string, { label: string; className: string }> = {
   active: {
@@ -18,20 +20,8 @@ const statusVariants: Record<string, { label: string; className: string }> = {
     label: "Past Due",
     className: "bg-yellow-500/10 text-yellow-600 border-yellow-200",
   },
-  canceled: {
+  cancelled: {
     label: "Canceled",
-    className: "bg-red-500/10 text-red-600 border-red-200",
-  },
-  incomplete: {
-    label: "Incomplete",
-    className: "bg-orange-500/10 text-orange-600 border-orange-200",
-  },
-  trialing: {
-    label: "Trial",
-    className: "bg-blue-500/10 text-blue-600 border-blue-200",
-  },
-  unpaid: {
-    label: "Unpaid",
     className: "bg-red-500/10 text-red-600 border-red-200",
   },
   inactive: {
@@ -41,26 +31,18 @@ const statusVariants: Record<string, { label: string; className: string }> = {
 };
 
 /**
- * SubscriptionCard - Comprehensive subscription management interface
+ * SubscriptionCard - Subscription management using Convex + Stripe
  *
- * Uses Clerk's official billing components:
- * - useSubscription hook for detailed subscription data
- * - SubscriptionDetailsButton for in-app subscription management
- * - Navigation to pricing table for plan changes
- *
- * Displays:
- * - Current plan with status badge
- * - Next payment date and amount
- * - Subscription start date
- * - Action buttons for management and plan changes
+ * Uses Convex as source of truth for subscription data.
+ * "Manage Subscription" redirects to Stripe Customer Portal.
  */
 export function SubscriptionCard() {
-  const { user, isLoaded: isUserLoaded } = useUser();
-  const { has, isLoaded: isAuthLoaded } = useAuth();
-  const { data: subscription, isLoading: isSubscriptionLoading } = useSubscription();
+  const { isLoading, effectiveTier, subscriptionStatus, hasOverride, subscription } =
+    useEffectiveSubscription();
+  const clerk = useClerk();
+  const [isRedirectingToPortal, setIsRedirectingToPortal] = useState(false);
 
-  // Loading state
-  if (!isUserLoaded || !isAuthLoaded || isSubscriptionLoading) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -78,50 +60,33 @@ export function SubscriptionCard() {
     );
   }
 
-  // Not signed in
-  if (!user) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Subscription
-          </CardTitle>
-          <CardDescription>Manage your subscription plan</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Please sign in to view your subscription.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const hasActivePlan = effectiveTier !== null && subscriptionStatus === "active";
+  const statusInfo = statusVariants[subscriptionStatus ?? "inactive"] ?? statusVariants.inactive;
 
-  // Determine current plan using shared utility
-  const currentPlan = getCurrentPlanTier(has);
-  const hasActivePlan = currentPlan !== null;
+  const handleManageSubscription = async () => {
+    if (subscription?.billingProvider === "clerk") {
+      clerk.openUserProfile();
+      return;
+    }
+    setIsRedirectingToPortal(true);
+    try {
+      const response = await fetch("/api/stripe/create-portal", { method: "POST" });
+      const data = (await response.json()) as { url?: string; error?: string };
 
-  // Get subscription details from Clerk
-  const subscriptionStatus = subscription?.status || "inactive";
-  const statusInfo = statusVariants[subscriptionStatus] || statusVariants.inactive;
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to open billing portal");
+      }
 
-  // Format dates - Clerk returns Date objects
-  const formatDate = (date: Date | null | undefined) => {
-    if (!date) return null;
-    return date.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Portal error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to open billing portal");
+    } finally {
+      setIsRedirectingToPortal(false);
+    }
   };
-
-  // Use Clerk's subscription properties
-  const nextPaymentDate = formatDate(subscription?.nextPayment?.date);
-  const startDate = formatDate(subscription?.activeAt);
-
-  // Clerk provides pre-formatted amount
-  const nextPaymentAmount = subscription?.nextPayment?.amount?.amountFormatted;
 
   return (
     <Card>
@@ -137,54 +102,64 @@ export function SubscriptionCard() {
         <div className="flex items-center justify-between rounded-lg border p-4">
           <div className="space-y-2">
             <p className="text-lg font-semibold">
-              {hasActivePlan && currentPlan ? `${PLAN_LABELS[currentPlan]} Plan` : "No Active Plan"}
+              {hasActivePlan && effectiveTier
+                ? `${PLAN_LABELS[effectiveTier]} Plan`
+                : "No Active Plan"}
             </p>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={statusInfo.className}>
                 {statusInfo.label}
               </Badge>
+              {hasOverride && (
+                <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200">
+                  Override
+                </Badge>
+              )}
             </div>
           </div>
           <CreditCard className="h-10 w-10 text-muted-foreground" />
         </div>
 
-        {/* Subscription Details */}
-        {hasActivePlan && subscription && (
-          <div className="space-y-3 rounded-lg border p-4">
-            <h3 className="text-sm font-medium">Subscription Details</h3>
-            <div className="space-y-2 text-sm">
-              {startDate && (
+        {/* Override Info */}
+        {hasOverride && subscription && (
+          <div className="space-y-2 rounded-lg border p-4">
+            <h3 className="text-sm font-medium">Tier Override Active</h3>
+            <div className="space-y-1 text-sm">
+              {subscription.overrideReason && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Member since</span>
-                  <span className="font-medium">{startDate}</span>
+                  <span className="text-muted-foreground">Reason</span>
+                  <span className="font-medium">{subscription.overrideReason}</span>
                 </div>
               )}
-              {nextPaymentDate && subscriptionStatus === "active" && (
+              {subscription.overrideExpiresAt && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Next payment</span>
-                  <span className="font-medium">{nextPaymentDate}</span>
+                  <span className="text-muted-foreground">Expires</span>
+                  <span className="font-medium">
+                    {new Date(subscription.overrideExpiresAt).toLocaleDateString()}
+                  </span>
                 </div>
               )}
-              {nextPaymentAmount && subscriptionStatus === "active" && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">{nextPaymentAmount}</span>
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Paying for {subscription.subscriptionTier}, accessing {subscription.effectiveTier}{" "}
+                features.
+              </p>
             </div>
           </div>
         )}
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3 sm:flex-row">
-          <SignedIn>
-            <SubscriptionDetailsButton>
-              <Button variant="default" className="flex-1 sm:flex-none">
-                <Settings className="mr-2 h-4 w-4" />
-                Manage Subscription
-              </Button>
-            </SubscriptionDetailsButton>
-          </SignedIn>
+          {hasActivePlan && (
+            <Button
+              variant="default"
+              className="flex-1 sm:flex-none"
+              onClick={handleManageSubscription}
+              disabled={isRedirectingToPortal}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              {isRedirectingToPortal ? "Opening..." : "Manage Subscription"}
+            </Button>
+          )}
 
           <Button variant="outline" className="flex-1 sm:flex-none" asChild>
             <Link href={hasActivePlan ? "/select-plan?change=true" : "/select-plan"}>
@@ -209,7 +184,7 @@ export function SubscriptionCard() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Billing is powered by Stripe through Clerk. All payment information is securely handled.
+          Billing is powered by Stripe. All payment information is securely handled.
         </p>
       </CardContent>
     </Card>

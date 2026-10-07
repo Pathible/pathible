@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "../support/clerk";
 
 /**
  * Legacy Planning E2E Tests
@@ -15,7 +15,7 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  * Run with: pnpm test:e2e
  */
 
-const TEST_USER_EMAIL = Cypress.env("TEST_USER_EMAIL");
+const TEST_USER_EMAIL = Cypress.expose("TEST_USER_EMAIL");
 
 describe("Legacy Planning - E2E Test Suite", () => {
   beforeEach(() => {

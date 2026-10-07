@@ -67,24 +67,23 @@ export async function requireServerAuth() {
 }
 
 /**
- * Check if the user's household has a tier override (bypasses Clerk billing)
+ * Check if the user has an active subscription (or tier override) in Convex.
  *
- * This is used in the auth layout to allow demo/partner accounts to access
- * the app without a Clerk subscription. The tierOverride on the household
- * already unlocks all backend feature gates — this extends that bypass
- * to the frontend routing check.
+ * This is the primary subscription gate for server-side route protection.
+ * It queries Convex for the effective subscription status, which considers
+ * both actual subscriptions and tier overrides.
  *
- * Returns true if the user's household has:
- * - An active subscription status in Convex
- * - A non-expired tierOverride set
+ * Returns true if:
+ * - User has subscriptionStatus === "active" in Convex, OR
+ * - User has a valid (non-expired) tierOverride
  *
  * Returns false (fail-closed) if:
  * - User is not authenticated
  * - No household found
- * - No tierOverride set
+ * - Subscription is not active and no override
  * - Query fails
  */
-export async function getHasTierOverride(): Promise<boolean> {
+export async function getHasActiveSubscription(): Promise<boolean> {
   try {
     const { getToken, userId } = await auth();
 
@@ -105,11 +104,22 @@ export async function getHasTierOverride(): Promise<boolean> {
     const convexClient = new ConvexHttpClient(convexUrl);
     convexClient.setAuth(token);
 
-    const subscription = await convexClient.query(api.auth.getEffectiveSubscription);
+    let subscription = await convexClient.query(api.auth.getEffectiveSubscription);
+    // Convex has already verified the override and its expiry independently of billing.
+    if (subscription?.hasOverride) return true;
+    if (subscription && !subscription.billingProvider) {
+      await convexClient.action(api.stripeActions.reconcileLegacy, {});
+      subscription = await convexClient.query(api.auth.getEffectiveSubscription);
+    }
 
-    return subscription?.hasOverride ?? false;
+    if (!subscription) {
+      return false;
+    }
+
+    // Active subscription or valid tier override grants access
+    return subscription.subscriptionStatus === "active" || subscription.hasOverride;
   } catch (error) {
-    console.error("[Auth] Failed to check tier override:", error);
+    console.error("[Auth] Failed to check subscription status:", error);
     return false;
   }
 }
@@ -222,5 +232,21 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus | null> {
     // Log error but fail open - don't block users on transient errors
     console.error("[Auth] Failed to get onboarding status:", error);
     return null;
+  }
+}
+
+export async function getHasExecutorPurchase(): Promise<boolean> {
+  try {
+    const { userId, getToken } = await auth();
+    const url = process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!userId || !url) return false;
+    const token = await getToken({ template: "convex" });
+    if (!token) return false;
+    const client = new ConvexHttpClient(url);
+    client.setAuth(token);
+    const subscription = await client.query(api.auth.getEffectiveSubscription);
+    return subscription?.executorPurchased === true;
+  } catch {
+    return false;
   }
 }

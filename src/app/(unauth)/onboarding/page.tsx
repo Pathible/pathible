@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import Image from "next/image";
@@ -15,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { api } from "@/convex/_generated/api";
-import { checkHasActivePlan, getCurrentPlanTier } from "@/lib/feature-access";
+import { useEffectiveSubscription } from "@/lib/feature-access-hooks";
 
 /**
  * Multi-Step Onboarding Wizard
@@ -44,7 +43,7 @@ export default function OnboardingPage() {
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { has } = useAuth();
+  const { effectiveTier, subscriptionStatus } = useEffectiveSubscription();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3; // Reduced from 4 - invitations moved to dashboard
 
@@ -52,7 +51,7 @@ function OnboardingContent() {
   const referralSource = searchParams.get("ref") || undefined;
 
   // Check if user already has an active subscription (e.g., subscribed from /pricing)
-  const hasActivePlan = checkHasActivePlan(has);
+  const hasActivePlan = effectiveTier !== null && subscriptionStatus === "active";
 
   // Step 1: Profile
   const [firstName, setFirstName] = useState("");
@@ -126,16 +125,12 @@ function OnboardingContent() {
           return;
         }
 
-        // Get the user's subscription tier from Clerk Billing
-        // This ensures the household is created with the correct tier
-        // (not hardcoded to "foundations")
-        const clerkTier = getCurrentPlanTier(has);
-
-        // Create household with the user's actual subscription tier
+        // Create household - tier will be set by Stripe webhook after checkout
+        // Defaults to "foundations" until subscription is activated
         await createHouseholdMutation({
           name: householdName,
           description: householdDescription || undefined,
-          subscriptionTier: clerkTier || undefined,
+          subscriptionTier: effectiveTier || undefined,
           referralSource,
         });
 
@@ -163,7 +158,13 @@ function OnboardingContent() {
           setTimeout(() => router.push("/dashboard"), 500);
         } else {
           toast.success("Onboarding complete! Now let's select your plan.");
-          setTimeout(() => router.push("/select-plan"), 500);
+          setTimeout(
+            () =>
+              router.push(
+                `/select-plan${searchParams.get("plan") ? `?plan=${encodeURIComponent(searchParams.get("plan") ?? "")}` : ""}`,
+              ),
+            500,
+          );
         }
       }
     } catch (error) {

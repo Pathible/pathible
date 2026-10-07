@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "../support/clerk";
 
 /**
  * User Journey E2E Tests
@@ -22,7 +22,7 @@ import { setupClerkTestingToken } from "@clerk/testing/cypress";
  */
 
 // Test constants
-const TEST_USER_EMAIL = Cypress.env("TEST_USER_EMAIL");
+const TEST_USER_EMAIL = Cypress.expose("TEST_USER_EMAIL");
 // These constants are available for more detailed onboarding tests
 const _TEST_FIRST_NAME = "E2E Test";
 const _TEST_LAST_NAME = "User";
@@ -279,7 +279,7 @@ describe("Edge Cases and Error Handling", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
 
       cy.visit("/onboarding");

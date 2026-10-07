@@ -1291,7 +1291,7 @@ The tool is ready when you are.
 
 ---
 
-*Ready to see the difference? Start your free trial and experience what legacy planning should feel like.*`,
+*Ready to see the difference? Choose a subscription and experience what legacy planning should feel like.*`,
     category: "family_legacy",
     status: "published",
     visibility: "public",

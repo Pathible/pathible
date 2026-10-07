@@ -222,7 +222,7 @@ declare global {
 }
 
 // Import Clerk testing token setup
-import { setupClerkTestingToken } from "@clerk/testing/cypress";
+import { setupClerkTestingToken } from "./clerk";
 
 /**
  * Sign in with session caching - reuses auth across tests
@@ -235,7 +235,7 @@ Cypress.Commands.add(
   "signInWithSession",
   (tier: "foundations" | "heritage" | "legacy" = "heritage") => {
     // Store the tier for later use by ensureOnboarded
-    Cypress.env("CURRENT_TIER", tier);
+    Cypress.expose("CURRENT_TIER", tier);
 
     // Restore the auth session (this is cached across specs)
     cy.session(
@@ -247,7 +247,7 @@ Cypress.Commands.add(
         cy.clerkLoaded();
         cy.clerkSignIn({
           strategy: "email_code",
-          identifier: Cypress.env("TEST_USER_EMAIL"),
+          identifier: Cypress.expose("TEST_USER_EMAIL"),
         });
         cy.visit("/dashboard", { timeout: 30000 });
         cy.url().should("satisfy", (url: string) => {
@@ -283,7 +283,7 @@ Cypress.Commands.add("signInFreshUser", () => {
       cy.clerkLoaded();
       cy.clerkSignIn({
         strategy: "email_code",
-        identifier: Cypress.env("TEST_USER_EMAIL"),
+        identifier: Cypress.expose("TEST_USER_EMAIL"),
       });
       cy.visit("/dashboard", { timeout: 30000 });
       cy.resetTestUser();
@@ -335,7 +335,7 @@ Cypress.Commands.add("ensureOnboarded", (targetPage: string = "/dashboard") => {
   // Set subscription tier after navigating to target page
   // This uses the tier stored by signInWithSession()
   // Wait for page to be fully loaded with Convex client before setting tier
-  const tier = Cypress.env("CURRENT_TIER") || "heritage";
+  const tier = Cypress.expose("CURRENT_TIER") || "heritage";
   cy.log(`Setting subscription tier to: ${tier}`);
 
   // Wait for Convex test helpers to be available (retries until they exist)
