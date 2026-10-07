@@ -34,7 +34,7 @@ const EXECUTOR_FAQ_ITEMS = [
   {
     question: "Is my data secure?",
     answer:
-      "Yes. Pathible uses bank-level encryption to protect your data. All documents are stored securely, and you control who has access. We never sell your data or share it with third parties.",
+      "Private estate records require authentication. You manage family access and can review our privacy policy for how information is stored, processed, and retained.",
   },
 ];
 

@@ -56,6 +56,13 @@ export const get = query({
       primaryContactId: v.id("profiles"),
       subscriptionTier: subscriptionTierValidator,
       subscriptionStatus: subscriptionStatusValidator,
+      subscriptionValidUntil: v.optional(v.number()),
+      stripeCustomerId: v.optional(v.string()),
+      stripeSubscriptionId: v.optional(v.string()),
+      billingProvider: v.optional(v.union(v.literal("clerk"), v.literal("stripe"))),
+      stripeSnapshotAt: v.optional(v.number()),
+      executorPaymentIntentId: v.optional(v.string()),
+      executorChargeId: v.optional(v.string()),
       // Tier override fields (for promotional pricing)
       tierOverride: v.optional(subscriptionTierValidator),
       tierOverrideReason: v.optional(v.string()),
@@ -123,6 +130,13 @@ export const list = query({
         primaryContactId: v.id("profiles"),
         subscriptionTier: subscriptionTierValidator,
         subscriptionStatus: subscriptionStatusValidator,
+        subscriptionValidUntil: v.optional(v.number()),
+        stripeCustomerId: v.optional(v.string()),
+        stripeSubscriptionId: v.optional(v.string()),
+        billingProvider: v.optional(v.union(v.literal("clerk"), v.literal("stripe"))),
+        stripeSnapshotAt: v.optional(v.number()),
+        executorPaymentIntentId: v.optional(v.string()),
+        executorChargeId: v.optional(v.string()),
         // Tier override fields for promotional pricing
         tierOverride: v.optional(subscriptionTierValidator),
         tierOverrideReason: v.optional(v.string()),
@@ -339,15 +353,6 @@ export const create = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
-    // Subscription tier from Clerk Billing - passed from frontend
-    subscriptionTier: v.optional(
-      v.union(
-        v.literal("foundations"),
-        v.literal("heritage"),
-        v.literal("legacy"),
-        v.literal("founders"),
-      ),
-    ),
     referralSource: v.optional(v.string()),
   },
   returns: v.id("households"),
@@ -362,8 +367,12 @@ export const create = mutation({
       STRING_LIMITS.description,
     );
 
-    // Use the tier from Clerk Billing if provided, otherwise default to foundations
-    const tier = args.subscriptionTier || "foundations";
+    // Use billing state verified on the server; unpaid households remain inactive
+    const entitlement = await ctx.db
+      .query("billingEntitlements")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", profile.userId))
+      .unique();
+    const tier = entitlement?.tier ?? "foundations";
 
     // Create the household
     const householdId = await ctx.db.insert("households", {
@@ -371,7 +380,8 @@ export const create = mutation({
       description,
       primaryContactId: profile._id,
       subscriptionTier: tier,
-      subscriptionStatus: "active",
+      subscriptionStatus: entitlement?.status ?? "inactive",
+      subscriptionValidUntil: entitlement?.validUntil,
       storageUsedBytes: 0,
       memberCount: 0,
       familyUnitCount: 0,

@@ -27,16 +27,16 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const baseUrl = "https://pathible.com";
+const baseUrl = "https://www.pathible.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "Pathible - Faith-Based Family Legacy Platform",
+    default: "Pathible - Help Your Family Find What They Need",
     template: "%s | Pathible",
   },
   description:
-    "Have you ever had to sort through a loved one's mess while grieving? We have. Pathible gets everything in one place for your family, so they never have to.",
+    "Organize your important documents, accounts, insurance, and final wishes in one place. Invite someone you trust so your family knows where to start.",
   keywords: [
     "family legacy planning",
     "faith-based estate planning",
@@ -65,16 +65,16 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: baseUrl,
     siteName: "Pathible",
-    title: "Pathible - Get Everything in One Place for Your Family",
+    title: "Pathible - Help Your Family Find What They Need",
     description:
-      "Have you ever had to sort through a loved one's mess while grieving? We have. Pathible gets everything in one place, so they never have to.",
+      "Organize your documents, accounts, and wishes. Invite someone you trust so your family knows where to start.",
     // Images auto-injected from opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pathible - Get Everything in One Place for Your Family",
+    title: "Pathible - Help Your Family Find What They Need",
     description:
-      "Have you ever had to sort through a loved one's mess while grieving? We have. Pathible gets everything in one place, so they never have to.",
+      "Organize your documents, accounts, and wishes. Invite someone you trust so your family knows where to start.",
     // Images auto-injected from opengraph-image.tsx
   },
   robots: {

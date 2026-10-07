@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PublicLearningHero } from "@/components/learning/public";
 import { PublicPageLayout } from "@/components/PublicPageLayout";
+import { getPublicArticles } from "@/lib/public-articles";
 import { generatePageMetadata } from "@/lib/seo-config";
 import { LearnArticlesSection } from "./LearnArticlesSection";
 
@@ -11,11 +12,14 @@ export const metadata: Metadata = generatePageMetadata({
   path: "/learn",
 });
 
-export default function LearnPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LearnPage() {
+  const articles = await getPublicArticles();
   return (
     <PublicPageLayout>
       <PublicLearningHero />
-      <LearnArticlesSection />
+      <LearnArticlesSection articles={articles} />
     </PublicPageLayout>
   );
 }

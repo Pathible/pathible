@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { Article } from "@/components/learning";
@@ -18,35 +18,13 @@ function getNormalizedCategory(category: string): string {
   return category;
 }
 
-export function LearnArticlesSection() {
+export function LearnArticlesSection({ articles }: { articles: Article[] }) {
   const { isSignedIn } = useUser();
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
-  const publicArticles = useQuery(api.articles.listPublicArticles, { limit: 50 });
   const readArticlesData = useQuery(api.articles.getUserReadArticles, isSignedIn ? {} : "skip");
 
-  if (publicArticles === undefined) {
-    return (
-      <section className="py-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      </section>
-    );
-  }
-
   const readArticles = new Set(readArticlesData?.map((a) => a.slug) ?? []);
-
-  const articles: Article[] = publicArticles.map((article) => ({
-    _id: article._id,
-    title: article.title,
-    slug: article.slug,
-    excerpt: article.excerpt,
-    category: article.category,
-    readTimeMinutes: article.readTimeMinutes,
-    featuredImageUrl: article.featuredImageUrl,
-    publishedAt: article.publishedAt,
-  }));
 
   // Collect categories that have articles, preserving a stable order
   const categoryOrder: string[] = [];
@@ -131,7 +109,8 @@ export function LearnArticlesSection() {
               </span>
             </h2>
             <p className="text-lg sm:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed font-crimson">
-              Create a free account to track your progress and start organizing what matters most.
+              Put what you learned into practice. Organize your documents, accounts, and wishes in
+              one family workspace.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button
@@ -140,7 +119,7 @@ export function LearnArticlesSection() {
                 className="bg-white hover:bg-pathible-sand text-pathible-forest px-10 py-7 rounded-2xl text-lg font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
               >
                 <Link href="/signup" className="flex items-center gap-2">
-                  Get Started
+                  Organize My Family
                   <ArrowRight className="w-5 h-5" />
                 </Link>
               </Button>

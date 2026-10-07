@@ -8,11 +8,11 @@
  */
 
 export const SEO_CONFIG = {
-  baseUrl: "https://pathible.com",
+  baseUrl: "https://www.pathible.com",
   siteName: "Pathible",
-  tagline: "Get everything in one place for your family. So they never have to.",
+  tagline: "Help your family find what they need in an emergency.",
   description:
-    "Have you ever had to sort through a loved one's mess while grieving? We have. Pathible gets everything in one place for your family, so they never have to.",
+    "Organize your important documents, accounts, insurance, and final wishes in one place. Invite someone you trust so your family knows where to start.",
 } as const;
 
 // =============================================================================
@@ -64,24 +64,16 @@ export const softwareApplicationSchema = {
   applicationCategory: "LifestyleApplication",
   operatingSystem: "Web",
   description:
-    "A faith-based family legacy platform that helps families preserve documents, stories, and values across generations.",
+    "A family organization platform for important documents, accounts, final wishes, and stories.",
   url: SEO_CONFIG.baseUrl,
   provider: {
     "@id": `${SEO_CONFIG.baseUrl}/#organization`,
-  },
-  offers: {
-    "@type": "AggregateOffer",
-    priceCurrency: "USD",
-    lowPrice: "12",
-    highPrice: "49",
-    offerCount: "3",
   },
   featureList: [
     "Heritage Vault - Secure document storage",
     "Financial Clarity - Track accounts, property, and insurance",
     "Wisdom & Stories - Family story preservation",
     "Legacy Planning - Final wishes documentation",
-    "Bank-level encryption",
     "Family member sharing",
     "Core beliefs documentation",
   ],
@@ -105,7 +97,7 @@ export const FAQ_ITEMS = [
   {
     question: "Is my data secure?",
     answer:
-      "Yes. Pathible uses bank-level encryption to protect all your documents and data. You own your data completely. We never sell or share your information. Your family's files stay private and secure.",
+      "Pathible requires authentication for private household records and lets you manage family access. See our privacy policy for how information is stored, processed, and retained.",
   },
   {
     question: "Who is Pathible for?",
@@ -115,7 +107,7 @@ export const FAQ_ITEMS = [
   {
     question: "How much does Pathible cost?",
     answer:
-      "Pathible offers three plans: Foundations for getting started, Heritage for more storage and features, and Legacy for families who want everything. Visit our pricing page for current rates.",
+      "Pathible offers one annual family plan. See the pricing page for the annual charge, included features, and renewal details.",
   },
   {
     question: "What is the Heritage Vault?",
@@ -171,7 +163,7 @@ export const EXECUTOR_FAQ_ITEMS = [
   {
     question: "Is my data secure?",
     answer:
-      "Yes. Pathible uses bank-level encryption to protect all your documents and data. Estate records are especially sensitive — we treat security as a core feature, not an afterthought. You own your data completely and can export or delete it anytime.",
+      "Pathible requires authentication for private estate records and lets you manage family access. See our privacy policy for storage, service providers, and data retention.",
   },
 ] as const;
 

@@ -10,6 +10,29 @@ import { articleCategoryValidator } from "./shared/categories";
  */
 
 export default defineSchema({
+  emailUnsubscribeTokens: defineTable({
+    profileId: v.id("profiles"),
+    token: v.string(),
+  })
+    .index("by_profile", ["profileId"])
+    .index("by_token", ["token"]),
+  billingEntitlements: defineTable({
+    clerkUserId: v.string(),
+    tier: v.union(
+      v.literal("foundations"),
+      v.literal("heritage"),
+      v.literal("legacy"),
+      v.literal("founders"),
+    ),
+    status: v.union(
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("cancelled"),
+      v.literal("past_due"),
+    ),
+    validUntil: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_clerkUserId", ["clerkUserId"]),
   // ============================================================================
   // AUTHENTICATION & USER MANAGEMENT
   // ============================================================================
@@ -105,6 +128,22 @@ export default defineSchema({
   /**
    * Households - the primary organizational unit for families
    */
+  // Retain billing records written by the Stripe development branch.
+  stripeRefunds: defineTable({ paymentIntentId: v.string(), chargeId: v.string() }).index(
+    "by_paymentIntentId",
+    ["paymentIntentId"],
+  ),
+  stripeEvents: defineTable({ eventId: v.string(), processedAt: v.number() }).index("by_eventId", [
+    "eventId",
+  ]),
+  billingAttempts: defineTable({
+    householdId: v.id("households"),
+    clerkUserId: v.string(),
+    mode: v.union(v.literal("payment"), v.literal("subscription")),
+    priceId: v.string(),
+    createdAt: v.number(),
+    completed: v.boolean(),
+  }).index("by_household_and_mode", ["householdId", "mode"]),
   households: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
@@ -122,6 +161,14 @@ export default defineSchema({
       v.literal("cancelled"),
       v.literal("past_due"),
     ),
+    subscriptionValidUntil: v.optional(v.number()),
+    // Optional compatibility fields preserve existing development data.
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    billingProvider: v.optional(v.union(v.literal("clerk"), v.literal("stripe"))),
+    stripeSnapshotAt: v.optional(v.number()),
+    executorPaymentIntentId: v.optional(v.string()),
+    executorChargeId: v.optional(v.string()),
     // Tier override - allows granting higher tier access than what user pays for
     // Use case: Promotional pricing (pay $9.99 for foundations, get legacy features)
     tierOverride: v.optional(
@@ -157,7 +204,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_primaryContactId", ["primaryContactId"])
-    .index("by_referralSource", ["referralSource"]),
+    .index("by_referralSource", ["referralSource"])
+    .index("by_stripeCustomerId", ["stripeCustomerId"]),
 
   /**
    * Household memberships - join table linking users to households
@@ -1165,6 +1213,8 @@ export default defineSchema({
       v.literal("revoked"),
       v.literal("exhausted"),
     ),
+    requestWindowStartedAt: v.optional(v.number()),
+    requestCount: v.optional(v.number()),
     lastAccessedAt: v.optional(v.number()),
     revokedAt: v.optional(v.number()),
     revokedBy: v.optional(v.id("profiles")),

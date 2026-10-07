@@ -191,6 +191,43 @@ export const listPublicArticles = query({
   },
 });
 
+export const listPublicForDiscovery = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("educationalArticles"),
+      title: v.string(),
+      slug: v.string(),
+      excerpt: v.string(),
+      category: v.string(),
+      readTimeMinutes: v.number(),
+      featuredImageUrl: v.optional(v.string()),
+      publishedAt: v.optional(v.number()),
+      updatedAt: v.number(),
+    }),
+  ),
+  handler: async (ctx) => {
+    const articles = await ctx.db
+      .query("educationalArticles")
+      .withIndex("by_status_and_visibility", (q) =>
+        q.eq("status", "published").eq("visibility", "public"),
+      )
+      .order("desc")
+      .collect();
+    return articles.map((article) => ({
+      _id: article._id,
+      title: article.title,
+      slug: article.slug,
+      excerpt: article.excerpt,
+      category: article.category,
+      readTimeMinutes: article.readTimeMinutes,
+      featuredImageUrl: article.featuredImageUrl,
+      publishedAt: article.publishedAt,
+      updatedAt: article.updatedAt,
+    }));
+  },
+});
+
 /**
  * Get a single article by ID (admin view - includes all fields)
  */
@@ -318,7 +355,7 @@ export const getPublicBySlug = query({
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .unique();
 
-    if (!article || article.status !== "published") return null;
+    if (!article || article.status !== "published" || article.visibility !== "public") return null;
 
     return {
       _id: article._id,

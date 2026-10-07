@@ -552,7 +552,7 @@ export function generateVaultEmptyEmailContent(firstName: string, householdName?
               <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 0 auto 24px;">
                 <tr>
                   <td align="center" style="background-color: ${forestGreen}; border-radius: 6px;">
-                    <a href="https://pathible.com/dashboard/vault" target="_blank" style="display: inline-block; padding: 14px 25px; font-family: 'Inter', sans-serif; color: #ffffff; font-size: 14px; font-weight: bold; text-decoration: none; line-height: 16px;">
+                    <a href="https://www.pathible.com/vault" target="_blank" style="display: inline-block; padding: 14px 25px; font-family: 'Inter', sans-serif; color: #ffffff; font-size: 14px; font-weight: bold; text-decoration: none; line-height: 16px;">
                       Upload Your First Document
                     </a>
                   </td>
